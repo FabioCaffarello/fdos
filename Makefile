@@ -11,7 +11,7 @@ SCRIPTS_DIR := scripts
 # would pre-judge it. `go.work`, `go.mod`, `fmt`, `lint`, `test` and `build`
 # arrive in M2.
 
-.PHONY: help bootstrap verify toolchain-check contracts-check adr-check clean
+.PHONY: help bootstrap verify toolchain-check contracts-check adr-check constitution-check clean
 
 help: ## Show available targets
 	@printf 'FDOS — Financial Data Operating System\n\n'
@@ -25,7 +25,7 @@ bootstrap: ## Prepare a working copy for development
 	@$(MAKE) --no-print-directory toolchain-check
 	@printf '\nBootstrap complete. Run `make verify` to check the repository.\n'
 
-verify: toolchain-check contracts-check adr-check ## Run every enforcement mechanism available at this milestone
+verify: toolchain-check contracts-check adr-check constitution-check ## Run every enforcement mechanism available at this milestone
 	@printf '\nAll checks passed.\n'
 
 toolchain-check: ## Assert the installed toolchain matches the pins in mise.toml
@@ -36,6 +36,9 @@ contracts-check: ## Assert every directory declares a valid architectural contra
 
 adr-check: ## Assert the decision log is well-formed and append-only
 	@$(SCRIPTS_DIR)/verify-adr.sh
+
+constitution-check: ## Assert every principle appears in the §15 enforcement table
+	@$(SCRIPTS_DIR)/verify-constitution-coverage.sh
 
 clean: ## Remove build output
 	@rm -rf bin dist

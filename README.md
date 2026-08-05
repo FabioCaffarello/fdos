@@ -10,11 +10,11 @@ reference data.
 
 That constraint is the whole design. Everything else follows from it.
 
-> **Status: M0 — Repository Genesis.**
-> FDOS is at its first commit. There is no domain code, and that is deliberate:
-> the canonical model is an output of the M1.5 RFCs, and building before that
-> design lands would pre-judge it. What exists today is the governance and
-> enforcement substrate everything else will be held to.
+> **Status: M1 complete — Governance Substrate. Next: M1.5.**
+> There is no domain code, and that is deliberate: the canonical model is an
+> output of the M1.5 RFCs, and building before that design lands would pre-judge
+> it. What exists today is the governance and enforcement substrate everything
+> else will be held to.
 
 ## Quick start
 
@@ -82,6 +82,8 @@ generate the import-boundary configuration rather than merely describing it.
 
 ## Governance
 
+[`CONTRIBUTING.md`](CONTRIBUTING.md) is the working guide. In short:
+
 Any change to repository structure, module boundaries, the public contract
 surface, the toolchain or the enforcement mechanisms requires an
 [ADR](docs/adr/). Decisions requiring design exploration first go through an
@@ -104,9 +106,9 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 
 | Milestone | Objective |
 |-----------|-----------|
-| **M0** | Repository genesis — governance and enforcement substrate ✅ |
-| M1 | Governance substrate — `.context`, contribution and release process |
-| M1.5 | Canonical domain architecture — RFCs only: model, identifiers, aggregates, event taxonomy, bitemporality, reference data, explainability |
+| M0 | Repository genesis — governance and enforcement substrate ✅ |
+| M1 | Governance substrate — `.context`, contribution and release process ✅ |
+| **M1.5** | Canonical domain architecture — RFCs only: model, identifiers, aggregates, event taxonomy, bitemporality, reference data, explainability |
 | M2 | Determinism toolchain — layer boundaries, custom analysers, reproducible builds |
 | M3 | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing |
 | M2.5 | AI engineering — agent playbooks, prompt contracts, staleness checks |

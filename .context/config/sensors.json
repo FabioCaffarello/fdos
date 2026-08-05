@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "generatedAt": "2026-08-05T00:00:00.000Z",
+  "source": "manual",
+  "stack": {
+    "primaryLanguage": "go",
+    "languages": ["go"],
+    "frameworks": [],
+    "buildTools": ["make"],
+    "testFrameworks": [],
+    "packageManager": "go-modules"
+  },
+  "sensors": [
+    {
+      "id": "verify",
+      "name": "Full verification",
+      "description": "Every enforcement mechanism available at the current milestone. The single gate CI invokes from M3.",
+      "command": "make verify",
+      "severity": "critical",
+      "blocking": true,
+      "phases": ["V", "C"]
+    },
+    {
+      "id": "toolchain-check",
+      "name": "Toolchain pins",
+      "description": "Installed tools match the pins in mise.toml. Enforces Constitution §9 — reproducibility begins with the compiler.",
+      "command": "make toolchain-check",
+      "severity": "critical",
+      "blocking": true,
+      "phases": ["E", "V"]
+    },
+    {
+      "id": "contracts-check",
+      "name": "Directory contracts",
+      "description": "Every directory declares a valid architectural contract that agrees with CODEOWNERS. Enforces Constitution §10.",
+      "command": "make contracts-check",
+      "severity": "critical",
+      "blocking": true,
+      "phases": ["R", "V"]
+    },
+    {
+      "id": "adr-check",
+      "name": "Decision log",
+      "description": "The ADR log is well-formed, uniquely numbered, and supersession links are bidirectional. Enforces Constitution §14.",
+      "command": "make adr-check",
+      "severity": "critical",
+      "blocking": true,
+      "phases": ["R", "V"]
+    },
+    {
+      "id": "constitution-check",
+      "name": "Enforcement table coverage",
+      "description": "Every Constitution principle appears in the §15 enforcement table, so the repository's self-assessment cannot go stale. Enforces ADR-0005.",
+      "command": "make constitution-check",
+      "severity": "critical",
+      "blocking": true,
+      "phases": ["R", "V"]
+    }
+  ]
+}

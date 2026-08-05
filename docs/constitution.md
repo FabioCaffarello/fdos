@@ -189,8 +189,13 @@ self-assessment and is expected to improve every milestone.
 | 11 | Contracts Over Implementations | — | 6 | 3 (M4) |
 | 12 | Knowledge Graph Strategy | — | 6 | 5 |
 | 13 | Open Core | — | 6 | 3 (M5) |
-| 14 | Engineering Culture | ADR log (`make adr-check`) | 3 | 3 |
+| 14 | Engineering Culture | ADR log + enforcement-table coverage (`make adr-check`, `make constitution-check`) | 3 | 3 |
 
-At M0 almost everything sits at rung 6. That is the accurate reading of a
-repository whose first commit this is, and stating it plainly is the point: the
-table exists to make the gap visible and to make closing it measurable.
+At M1 almost everything still sits at rung 6. That is the accurate reading of a
+repository three commits old, and stating it plainly is the point: the table
+exists to make the gap visible and to make closing it measurable.
+
+`make constitution-check` asserts that this table lists every principle above,
+by number and by name, in both directions. The table cannot silently fall behind
+the Constitution it measures — which would turn the one artifact tracking
+architectural erosion into a source of false confidence.

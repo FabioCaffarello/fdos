@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "defaultEffect": "allow",
+  "rules": [
+    {
+      "id": "protect-constitution",
+      "effect": "require_approval",
+      "when": {
+        "paths": [
+          "docs/constitution.md"
+        ]
+      },
+      "reason": "The Constitution is the highest authority in the repository. It is amended only through an RFC, a version bump and an ADR — never edited directly."
+    },
+    {
+      "id": "protect-decision-log",
+      "effect": "require_approval",
+      "when": {
+        "paths": [
+          "docs/adr/**"
+        ]
+      },
+      "reason": "The ADR log is append-only and immutable (ADR-0000). A decision that proves wrong is superseded by a new ADR, never rewritten. Only new files and supersession metadata should change here."
+    },
+    {
+      "id": "protect-enforcement-mechanisms",
+      "effect": "require_approval",
+      "when": {
+        "paths": [
+          "scripts/**",
+          "Makefile",
+          "mise.toml",
+          ".github/**"
+        ]
+      },
+      "reason": "These are the mechanisms that make the Constitution executable. Weakening a check is indistinguishable from weakening the principle it enforces."
+    },
+    {
+      "id": "protect-directory-contracts",
+      "effect": "require_approval",
+      "when": {
+        "paths": [
+          "**/README.md",
+          "CODEOWNERS"
+        ]
+      },
+      "reason": "Directory contract front matter is binding, and from M2 it generates the import-boundary configuration. Changing a contract changes what the build permits."
+    },
+    {
+      "id": "protect-repository-core",
+      "effect": "require_approval",
+      "when": {
+        "paths": [
+          "apps/**",
+          "libs/**"
+        ],
+        "risk": "high"
+      },
+      "reason": "High-risk changes to domain and application code require approval."
+    },
+    {
+      "id": "protect-deployment",
+      "effect": "require_approval",
+      "when": {
+        "paths": [
+          "deploy/**"
+        ],
+        "risk": "high"
+      },
+      "reason": "High-risk changes to deployment topology require approval."
+    },
+    {
+      "id": "block-secrets",
+      "effect": "deny",
+      "when": {
+        "paths": [
+          "**/.env*",
+          "**/*.pem",
+          "**/*.key",
+          "**/*secret*"
+        ]
+      },
+      "reason": "Secret-like files are blocked by policy. Private institution credentials never share a trust boundary with the public core."
+    }
+  ]
+}

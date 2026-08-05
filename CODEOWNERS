@@ -16,6 +16,12 @@
 /docs/adr/              @FabioCaffarello
 /docs/rfc/              @FabioCaffarello
 /CODEOWNERS             @FabioCaffarello
+/CONTRIBUTING.md        @FabioCaffarello
+
+# ---------------------------------------------------------------------------
+# Knowledge for AI agents. Derived from docs/ — never authoritative over it.
+# ---------------------------------------------------------------------------
+/.context/              @FabioCaffarello
 
 # ---------------------------------------------------------------------------
 # Enforcement mechanisms — the code that makes the Constitution executable.

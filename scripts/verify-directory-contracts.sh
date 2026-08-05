@@ -20,8 +20,10 @@ source "${ROOT}/scripts/lib/frontmatter.sh"
 
 REQUIRED_KEYS="directory purpose owner allowed forbidden"
 
-# Tool-managed or VCS-internal trees carry no architectural contract.
-EXCLUDED_DIRS=".git .context"
+# VCS-internal trees carry no architectural contract. `.context/` is no longer
+# excluded: as of M1 it declares its own contract like every other directory,
+# which is what ADR-0006 promised for the milestone that first populates it.
+EXCLUDED_DIRS=".git"
 
 failures=0
 
