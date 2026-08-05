@@ -73,7 +73,7 @@ still at rung 6.
 | `examples/` | Executable demonstrations of the public contract surface. |
 | `scripts/` | Enforcement mechanisms, invoked through `make`. |
 | `.github/` | CI workflows. Runs `make`, contains no logic of its own. |
-| `.dotcontext/` | Structured engineering knowledge for AI agents (ADR-0001). |
+| `.context/` | Structured engineering knowledge for AI agents (ADR-0006). |
 
 Every directory declares its architectural contract in the front matter of its
 `README.md`: what it permits, what it forbids, and who owns it. `make
@@ -93,18 +93,19 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | ADR | Decision |
 |-----|----------|
 | [0000](docs/adr/0000-record-architecture-decisions.md) | Decisions are recorded as an append-only log |
-| [0001](docs/adr/0001-context-management.md) | `.dotcontext` is the canonical AI knowledge directory |
+| [0001](docs/adr/0001-context-management.md) | ~~`.dotcontext` is the canonical AI knowledge directory~~ — superseded by 0006 |
 | [0002](docs/adr/0002-license.md) | The public core is Apache-2.0 |
 | [0003](docs/adr/0003-module-path.md) | Modules publish under `github.com/FabioCaffarello/fdos` |
 | [0004](docs/adr/0004-module-granularity.md) | One module per `libs/*`; CI builds with `GOWORK=off` |
 | [0005](docs/adr/0005-enforcement-ladder.md) | Principles are enforced at the highest feasible mechanism |
+| [0006](docs/adr/0006-context-directory-naming.md) | `.context` is the canonical AI knowledge directory |
 
 ## Roadmap
 
 | Milestone | Objective |
 |-----------|-----------|
 | **M0** | Repository genesis — governance and enforcement substrate ✅ |
-| M1 | Governance substrate — `.dotcontext`, contribution and release process |
+| M1 | Governance substrate — `.context`, contribution and release process |
 | M1.5 | Canonical domain architecture — RFCs only: model, identifiers, aggregates, event taxonomy, bitemporality, reference data, explainability |
 | M2 | Determinism toolchain — layer boundaries, custom analysers, reproducible builds |
 | M3 | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing |

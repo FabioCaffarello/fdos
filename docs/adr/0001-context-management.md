@@ -1,15 +1,20 @@
 ---
 id: ADR-0001
 title: FDOS adopts .dotcontext as the canonical AI knowledge directory
-status: Accepted
+status: Superseded
 date: 2026-08-04
 deciders:
   - "@FabioCaffarello"
 supersedes: []
-superseded_by: []
+superseded_by:
+  - ADR-0006
 ---
 
 # ADR-0001 — FDOS adopts `.dotcontext` as the canonical AI knowledge directory
+
+> **Superseded by [ADR-0006](0006-context-directory-naming.md).** FDOS uses
+> `.context/`. The text below is preserved unaltered, as ADR-0000 requires: it
+> records what was decided and why, not what turned out to be right.
 
 ## Context
 

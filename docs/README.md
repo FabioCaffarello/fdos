@@ -10,7 +10,7 @@ allowed:
   - Diagrams and reference material supporting the above
 forbidden:
   - Generated API reference (produced from contracts at M4, never hand-written)
-  - Knowledge intended primarily for AI agents (belongs in .dotcontext/)
+  - Knowledge intended primarily for AI agents (belongs in .context/)
   - Anything that duplicates rather than references a decision
 ---
 
@@ -38,9 +38,9 @@ Any change to repository structure, module boundaries, the public contract
 surface, the toolchain, enforcement mechanisms, or the Constitution requires an
 ADR.
 
-## Relationship to `.dotcontext/`
+## Relationship to `.context/`
 
-`docs/` is written for humans and is the authoritative record. `.dotcontext/` is
+`docs/` is written for humans and is the authoritative record. `.context/` is
 structured knowledge for AI agents and is *derived from* this directory — never
 the reverse. Where the two disagree, `docs/` wins, and the disagreement is a bug
 in the derivation.

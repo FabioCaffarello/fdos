@@ -18,12 +18,12 @@ go.work.sum
 vendor/
 
 # ---------------------------------------------------------------------------
-# .dotcontext — only versioned classifications are tracked (see ADR-0001)
+# .context — only versioned classifications are tracked (see ADR-0006)
 # ---------------------------------------------------------------------------
-.dotcontext/plans/
-.dotcontext/cache/
-.dotcontext/runtime/
-.dotcontext/**/archive/
+.context/plans/
+.context/cache/
+.context/runtime/
+.context/**/archive/
 
 # ---------------------------------------------------------------------------
 # Local tooling / editor state

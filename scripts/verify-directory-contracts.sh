@@ -21,7 +21,7 @@ source "${ROOT}/scripts/lib/frontmatter.sh"
 REQUIRED_KEYS="directory purpose owner allowed forbidden"
 
 # Tool-managed or VCS-internal trees carry no architectural contract.
-EXCLUDED_DIRS=".git .dotcontext"
+EXCLUDED_DIRS=".git .context"
 
 failures=0
 

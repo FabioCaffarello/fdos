@@ -74,6 +74,28 @@ fm_list_count() {
   ' "$1"
 }
 
+# fm_list_items <file> <key>
+# Prints each `- ` item of a top-level list key, one per line, unquoted.
+fm_list_items() {
+  awk -v want="$2" '
+    NR == 1 { next }
+    /^---[[:space:]]*$/ { exit 0 }
+    /^[A-Za-z_][A-Za-z0-9_]*:/ {
+      key = $0
+      sub(/:.*$/, "", key)
+      inlist = (key == want)
+      next
+    }
+    inlist && /^[[:space:]]+-[[:space:]]+/ {
+      item = $0
+      sub(/^[[:space:]]+-[[:space:]]+/, "", item)
+      gsub(/^["'"'"']|["'"'"']$/, "", item)
+      gsub(/[[:space:]]+$/, "", item)
+      if (item != "") print item
+    }
+  ' "$1"
+}
+
 # fm_require_keys <file> <label> <key>...
 # Reports every missing required key. Returns 1 if any are missing.
 fm_require_keys() {

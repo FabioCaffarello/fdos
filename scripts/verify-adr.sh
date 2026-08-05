@@ -78,6 +78,52 @@ if [ "$checked" -eq 0 ]; then
   fail "docs/adr/: no ADRs found — ADR-0000 must exist"
 fi
 
+# Second pass: supersession links must be real and bidirectional.
+#
+# Added when the log's first supersession (ADR-0001 -> ADR-0006) showed that
+# requiring a successor to be *named* does not require it to *exist*, or to
+# point back. A one-directional link makes the chain traversable forwards only,
+# which defeats the purpose: a reader arriving at the successor cannot tell what
+# it replaced.
+adr_file_for() { # <ADR-NNNN>
+  local num="${1#ADR-}"
+  local match
+  match="$(ls "${ADR_DIR}/${num}"-*.md 2>/dev/null | head -1 || true)"
+  printf '%s' "$match"
+}
+
+for adr in "${ADR_DIR}"/[0-9][0-9][0-9][0-9]-*.md; do
+  [ -f "$adr" ] || continue
+  name="$(basename "$adr")"
+  id="$(fm_value "$adr" id || true)"
+
+  for successor in $(fm_list_items "$adr" superseded_by || true); do
+    target="$(adr_file_for "$successor")"
+    if [ -z "$target" ]; then
+      fail "docs/adr/${name}: superseded_by names '${successor}', which does not exist"
+      continue
+    fi
+    if ! fm_list_items "$target" supersedes | grep -qx -- "$id"; then
+      fail "docs/adr/${name}: '${successor}' does not list '${id}' in its 'supersedes' — supersession must be bidirectional"
+    fi
+  done
+
+  for predecessor in $(fm_list_items "$adr" supersedes || true); do
+    target="$(adr_file_for "$predecessor")"
+    if [ -z "$target" ]; then
+      fail "docs/adr/${name}: supersedes names '${predecessor}', which does not exist"
+      continue
+    fi
+    target_status="$(fm_value "$target" status || true)"
+    if [ "$target_status" != "Superseded" ]; then
+      fail "docs/adr/${name}: supersedes '${predecessor}', but that ADR's status is '${target_status}', not 'Superseded'"
+    fi
+    if ! fm_list_items "$target" superseded_by | grep -qx -- "$id"; then
+      fail "docs/adr/${name}: '${predecessor}' does not list '${id}' in its 'superseded_by' — supersession must be bidirectional"
+    fi
+  done
+done
+
 if [ "$failures" -gt 0 ]; then
   printf '\nFAIL: %d ADR violation(s) across %d records.\n' "$failures" "$checked" >&2
   exit 1
