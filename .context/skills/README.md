@@ -16,16 +16,21 @@ for what was removed and why.
 | [Code Review](./code-review/SKILL.md) | Review changes against the Constitution and the enforcement ladder | R, V |
 | [PR Review](./pr-review/SKILL.md) | Review a pull request end to end, including its governance obligations | R, V |
 | [Commit Message](./commit-message/SKILL.md) | Write commit messages that record reasoning, not just change | E, C |
+| [Test Generation](./test-generation/SKILL.md) | Tests that can fail for the right reason; fixtures proving specificity | E, V |
+| [Security Audit](./security-audit/SKILL.md) | Integrity and supply-chain failures, ranked by what actually matters here | R, V |
 
 Built-in `dotcontext-*` workflow skills remain available and are not managed
 here.
 
-## Missing skills are deliberate
+## Missing skills are still deliberate
 
-There is no api-design, test-generation, refactoring, bug-investigation or
-security-audit skill. API design is generated from contracts at M4 and a skill
-now would pre-judge that chain; the rest have no code to act on. They return at
-the milestone that gives them a subject.
+There is no api-design, refactoring or bug-investigation skill. API design is
+generated from contracts at M4 and a skill now would pre-judge the proto → buf →
+OpenAPI chain; the others have too little code to act on.
+
+`test-generation` and `security-audit` returned at M2.5: M2 produced a testing
+discipline worth writing down, and M3 produced a real security posture with an
+equally real gap list.
 
 ## Creating a skill
 
@@ -47,7 +52,7 @@ not left to rot.
 | Phase | Name | Skills |
 |-------|------|--------|
 | P | Planning | feature-breakdown, documentation |
-| R | Review | pr-review, code-review |
-| E | Execution | commit-message |
-| V | Validation | pr-review, code-review |
+| R | Review | pr-review, code-review, security-audit |
+| E | Execution | commit-message, test-generation |
+| V | Validation | pr-review, code-review, test-generation, security-audit |
 | C | Confirmation | commit-message, documentation |

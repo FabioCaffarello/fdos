@@ -7,6 +7,18 @@ phases: [P, C]
 generated: 2026-08-05
 status: filled
 scaffoldVersion: "2.0.0"
+must_read:
+  - docs/constitution.md
+  - docs/README.md
+  - .context/README.md
+must_not:
+  - Duplicate a decision instead of referencing it
+  - Describe intent without marking it provisional
+  - Imply coverage for a principle sitting at rung 6
+  - Leave `.context/` describing a repository that no longer exists
+evidence:
+  - Documentation updated in the same change as the code it describes
+  - "`make verify` passing, including contracts-check and context-check"
 ---
 
 # Documentation Writer

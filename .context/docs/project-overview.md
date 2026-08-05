@@ -22,7 +22,7 @@ is open, the answer is almost always whichever option preserves reproducibility.
 
 ## Current state
 
-**M3 complete — CI/CD and supply chain.** Next: M2.5 (AI engineering).
+**M2.5 complete — AI engineering.** Next: M3.5 (developer experience).
 
 There is **no domain code and no application**. The only Go in the repository is
 `libs/analysis` — the four static analysers that turn Constitution principles
@@ -40,12 +40,13 @@ What exists today, and is enforced:
 
 ```sh
 make analyze   # nofloat · nondet · impurity · layering
-make verify    # the full gate — 15 checks; exactly what CI runs (ADR-0014)
+make verify    # the full gate — 18 checks; exactly what CI runs (ADR-0014)
 ```
 
 A `time.Now()` or a `float64` in a domain package fails the build, by name.
 So does an unpinned GitHub Action, a rewritten ADR, a secret anywhere in
-history, or a binary that does not build twice to the same digest.
+history, a binary that does not build twice to the same digest, or a playbook
+in this directory naming a `make` target that no longer exists.
 
 ## What FDOS refuses to be
 
@@ -82,9 +83,9 @@ rather than assumed (ADR-0004).
 | M1 ✅ | Governance substrate — `.context`, contribution and release process |
 | M1.5 ✅ | Canonical domain architecture — **RFCs only**. Six accepted (RFC-0001 … RFC-0006), recorded by ADR-0007 … ADR-0012 |
 | M2 ✅ | Determinism toolchain — four analysers, reproducible builds, layer boundaries |
-| M3 ✅ | CI/CD and supply chain — 15 checks per PR, SHA-pinned inputs, SBOM, provenance, signing |
-| **M2.5** | AI engineering — agent playbooks, prompt contracts, staleness checks |
-| M3.5 | Developer experience |
+| M3 ✅ | CI/CD and supply chain — SHA-pinned inputs, SBOM, provenance, signing |
+| M2.5 ✅ | AI engineering — prompt contracts, knowledge-base staleness checks |
+| **M3.5** | Developer experience |
 | M4 | Contracts and observability — proto → buf → OpenAPI → SDK → MCP → docs |
 | M5 | Open core boundary |
 | M6 | First domain — the Ledger, as a vertical slice |

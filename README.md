@@ -10,11 +10,11 @@ reference data.
 
 That constraint is the whole design. Everything else follows from it.
 
-> **Status: M3 complete — CI/CD and supply chain. Next: M2.5 (AI engineering).**
-> Fifteen checks now run on every pull request, every build input is pinned by
-> digest, and releases carry an SBOM, provenance attestation and signature.
-> There is still no domain code — the canonical model lands with the Ledger at
-> M6.
+> **Status: M2.5 complete — AI engineering. Next: M3.5 (developer experience).**
+> Eighteen checks run on every pull request. The knowledge base agents work
+> from is now checked against the repository it describes, so stale context
+> fails a build instead of producing a confident wrong answer. There is still no
+> domain code — the canonical model lands with the Ledger at M6.
 
 ## Quick start
 
@@ -70,8 +70,9 @@ still at rung 6.
 
 As of M2, six principles reached their target rung. Determinism, canonical-model
 purity and layer boundaries are enforced by static analysis; reproducibility by a
-double-build diff. The seven principles still unenforced need types that do not
-exist yet, and climb at M4 and M6.
+double-build diff. M3 and M2.5 raised no rungs — they made the existing
+mechanisms run without anyone remembering to. The seven principles still
+unenforced need types that do not exist yet, and climb at M4 and M6.
 
 ```
 libs/ledger/domain/rule.go:14:37: nondet: time.Now in domain package;
@@ -93,8 +94,12 @@ libs/ledger/domain/rule.go:14:37: nondet: time.Now in domain package;
 
 Every directory declares its architectural contract in the front matter of its
 `README.md`: what it permits, what it forbids, and who owns it. `make
-contracts-check` enforces this from commit #1, and from M2 those declarations
-generate the import-boundary configuration rather than merely describing it.
+contracts-check` enforces this from commit #1.
+
+The M0 plan was for those declarations to *generate* the import-boundary
+configuration. M2 found a better answer: the layer rule turned out to be
+structural rather than per-module, so it lives in the `layering` analyser, which
+is tested rather than configured. The contracts stay the human record.
 
 ## Governance
 
@@ -125,6 +130,7 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0012](docs/adr/0012-explained-return-type.md) | Domain calculations producing financial values return `Explained[T]` |
 | [0013](docs/adr/0013-layer-structure-and-module-topology.md) | Modules follow bounded contexts; layers are packages within them |
 | [0014](docs/adr/0014-ci-runs-make-and-pins-everything.md) | CI invokes `make` and nothing else; every build input is pinned by digest |
+| [0015](docs/adr/0015-ai-engineering-policy.md) | AI-assisted work is bounded by enforced gates and a checkable knowledge base |
 
 ### Requests for Comment
 
@@ -150,8 +156,8 @@ above it.
 | M1.5 | Canonical domain architecture — RFCs only: identity, numerics, bitemporality, provenance, event taxonomy, explainability ✅ |
 | M2 | Determinism toolchain — layer boundaries, custom analysers, reproducible builds ✅ |
 | M3 | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing ✅ |
-| **M2.5** | AI engineering — agent playbooks, prompt contracts, staleness checks |
-| M3.5 | Developer experience — devcontainer, IDE configuration, task ergonomics |
+| M2.5 | AI engineering — agent playbooks, prompt contracts, staleness checks ✅ |
+| **M3.5** | Developer experience — devcontainer, IDE configuration, task ergonomics |
 | M4 | Contracts and observability — proto → buf → OpenAPI → SDK → MCP → docs |
 | M5 | Open core boundary — published contract modules, plugin conformance suite |
 | M6 | First domain — the Ledger, as a vertical slice validating everything above |

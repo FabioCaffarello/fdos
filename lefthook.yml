@@ -45,6 +45,10 @@ pre-commit:
       glob: "docs/constitution.md"
       run: make constitution-check
 
+    - name: knowledge-base
+      glob: ".context/**/*.md"
+      run: make context-check agent-contract-check
+
     # Catches the paste before it becomes history. Scanning staged content only
     # keeps this in the tens of milliseconds.
     - name: secrets

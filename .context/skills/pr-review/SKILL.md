@@ -25,9 +25,11 @@ scaffoldVersion: "2.0.0"
 
 ## Examples
 
-**Request changes — missing governance:**
+**Request changes — missing governance.** The real review of what became
+`scripts/verify-adr-immutability.sh`:
 ```
-This adds scripts/verify-imports.sh and wires it into `make verify`.
+This adds a check comparing each ADR against its introducing commit and
+wires it into `make verify`.
 
 Two blockers:
 
@@ -38,9 +40,11 @@ Two blockers:
    fails with a useful message, restore. Two of the four M0 checks had real
    defects that only negative testing surfaced.
 
-Also: docs/constitution.md §15 still lists §10 at rung 3. This change moves
-it to rung 2 — the table should say so.
+Also: docs/constitution.md §15 lists ADR immutability under §14 as review
+only. This change moves it to rung 3 — the table should say so.
 ```
+Both were addressed before it landed: ADR-0014 records the decision, and the
+check was exercised against a rewritten body line and a deleted section.
 
 **Approve:**
 ```

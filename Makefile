@@ -27,6 +27,7 @@ endef
 
 .PHONY: help bootstrap hooks verify affected \
 	toolchain-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
+	context-check agent-contract-check \
 	fmt fmt-check vet lint test analyze repro-check tidy tidy-check build clean \
 	secrets-check secrets-check-staged vuln-check
 
@@ -51,7 +52,8 @@ hooks: ## Install the git hooks (lefthook)
 	fi
 
 verify: toolchain-check contracts-check adr-check adr-immutability-check rfc-check constitution-check \
-        action-pinning-check secrets-check tidy-check fmt-check vet lint test analyze vuln-check repro-check ## Run every enforcement mechanism available at this milestone
+        action-pinning-check context-check agent-contract-check \
+        secrets-check tidy-check fmt-check vet lint test analyze vuln-check repro-check ## Run every enforcement mechanism available at this milestone
 	@printf '\nAll checks passed.\n'
 
 affected: ## Print the modules affected by the current change
@@ -81,6 +83,12 @@ constitution-check: ## Assert every principle appears in the §15 enforcement ta
 
 action-pinning-check: ## Assert every GitHub Action is pinned to a commit SHA
 	@$(SCRIPTS_DIR)/verify-action-pinning.sh
+
+context-check: ## Assert documentation describes the repository that exists
+	@$(SCRIPTS_DIR)/verify-doc-references.sh
+
+agent-contract-check: ## Assert agent playbooks declare a valid prompt contract
+	@$(SCRIPTS_DIR)/verify-agent-contracts.sh
 
 # ---------------------------------------------------------------------------
 # Security and supply chain

@@ -7,6 +7,18 @@ phases: [R, V]
 generated: 2026-08-05
 status: filled
 scaffoldVersion: "2.0.0"
+must_read:
+  - docs/constitution.md
+  - docs/adr/
+  - libs/README.md
+must_not:
+  - Approve while claiming a verification that was not run
+  - Report a hypothesis as a confirmed defect
+  - Rank a style preference above a Constitution violation
+  - Accept a new enforcement mechanism with no negative test
+evidence:
+  - Findings ordered by enforcement-ladder rung, each naming the principle or ADR
+  - "`make verify` output, or an explicit statement that it was not run"
 ---
 
 # Code Reviewer

@@ -196,7 +196,7 @@ expected to improve every milestone.
 | 11 | Contracts Over Implementations | `layering` forbids cross-context coupling; versioning not yet enforced | 2 | 2 + M4 |
 | 12 | Knowledge Graph Strategy | — | 6 | 5 |
 | 13 | Open Core | `GOWORK=off` in every Go target and every workflow | 3 | 3 ✅ |
-| 14 | Engineering Culture | ADR and RFC logs, ADR immutability against git history, enforcement-table coverage, secret and vulnerability scans (`make adr-check`, `adr-immutability-check`, `rfc-check`, `constitution-check`, `secrets-check`, `vuln-check`) | 3 | 3 ✅ |
+| 14 | Engineering Culture | ADR and RFC logs, ADR immutability against git history, enforcement-table coverage, documentation references, agent prompt contracts, secret and vulnerability scans (`make adr-check`, `adr-immutability-check`, `rfc-check`, `constitution-check`, `context-check`, `agent-contract-check`, `secrets-check`, `vuln-check`) | 3 | 3 ✅ |
 
 Six principles reached their target at M2. M3 raised no rung numbers — it made
 the existing mechanisms real. Every check now runs automatically on every pull
@@ -210,10 +210,22 @@ honest reading is that they are unenforced.
 §8 (Explainability) remains the weakest. ADR-0012 decided the mechanism; nothing
 implements it yet.
 
-One rule is still enforced by nothing: **branch protection, required checks and
-the merge queue are GitHub settings, not files.** They cannot be enforced from
-this repository. `docs/branch-protection.md` records the intended configuration
-and states plainly that it is a checklist, not a mechanism.
+M2.5 added the same kind of mechanism to the knowledge base: documentation that
+names a `make` target, a script, an ADR or a link now has to be describing
+something that exists (`make context-check`), and agent playbooks declare
+obligations that can be checked as data (`make agent-contract-check`).
+
+Two rules remain enforced by nothing:
+
+**Branch protection, required checks and the merge queue are GitHub settings,
+not files.** They cannot be enforced from this repository.
+`docs/branch-protection.md` records the intended configuration and states
+plainly that it is a checklist, not a mechanism.
+
+**Whether an agent honours its prompt contract** cannot be verified from
+outside. The `must_read` / `must_not` / `evidence` fields make the obligation
+explicit and reviewable; they do not enforce it, and a green
+`agent-contract-check` is not evidence of compliance (ADR-0015).
 
 `make constitution-check` asserts that this table lists every principle above,
 by number and by name, in both directions. The table cannot silently fall behind

@@ -7,6 +7,18 @@ phases: [R, V]
 generated: 2026-08-05
 status: filled
 scaffoldVersion: "2.0.0"
+must_read:
+  - .context/docs/security.md
+  - docs/adr/0014-ci-runs-make-and-pins-everything.md
+  - .gitleaks.toml
+must_not:
+  - Imply security coverage that does not exist
+  - Accept a build input that is not identified by digest
+  - Treat a determinism violation as a style issue rather than an integrity defect
+  - Allow model output onto a path that reaches the ledger
+evidence:
+  - "`make secrets-check` and `make vuln-check` output"
+  - Findings ranked by integrity impact, not by conventional severity label
 ---
 
 # Security Auditor

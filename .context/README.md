@@ -35,35 +35,51 @@ the disagreement is a bug in the derivation.
 
 ## A playbook must have a subject
 
-The scaffold generates a full roster of roles and skills by default. FDOS keeps
-only those describing something that exists in this repository today.
-
-Removed at M1, with the reason:
-
-| Removed | Reason |
-|---------|--------|
-| `database-specialist` | The domain must not depend on a database (Constitution §10). A first-class database role invites exactly the coupling that principle forbids. |
-| `frontend-specialist`, `mobile-specialist` | FDOS has no user interface and no mobile surface. |
-| `backend-specialist`, `feature-developer`, `bug-fixer`, `refactoring-specialist`, `performance-optimizer`, `test-writer` | No Go code exists yet. These describe work on a codebase that has not been written. |
-| `devops-specialist` | CI/CD is M3. `.github/` is deliberately empty. |
-| `api-design` | API design is generated from contracts at M4. A skill now would pre-judge the proto → buf → OpenAPI chain. |
-| `bug-investigation`, `refactoring`, `security-audit`, `test-generation` | No code to investigate, refactor, audit or test. |
-
-They are regenerated at the milestone that gives them a subject — most at
-**M2.5 (AI Engineering)**, which is where agent playbooks are a deliverable
-rather than a side effect of scaffolding.
+The scaffold generates a full roster by default. FDOS keeps only what describes
+something that exists in this repository today.
 
 This is not tidiness. A playbook describing structure that does not exist is
-worse than no playbook: an agent will act on it, and nothing reports that it was
-wrong. M2.5 adds a staleness check in CI so that this failure mode becomes
-detectable rather than latent.
+worse than no playbook: an agent acts on it confidently, and nothing reports
+that it was wrong.
 
-## Derivation
+### Returned at M2.5, because they acquired a subject
 
-These files are written by hand today. They are intended to become **generated**
-from `docs/` at M2.5, so that drift between the human record and the agent
-record is impossible rather than merely discouraged.
+| Restored | What gave it a subject |
+|----------|------------------------|
+| `test-writer`, `test-generation` | M2 produced Go code and a specific testing discipline — fixtures that prove specificity, not just sensitivity |
+| `devops-specialist` | M3 produced workflows, hooks and a supply chain |
+| `security-audit` | M3 produced a real security posture, and an equally real gap list |
 
-Until then, any change to the Constitution, an ADR, or a directory contract
-obliges a corresponding update here. That obligation currently rests on human
-discipline — rung 6, and recorded as such.
+### Still absent, with the reason
+
+| Absent | Reason | Returns |
+|--------|--------|---------|
+| `database-specialist` | The domain must not depend on a database (Constitution §10). A first-class database role invites exactly the coupling that principle forbids | never |
+| `frontend-specialist`, `mobile-specialist` | No user interface, no mobile surface | if one exists |
+| `backend-specialist`, `feature-developer` | No services and no features; the only Go is the analyser toolchain | M6 |
+| `bug-fixer`, `bug-investigation` | Almost no code to have bugs in | M6 |
+| `refactoring-specialist`, `refactoring` | Too little code to refactor | M6 |
+| `performance-optimizer` | No performance work, and no benchmarks to reason from | M6 |
+| `api-design` | API design is generated from contracts. A skill now would pre-judge the proto → buf → OpenAPI chain | M4 |
+
+## Derivation, and how it is checked
+
+These files are derived from `docs/` by hand. Since M2.5 the derivation is
+**checked**, not assumed:
+
+| Check | Asserts |
+|-------|---------|
+| `make context-check` | Every link, `make` target, script path and ADR/RFC identifier named here exists |
+| `make agent-contract-check` | Every playbook declares `must_read`, `must_not` and `evidence`; every `must_read` path exists; the rosters match disk in both directions; nothing is left `unfilled` |
+
+What that does **not** cover: whether a paragraph is merely wrong, and whether
+an agent actually reads its `must_read` or honours its `must_not`. Those stay at
+rung 6, recorded as such in ADR-0015. A green check is not evidence of agent
+compliance.
+
+Generating `.context/` from `docs/` outright was considered and rejected for now
+— the two have genuinely different audiences, and a generator would either
+produce unusable prose or push so much annotation into `docs/` that the
+annotation becomes the second copy. The trigger to revisit is these checks
+failing routinely, which would be evidence the derivation is mechanical after
+all.

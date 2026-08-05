@@ -7,6 +7,19 @@ phases: [P, R]
 generated: 2026-08-05
 status: filled
 scaffoldVersion: "2.0.0"
+must_read:
+  - docs/constitution.md
+  - docs/adr/
+  - docs/rfc/
+  - docs/adr/template.md
+must_not:
+  - Edit an accepted ADR to change its meaning — reverse by superseding
+  - Settle an open RFC question through an implementation choice
+  - Record a decision without a negative-consequences section
+  - Propose a change that contradicts an accepted ADR without the superseding ADR
+evidence:
+  - An ADR or RFC stating the decision, its costs, and its ladder rung
+  - "`make verify` passing, including adr-check and adr-immutability-check"
 ---
 
 # Architect Specialist
