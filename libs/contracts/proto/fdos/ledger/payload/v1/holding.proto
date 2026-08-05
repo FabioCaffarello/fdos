@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package fdos.ledger.payload.v1;
+
+import "fdos/kernel/v1/identity.proto";
+import "fdos/kernel/v1/money.proto";
+
+// Payloads are what a fact asserts. They are data, not facts.
+//
+// The separation is not cosmetic. `fdos.ledger.v1` holds facts, and every
+// message there must carry an Envelope — `make proto-check` enforces it,
+// because a fact without provenance and temporal coordinates is not a fact
+// (§6, §7).
+//
+// A payload has no envelope by construction: it lives inside `Fact.payload`,
+// wrapped in an Any, and the fact around it carries the envelope for both.
+// Keeping payloads in the fact package would mean either weakening that rule or
+// exempting messages by name — and an exemption by name is a rule waiting to be
+// worked around.
+//
+// This package boundary was introduced when the rule fired on HoldingObserved
+// during M7 and was right to.
+
+// HoldingObserved asserts that FDOS was told an account held a quantity of an
+// instrument (ADR-0011).
+//
+// An Observation, not an Occurrence. A broker statement is a report about the
+// world, not an event in it; recording a statement line as though it were a
+// trade fabricates a transaction that never took place, and once fabricated no
+// audit can tell the difference.
+message HoldingObserved {
+  fdos.kernel.v1.EntityId account = 1;
+  fdos.kernel.v1.EntityId instrument = 2;
+  fdos.kernel.v1.Quantity quantity = 3;
+}
