@@ -1,0 +1,14 @@
+github.com/FabioCaffarello/fdos/libs/contracts v0.1.0 h1:19lWHLhCMjesUAMy7pCKcVTJHGPII2UmpHk9A/QXtxQ=
+github.com/FabioCaffarello/fdos/libs/contracts v0.1.0/go.mod h1:zGK1Lyoke6ytPuDTQkCXzHkNLlLYpx1hqo3mQSy5NZA=
+github.com/FabioCaffarello/fdos/libs/kernel v0.2.0 h1:QiT6zjcHzeP4GidfN/REEokNLS7MM+J0y4j+pYuvXcg=
+github.com/FabioCaffarello/fdos/libs/kernel v0.2.0/go.mod h1:hM9SmGyiNMlaofqVcXPjIma1pSPOu7IWI5I06vEbr5Y=
+github.com/cockroachdb/apd/v3 v3.2.3 h1:4Zx+I3R35bFXMnltzmjP79i2cravE4jTRL6ps9Aux80=
+github.com/cockroachdb/apd/v3 v3.2.3/go.mod h1:klXJcjp+FffLTHlhIG69tezTDvdP065naDsHzKhYSqc=
+github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
+github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
+github.com/lib/pq v1.10.7 h1:p7ZhMD+KsSRozJr34udlUrhboJwWAgCg34+/ZZNvZZw=
+github.com/lib/pq v1.10.7/go.mod h1:AlVN5x4E4T544tWzH6hKfbfQvm3HdbOxrmggDNAPY9o=
+google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=
+google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
+pgregory.net/rapid v1.3.0 h1:vBvO0VSqti75J1jjYqpgPNBLKMd1+gxa9fYo7vk/Exc=
+pgregory.net/rapid v1.3.0/go.mod h1:dPlE4OBBxgXPqkP79flB6sJL1dx5azpI7HQ9MY9Z7uk=

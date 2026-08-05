@@ -72,15 +72,25 @@ not. Nothing does today.
 **What unblocks it:** a round-trip conformance test — domain → wire → domain
 must be the identity, and every wire field must be reachable.
 
-**Status after M6.** Still open, and now concrete rather than anticipated. The
-domain types exist (`libs/kernel`, `libs/ledger/domain`) and the wire types
-exist (`libs/contracts/gen`), and **nothing maps between them**. The M6 slice is
-end-to-end within the domain: observe → append → project → explain, with an
-in-memory store. No codec was written, so there is no drift yet — but also no
-mechanism preventing it the moment one is.
+**RESOLVED for the kernel types (M7).** `libs/kernel-wire` maps every kernel
+type and asserts two properties over generated values:
 
-The codec belongs in `libs/ledger/adapters/wire` and is the first thing M7
-should build.
+```
+domain -> wire -> domain   is the identity   (nothing lost encoding)
+wire   -> domain -> wire   is the identity   (nothing dropped decoding)
+```
+
+The second is what earns its keep: a codec that never reads `published_at`
+passes the first forever, because the value it fails to carry was never in the
+domain value it compares against. Both were negative-tested — dropping a field
+and mis-mapping a rounding mode each make the suite fail.
+
+Writing it needed exactly one addition to the kernel (`provenance.NewRef`),
+which is a good signal for the encapsulation.
+
+**Still open for the ledger types.** `Fact`, `Envelope` and `Correction` have no
+codec. `libs/ledger-wire` is the next module, depending on `libs/ledger@v0.1.0`
+and `libs/kernel-wire`, following the same two-property pattern.
 
 **Recorded in:** ADR-0018 Consequences, as the largest unpaid cost of that
 decision.
