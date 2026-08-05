@@ -95,3 +95,59 @@ is rung 5 — it tells a person something and relies on them acting.
 `exportSkills` with `includeBuiltIn: false` produces a tree matching `.context/`
 exactly — in which case versioning becomes correct and ADR-0019 should be
 revisited.
+
+---
+
+## B-005 — Dependency review on pull requests
+
+**Blocked on:** GitHub's Dependency Graph being unavailable on this repository.
+
+**Milestone:** M3 added `dependency-review` to `supply-chain.yml`, with a
+copyleft deny-list protecting the Apache-2.0 claim in `NOTICE` (ADR-0002).
+
+**Why it is blocked.** Every run fails with *"Dependency review is not supported
+on this repository. Please ensure that Dependency graph is enabled."* It cannot
+be turned on through the REST endpoints available here.
+
+**Delivered instead.** The job is disabled rather than left permanently red — a
+check that always fails trains people to ignore CI, which costs more than the
+check was worth. `make vuln-check` (govulncheck, reachable vulnerabilities) runs
+in the gate regardless, so dependency scanning is not absent; the PR-delta and
+licence view is.
+
+**What unblocks it:** enabling Dependency graph in repository settings, then
+removing the `false &&` guard in `.github/workflows/supply-chain.yml`.
+
+---
+
+## B-006 — Signed commits
+
+**Blocked on:** no SSH signing key registered with GitHub, and `gh` lacking the
+`admin:ssh_signing_key` scope to add one.
+
+**Milestone:** M5. `required_signatures` was applied in the `main` ruleset and
+**removed the same day**, because it blocked every merge.
+
+**Why it was removed.** The first pull request reached
+`mergeable_state=blocked` with a green `verify` and zero required approvals, and
+merged only with `--admin`. GitHub signs its own squash-merge commit, but that
+was not sufficient for the rule.
+
+A protection rule that must always be bypassed is worse than no rule: it trains
+the one person who can bypass it to reach for `--admin` by reflex, and the next
+rule that fires for a real reason gets the same treatment.
+
+**What unblocks it:**
+
+```sh
+gh auth refresh -h github.com -s admin:ssh_signing_key
+gh ssh-key add ~/.ssh/id_ed25519.pub --type signing
+git config gpg.format ssh
+git config user.signingkey ~/.ssh/id_ed25519.pub
+git config commit.gpgsign true
+```
+
+Then re-add `required_signatures` to the `main` ruleset.
+
+Constitution §6 says authorship is part of provenance. Until this is done, it is
+not — and `docs/branch-protection.md` says so rather than implying coverage.

@@ -19,7 +19,6 @@ Applies to the default branch.
 | Required status check: `verify` | `make verify` is the whole gate (ADR-0014) |
 | Strict status checks | The branch must be up to date, so the gate ran against what merges |
 | Required linear history | The bisect that finds a reproducibility regression years later needs it |
-| Required signatures | Authorship is part of provenance (Constitution §6) |
 | Conversation resolution required | An unresolved blocking finding must not merge |
 | Squash merge only | One logical change per commit, matching the commit-message convention |
 | No deletion | — |
@@ -60,16 +59,32 @@ This matters more than it looks. `release.yml` signs artifacts and attests build
 provenance against a tag; if the tag can move, the attestation describes
 something that is no longer there.
 
-## Signed commits, honestly
+## Signed commits — required, then removed
 
-The ruleset requires signatures. No local signing is configured, so branch
-commits are unsigned — GitHub signs its own squash-merge commit, which is what
-lands on `main`, so merges work.
+`required_signatures` was applied and **removed the same day**, because it
+blocked every merge.
 
-The requirement is therefore weaker than it reads: it guarantees that what is on
-`main` was produced by GitHub on behalf of an authenticated user, not that the
-author signed their work. Setting up SSH signing would close that gap and is
-cheap.
+No local signing is configured, so branch commits are unsigned. GitHub signs its
+own squash-merge commit, and the expectation was that this would satisfy the
+rule. It did not: the first pull request reached `mergeable_state=blocked` with a
+green `verify` and zero required approvals, and merged only with `--admin`.
+
+**A protection rule that must always be bypassed is worse than no rule.** It
+trains the one person who can bypass it to reach for `--admin` by reflex, and
+the next rule that fires for a real reason gets the same treatment.
+
+Restoring it needs three things, in order:
+
+```sh
+gh auth refresh -h github.com -s admin:ssh_signing_key   # account scope
+gh ssh-key add ~/.ssh/id_ed25519.pub --type signing
+git config gpg.format ssh
+git config user.signingkey ~/.ssh/id_ed25519.pub
+git config commit.gpgsign true
+```
+
+Then re-add the rule. Registered as B-006 in `docs/blocked.md`. Constitution §6
+says authorship is part of provenance; until this is done, it is not.
 
 ## Verification
 

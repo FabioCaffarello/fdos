@@ -29,9 +29,18 @@ env:
 
 jobs:
   dependency-review:
-    # Only meaningful on a pull request: it compares the dependency graph before
-    # and after the change.
-    if: github.event_name == 'pull_request'
+    # Disabled: the action requires GitHub's Dependency Graph, which is not
+    # available on this repository — every run fails with "Dependency review is
+    # not supported on this repository". A permanently red check trains people
+    # to ignore CI, which costs more than the check was worth.
+    #
+    # Re-enable by turning on Dependency graph in repository settings and
+    # removing the `false &&` below. Registered as B-005 in docs/blocked.md.
+    #
+    # `make vuln-check` (govulncheck, reachable vulnerabilities) runs in the
+    # gate regardless, so dependency scanning is not absent — only the
+    # PR-delta and licence view is.
+    if: false && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
