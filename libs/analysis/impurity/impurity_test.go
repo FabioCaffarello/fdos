@@ -16,3 +16,10 @@ func TestDomainPackagesRejectIOAndConcurrency(t *testing.T) {
 func TestAdapterPackagesAreUnaffected(t *testing.T) {
 	analysistest.Run(t, analysistest.TestData(), impurity.Analyzer, "ctx/adapters")
 }
+
+// Generated code is exempt. The kernel pattern matches
+// libs/contracts/gen/fdos/kernel/v1, and M6 found the analysers reporting every
+// protobuf message there. Correct on the substance, useless as a finding.
+func TestGeneratedCodeIsExempt(t *testing.T) {
+	analysistest.Run(t, analysistest.TestData(), impurity.Analyzer, "ctx/kernel")
+}
