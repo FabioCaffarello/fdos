@@ -192,7 +192,7 @@ an earlier target was not achievable.
 | # | Principle | Mechanism today | Rung | Target |
 |---|-----------|-----------------|------|--------|
 | 1 | Financial Truth | — | 6 | 1 (M6) |
-| 2 | Deterministic Engineering | `nondet`, `nofloat` analysers (`make analyze`) | 2 | 2 ✅ |
+| 2 | Deterministic Engineering | `nondet`, `nofloat` analysers, now covering the kernel (`make analyze`) | 2 | 2 ✅ |
 | 3 | Canonical Model First | `impurity`, `layering` analysers (`make analyze`) | 2 | 2 ✅ |
 | 4 | Immutable Ledger | — | 6 | 1 (M6) |
 | 5 | Event Sourcing | — | 6 | 1 (M6) |
@@ -222,6 +222,11 @@ M2.5 added the same kind of mechanism to the knowledge base: documentation that
 names a `make` target, a script, an ADR or a link now has to be describing
 something that exists (`make context-check`), and agent playbooks declare
 obligations that can be checked as data (`make agent-contract-check`).
+
+M6 found that the analysers did not cover `libs/kernel` at all — the one
+package holding `Money`, where the float ban matters most, was unchecked for
+four milestones (ADR-0021). Fixed, and the gap is recorded rather than quietly
+closed: a rule is only worth its coverage.
 
 M4 moved §11 to its target: `buf breaking` against `main` means an incompatible
 contract change fails the build. It also **corrected two targets downward**. §6

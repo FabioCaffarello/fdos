@@ -66,6 +66,9 @@ func run(pass *analysis.Pass) (any, error) {
 	}
 
 	for _, file := range pass.Files {
+		if scope.IsTestFile(pass.Fset.Position(file.Pos()).Filename) || scope.IsGenerated(file) {
+			continue
+		}
 		ast.Inspect(file, func(n ast.Node) bool {
 			switch node := n.(type) {
 			case *ast.CallExpr:

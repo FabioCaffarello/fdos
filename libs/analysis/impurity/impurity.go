@@ -64,6 +64,9 @@ func run(pass *analysis.Pass) (any, error) {
 	}
 
 	for _, file := range pass.Files {
+		if scope.IsTestFile(pass.Fset.Position(file.Pos()).Filename) || scope.IsGenerated(file) {
+			continue
+		}
 		checkImports(pass, file)
 
 		ast.Inspect(file, func(n ast.Node) bool {

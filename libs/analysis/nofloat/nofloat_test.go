@@ -17,3 +17,10 @@ func TestDomainPackagesRejectBinaryFloatingPoint(t *testing.T) {
 func TestAdapterPackagesAreUnaffected(t *testing.T) {
 	analysistest.Run(t, analysistest.TestData(), nofloat.Analyzer, "ctx/adapters")
 }
+
+// The shared kernel is checked too. It holds Money (ADR-0008), so a pattern
+// matching only `domain` would leave the one package where binary floating
+// point matters most entirely unchecked.
+func TestKernelIsCheckedLikeDomain(t *testing.T) {
+	analysistest.Run(t, analysistest.TestData(), nofloat.Analyzer, "ctx/kernel")
+}

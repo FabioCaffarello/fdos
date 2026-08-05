@@ -115,6 +115,9 @@ func run(pass *analysis.Pass) (any, error) {
 	}
 
 	for _, file := range pass.Files {
+		if strings.HasSuffix(pass.Fset.Position(file.Pos()).Filename, "_test.go") {
+			continue
+		}
 		for _, spec := range file.Imports {
 			path := strings.Trim(spec.Path.Value, `"`)
 			to, isFirstParty := classify(path)
