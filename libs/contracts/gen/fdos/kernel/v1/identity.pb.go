@@ -21,6 +21,62 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// EntityKind is what an EntityId identifies (ADR-0007).
+type EntityKind int32
+
+const (
+	EntityKind_ENTITY_KIND_UNSPECIFIED   EntityKind = 0
+	EntityKind_ENTITY_KIND_INSTRUMENT    EntityKind = 1
+	EntityKind_ENTITY_KIND_PARTY         EntityKind = 2
+	EntityKind_ENTITY_KIND_ACCOUNT       EntityKind = 3
+	EntityKind_ENTITY_KIND_LEDGER_STREAM EntityKind = 4
+)
+
+// Enum value maps for EntityKind.
+var (
+	EntityKind_name = map[int32]string{
+		0: "ENTITY_KIND_UNSPECIFIED",
+		1: "ENTITY_KIND_INSTRUMENT",
+		2: "ENTITY_KIND_PARTY",
+		3: "ENTITY_KIND_ACCOUNT",
+		4: "ENTITY_KIND_LEDGER_STREAM",
+	}
+	EntityKind_value = map[string]int32{
+		"ENTITY_KIND_UNSPECIFIED":   0,
+		"ENTITY_KIND_INSTRUMENT":    1,
+		"ENTITY_KIND_PARTY":         2,
+		"ENTITY_KIND_ACCOUNT":       3,
+		"ENTITY_KIND_LEDGER_STREAM": 4,
+	}
+)
+
+func (x EntityKind) Enum() *EntityKind {
+	p := new(EntityKind)
+	*p = x
+	return p
+}
+
+func (x EntityKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EntityKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_fdos_kernel_v1_identity_proto_enumTypes[0].Descriptor()
+}
+
+func (EntityKind) Type() protoreflect.EnumType {
+	return &file_fdos_kernel_v1_identity_proto_enumTypes[0]
+}
+
+func (x EntityKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EntityKind.Descriptor instead.
+func (EntityKind) EnumDescriptor() ([]byte, []int) {
+	return file_fdos_kernel_v1_identity_proto_rawDescGZIP(), []int{0}
+}
+
 // EntityId is an opaque internal identifier (RFC-0001, ADR-0007).
 //
 // Opaque means opaque: no consumer parses it, and no meaning may be recovered
@@ -28,8 +84,16 @@ const (
 // replaying the same input yields the same identifier — and never re-derived,
 // so it survives the underlying facts changing.
 type EntityId struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Value         string                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Value string                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	// What this identifier identifies.
+	//
+	// A closed set, unlike identifier schemes: kinds correspond to the aggregates
+	// fixed by ADR-0007, and adding one is a modelling decision that should
+	// require review. Carried on the wire so an identifier is self-describing —
+	// without it a decoder cannot rebuild the domain type, which is how this
+	// field came to exist.
+	Kind          EntityKind `protobuf:"varint,2,opt,name=kind,proto3,enum=fdos.kernel.v1.EntityKind" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -69,6 +133,13 @@ func (x *EntityId) GetValue() string {
 		return x.Value
 	}
 	return ""
+}
+
+func (x *EntityId) GetKind() EntityKind {
+	if x != nil {
+		return x.Kind
+	}
+	return EntityKind_ENTITY_KIND_UNSPECIFIED
 }
 
 // IdentifierAssertion is a sourced, timestamped claim that an entity is
@@ -248,9 +319,10 @@ var File_fdos_kernel_v1_identity_proto protoreflect.FileDescriptor
 
 const file_fdos_kernel_v1_identity_proto_rawDesc = "" +
 	"\n" +
-	"\x1dfdos/kernel/v1/identity.proto\x12\x0efdos.kernel.v1\x1a\x1ffdos/kernel/v1/provenance.proto\x1a\x1dfdos/kernel/v1/temporal.proto\" \n" +
+	"\x1dfdos/kernel/v1/identity.proto\x12\x0efdos.kernel.v1\x1a\x1ffdos/kernel/v1/provenance.proto\x1a\x1dfdos/kernel/v1/temporal.proto\"P\n" +
 	"\bEntityId\x12\x14\n" +
-	"\x05value\x18\x01 \x01(\tR\x05value\"\xf2\x01\n" +
+	"\x05value\x18\x01 \x01(\tR\x05value\x12.\n" +
+	"\x04kind\x18\x02 \x01(\x0e2\x1a.fdos.kernel.v1.EntityKindR\x04kind\"\xf2\x01\n" +
 	"\x13IdentifierAssertion\x120\n" +
 	"\x06entity\x18\x01 \x01(\v2\x18.fdos.kernel.v1.EntityIdR\x06entity\x12\x16\n" +
 	"\x06scheme\x18\x02 \x01(\tR\x06scheme\x12\x14\n" +
@@ -268,7 +340,14 @@ const file_fdos_kernel_v1_identity_proto_rawDesc = "" +
 	"confidence\x12:\n" +
 	"\n" +
 	"provenance\x18\x05 \x01(\v2\x1a.fdos.kernel.v1.ProvenanceR\n" +
-	"provenanceB\xc9\x01\n" +
+	"provenance*\x94\x01\n" +
+	"\n" +
+	"EntityKind\x12\x1b\n" +
+	"\x17ENTITY_KIND_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16ENTITY_KIND_INSTRUMENT\x10\x01\x12\x15\n" +
+	"\x11ENTITY_KIND_PARTY\x10\x02\x12\x17\n" +
+	"\x13ENTITY_KIND_ACCOUNT\x10\x03\x12\x1d\n" +
+	"\x19ENTITY_KIND_LEDGER_STREAM\x10\x04B\xc9\x01\n" +
 	"\x12com.fdos.kernel.v1B\rIdentityProtoP\x01ZJgithub.com/FabioCaffarello/fdos/libs/contracts/gen/fdos/kernel/v1;kernelv1\xa2\x02\x03FKX\xaa\x02\x0eFdos.Kernel.V1\xca\x02\x0eFdos\\Kernel\\V1\xe2\x02\x1aFdos\\Kernel\\V1\\GPBMetadata\xea\x02\x10Fdos::Kernel::V1b\x06proto3"
 
 var (
@@ -283,28 +362,31 @@ func file_fdos_kernel_v1_identity_proto_rawDescGZIP() []byte {
 	return file_fdos_kernel_v1_identity_proto_rawDescData
 }
 
+var file_fdos_kernel_v1_identity_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_fdos_kernel_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_fdos_kernel_v1_identity_proto_goTypes = []any{
-	(*EntityId)(nil),            // 0: fdos.kernel.v1.EntityId
-	(*IdentifierAssertion)(nil), // 1: fdos.kernel.v1.IdentifierAssertion
-	(*EntitiesIdentified)(nil),  // 2: fdos.kernel.v1.EntitiesIdentified
-	(*EffectiveInterval)(nil),   // 3: fdos.kernel.v1.EffectiveInterval
-	(*Provenance)(nil),          // 4: fdos.kernel.v1.Provenance
-	(Confidence)(0),             // 5: fdos.kernel.v1.Confidence
+	(EntityKind)(0),             // 0: fdos.kernel.v1.EntityKind
+	(*EntityId)(nil),            // 1: fdos.kernel.v1.EntityId
+	(*IdentifierAssertion)(nil), // 2: fdos.kernel.v1.IdentifierAssertion
+	(*EntitiesIdentified)(nil),  // 3: fdos.kernel.v1.EntitiesIdentified
+	(*EffectiveInterval)(nil),   // 4: fdos.kernel.v1.EffectiveInterval
+	(*Provenance)(nil),          // 5: fdos.kernel.v1.Provenance
+	(Confidence)(0),             // 6: fdos.kernel.v1.Confidence
 }
 var file_fdos_kernel_v1_identity_proto_depIdxs = []int32{
-	0, // 0: fdos.kernel.v1.IdentifierAssertion.entity:type_name -> fdos.kernel.v1.EntityId
-	3, // 1: fdos.kernel.v1.IdentifierAssertion.effective:type_name -> fdos.kernel.v1.EffectiveInterval
-	4, // 2: fdos.kernel.v1.IdentifierAssertion.provenance:type_name -> fdos.kernel.v1.Provenance
-	0, // 3: fdos.kernel.v1.EntitiesIdentified.canonical:type_name -> fdos.kernel.v1.EntityId
-	0, // 4: fdos.kernel.v1.EntitiesIdentified.alias:type_name -> fdos.kernel.v1.EntityId
-	5, // 5: fdos.kernel.v1.EntitiesIdentified.confidence:type_name -> fdos.kernel.v1.Confidence
-	4, // 6: fdos.kernel.v1.EntitiesIdentified.provenance:type_name -> fdos.kernel.v1.Provenance
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	0, // 0: fdos.kernel.v1.EntityId.kind:type_name -> fdos.kernel.v1.EntityKind
+	1, // 1: fdos.kernel.v1.IdentifierAssertion.entity:type_name -> fdos.kernel.v1.EntityId
+	4, // 2: fdos.kernel.v1.IdentifierAssertion.effective:type_name -> fdos.kernel.v1.EffectiveInterval
+	5, // 3: fdos.kernel.v1.IdentifierAssertion.provenance:type_name -> fdos.kernel.v1.Provenance
+	1, // 4: fdos.kernel.v1.EntitiesIdentified.canonical:type_name -> fdos.kernel.v1.EntityId
+	1, // 5: fdos.kernel.v1.EntitiesIdentified.alias:type_name -> fdos.kernel.v1.EntityId
+	6, // 6: fdos.kernel.v1.EntitiesIdentified.confidence:type_name -> fdos.kernel.v1.Confidence
+	5, // 7: fdos.kernel.v1.EntitiesIdentified.provenance:type_name -> fdos.kernel.v1.Provenance
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_fdos_kernel_v1_identity_proto_init() }
@@ -319,13 +401,14 @@ func file_fdos_kernel_v1_identity_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_fdos_kernel_v1_identity_proto_rawDesc), len(file_fdos_kernel_v1_identity_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_fdos_kernel_v1_identity_proto_goTypes,
 		DependencyIndexes: file_fdos_kernel_v1_identity_proto_depIdxs,
+		EnumInfos:         file_fdos_kernel_v1_identity_proto_enumTypes,
 		MessageInfos:      file_fdos_kernel_v1_identity_proto_msgTypes,
 	}.Build()
 	File_fdos_kernel_v1_identity_proto = out.File

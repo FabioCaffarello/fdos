@@ -28,7 +28,11 @@ ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
 PROTO_DIR="libs/contracts/proto"
-LEDGER_DIR="${PROTO_DIR}/fdos/ledger"
+# Fact packages only. Payloads live in fdos/ledger/payload/v* and carry no
+# envelope by construction: they sit inside Fact.payload, and the fact around
+# them carries the envelope for both. The alternative was exempting messages by
+# name, and an exemption by name is a rule waiting to be worked around.
+LEDGER_FACT_DIRS="${PROTO_DIR}/fdos/ledger/v1"
 GEN_DIR="libs/contracts/gen"
 
 failures=0
@@ -114,7 +118,7 @@ fi
 # unrepresentable — that guarantee belongs to the Go kernel types at M6. This
 # enforces it one rung lower: a ledger message with no Envelope field would
 # make provenance and bitemporality optional in practice (§6, §7).
-if [ -d "$LEDGER_DIR" ]; then
+if [ -d "$LEDGER_FACT_DIRS" ]; then
   while IFS= read -r file; do
     [ -f "$file" ] || continue
     while IFS= read -r message; do
@@ -130,7 +134,7 @@ if [ -d "$LEDGER_DIR" ]; then
         fail "envelope: ${file}: message ${message} has no Envelope — every ledger fact carries one (§6, §7)"
       fi
     done < <(grep -oE '^message [A-Za-z0-9_]+' "$file" | sed 's/^message //' || true)
-  done < <(find "$LEDGER_DIR" -name '*.proto' | sort)
+  done < <(find "$LEDGER_FACT_DIRS" -name '*.proto' | sort)
   printf '  envelope   every ledger fact carries an Envelope\n'
 fi
 
@@ -139,9 +143,9 @@ fi
 # Constitution §2: model output must never become financial truth. On the wire
 # that means no message the ledger accepts may reference ModelOutput. This makes
 # the boundary a schema property rather than a principle in a document.
-if [ -d "$LEDGER_DIR" ] && grep -rn 'ModelOutput' "$LEDGER_DIR" >/dev/null 2>&1; then
+if grep -rn 'ModelOutput' "${PROTO_DIR}/fdos/ledger" >/dev/null 2>&1; then
   fail "boundary: a ledger message references ModelOutput"
-  grep -rn 'ModelOutput' "$LEDGER_DIR" | sed 's/^/    /' >&2
+  grep -rn 'ModelOutput' "${PROTO_DIR}/fdos/ledger" | sed 's/^/    /' >&2
   fail "    a model may render a trace; it may not produce one (Constitution §2)"
 else
   printf '  boundary   no ledger message can carry model output\n'

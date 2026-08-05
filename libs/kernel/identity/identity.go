@@ -115,6 +115,47 @@ func MustDerive(kind Kind, seed string) ID {
 	return id
 }
 
+// Restore rebuilds an identifier from its opaque value.
+//
+// Not a parse: nothing is recovered from the structure, and the package
+// contract that identifiers are opaque still holds. This validates shape and
+// reattaches the kind, which is what a decoder needs and what Derive cannot do
+// — Derive assigns an identifier from a natural key, and re-deriving would
+// produce a different value for an entity whose key has since changed.
+//
+// Callers outside a codec should not need this. Resolution goes through
+// recorded identifier assertions (ADR-0007), not through rebuilding IDs.
+func Restore(kind Kind, value string) (ID, error) {
+	if !kind.Valid() {
+		return ID{}, fmt.Errorf("%w: %d", ErrUnknownKind, kind)
+	}
+	if !isCanonicalUUID(value) {
+		return ID{}, fmt.Errorf("%w: %q is not a canonical UUID", ErrEmptySeed, value)
+	}
+	return ID{kind: kind, value: value}, nil
+}
+
+// isCanonicalUUID checks 8-4-4-4-12 lowercase hex, which is what uuidV5
+// produces. Shape only: whether the entity exists is not a question this
+// package can answer.
+func isCanonicalUUID(s string) bool {
+	groups := strings.Split(s, "-")
+	if len(groups) != 5 {
+		return false
+	}
+	for i, want := range []int{8, 4, 4, 4, 12} {
+		if len(groups[i]) != want {
+			return false
+		}
+		for _, r := range groups[i] {
+			if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // Kind returns what this identifier identifies.
 func (id ID) Kind() Kind { return id.kind }
 

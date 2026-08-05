@@ -13,6 +13,24 @@ import "fdos/kernel/v1/temporal.proto";
 // so it survives the underlying facts changing.
 message EntityId {
   string value = 1;
+
+  // What this identifier identifies.
+  //
+  // A closed set, unlike identifier schemes: kinds correspond to the aggregates
+  // fixed by ADR-0007, and adding one is a modelling decision that should
+  // require review. Carried on the wire so an identifier is self-describing —
+  // without it a decoder cannot rebuild the domain type, which is how this
+  // field came to exist.
+  EntityKind kind = 2;
+}
+
+// EntityKind is what an EntityId identifies (ADR-0007).
+enum EntityKind {
+  ENTITY_KIND_UNSPECIFIED = 0;
+  ENTITY_KIND_INSTRUMENT = 1;
+  ENTITY_KIND_PARTY = 2;
+  ENTITY_KIND_ACCOUNT = 3;
+  ENTITY_KIND_LEDGER_STREAM = 4;
 }
 
 // IdentifierAssertion is a sourced, timestamped claim that an entity is
