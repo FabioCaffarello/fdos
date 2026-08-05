@@ -11,6 +11,14 @@ superseded_by: []
 
 # ADR-0003 — Go modules are published under `github.com/FabioCaffarello/fdos`
 
+> **Corrected by [ADR-0020](0020-open-core-boundary-and-pull-request-workflow.md),
+> not superseded.** The decision below stands. The note in it calling the
+> divergence between module path and repository name "deliberate" was factually
+> wrong: Go derives the repository *from* the module path, so
+> `github.com/FabioCaffarello/fdos` had to exist and did not — the proxy
+> returned 404 for every version. M5 renamed the repository to `fdos`. The text
+> is preserved unaltered, as ADR-0000 requires.
+
 ## Context
 
 Go module paths are load-bearing identifiers. They appear in every import

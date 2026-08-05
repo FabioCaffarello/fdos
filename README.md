@@ -10,11 +10,15 @@ reference data.
 
 That constraint is the whole design. Everything else follows from it.
 
-> **Status: M4 complete — contract surface. Next: M5 (open core boundary).**
-> The protobuf schemas are published and `buf breaking` gates them, so an
-> incompatible contract change fails the build. Provenance and bitemporality
-> left rung 6; explainability did not, and §15 records why. Domain code still
-> lands with the Ledger at M6.
+> **Status: M5 complete — open core boundary. Next: M6 (the Ledger).**
+> `libs/contracts/v0.1.0` is published and a module outside this repository
+> compiles against it through the Go proxy — no workspace, no `replace`, no
+> local path. `main` is protected and work moves through pull requests. Domain
+> code lands with the Ledger at M6.
+>
+> One acceptance criterion is **blocked**: no *private* repository has consumed
+> the contract yet, because `financial-connectors` is empty. See
+> [`docs/blocked.md`](docs/blocked.md) — B-001.
 
 ## Quick start
 
@@ -138,8 +142,10 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0014](docs/adr/0014-ci-runs-make-and-pins-everything.md) | CI invokes `make` and nothing else; every build input is pinned by digest |
 | [0015](docs/adr/0015-ai-engineering-policy.md) | AI-assisted work is bounded by enforced gates and a checkable knowledge base |
 | [0016](docs/adr/0016-developer-experience.md) | One entry point, one source of truth, and no second copy of the rules |
-| [0017](docs/adr/0017-claude-export-is-versioned.md) | The Claude Code export is versioned; `.context/` stays authoritative |
+| [0017](docs/adr/0017-claude-export-is-versioned.md) | ~~The Claude Code export is versioned~~ — superseded by 0019 |
 | [0018](docs/adr/0018-contract-surface-is-protobuf.md) | The contract surface is protobuf, and wire types are never domain types |
+| [0019](docs/adr/0019-claude-export-is-not-versioned.md) | The Claude Code export is not versioned |
+| [0020](docs/adr/0020-open-core-boundary-and-pull-request-workflow.md) | The repository is named `fdos`; the boundary is proven; work moves to pull requests |
 
 ### Requests for Comment
 
@@ -168,8 +174,8 @@ above it.
 | M2.5 | AI engineering — agent playbooks, prompt contracts, staleness checks ✅ |
 | M3.5 | Developer experience — devcontainer, IDE configuration, task ergonomics ✅ |
 | M4 | Contracts — protobuf schemas, `buf breaking` gate, generated Go SDK ✅ |
-| **M5** | Open core boundary — published contract modules, plugin conformance suite |
-| M6 | First domain — the Ledger, as a vertical slice validating everything above |
+| M5 | Open core boundary — published contract module, consumer proof, branch protection ✅ |
+| **M6** | First domain — the Ledger, as a vertical slice validating everything above |
 
 ## Open Core
 

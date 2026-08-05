@@ -1,76 +1,88 @@
-# Branch protection and merge queue
+# Branch and tag protection
 
-These are GitHub repository settings, not files. They cannot be enforced from
-this repository, which makes them the weakest link in the M3 gate: everything
-else is a mechanism, and this is a checklist.
+**Applied**, as two repository rulesets (ADR-0020). This document records what
+is configured and why, so a change made in the GitHub UI can be recognised as a
+change.
 
-Recorded here so the gap is visible and the intended configuration is
-reconstructible. Raising it above documentation requires committing a repository
-ruleset as JSON and applying it from a workflow with an admin token — which
-introduces an admin-scoped credential into CI, a worse risk than the one it
-solves. Deliberately not done (ADR-0014).
+It was previously a checklist with no mechanism. ADR-0014 declined to apply it
+from CI because that needs an admin-scoped token — a worse risk than the one it
+solves. Applying it by hand from an authenticated CLI does not need that token,
+so the objection did not transfer.
 
-## Required settings for `main`
+## `main` — branch ruleset
 
-### Protection
+Applies to the default branch.
 
-| Setting | Value | Why |
-|---------|-------|-----|
-| Require a pull request before merging | on | The ADR process is a review process; direct pushes bypass it |
-| Required approvals | 1 | Minimum meaningful review |
-| Dismiss stale approvals on new commits | on | An approval describes a diff, not a branch |
-| Require conversation resolution | on | An unresolved blocking finding must not merge |
-| Require linear history | on | The bisect that finds a reproducibility regression years later needs it |
-| Require signed commits | on | Authorship is part of provenance (Constitution §6) |
-| Allow force pushes | **off** | History is never rewritten (Constitution §4, ADR-0000) |
-| Allow deletions | **off** | — |
+| Rule | Why |
+|------|-----|
+| Pull request required | The ADR process is a review process; direct pushes bypass it |
+| Required status check: `verify` | `make verify` is the whole gate (ADR-0014) |
+| Strict status checks | The branch must be up to date, so the gate ran against what merges |
+| Required linear history | The bisect that finds a reproducibility regression years later needs it |
+| Required signatures | Authorship is part of provenance (Constitution §6) |
+| Conversation resolution required | An unresolved blocking finding must not merge |
+| Squash merge only | One logical change per commit, matching the commit-message convention |
+| No deletion | — |
+| No force push | History is never rewritten (Constitution §4, ADR-0000) |
 
-### Required status checks
+### Required approvals is 0
 
-Require branches to be up to date before merging, and require:
+Deliberate, and the one setting that looks wrong.
 
-```
-verify
-```
+A single-maintainer repository with one required approval cannot merge anything:
+the author cannot approve their own pull request. Zero still requires the pull
+request, the green status check and resolved conversations.
 
-That is the whole list, and deliberately so. `verify` runs `make verify`, which
-runs every mechanism the repository has (ADR-0014). Enumerating individual
-checks here would create a second place the gate is defined, and the two would
-drift.
+**It rises to 1 the day there is a second maintainer.** That is the only reason
+it is not 1 now.
+
+### Only `verify` is required
+
+Deliberately the whole list. `verify` runs `make verify`, which runs every
+mechanism the repository has. Enumerating individual checks here would create a
+second place the gate is defined, and the two would drift.
 
 `supply-chain / dependency-review` is **not** required: it only runs on pull
 requests that change dependencies, and a required check that does not always run
 blocks merges for the wrong reason.
 
-### Merge queue
+## `release-tags` — tag ruleset
 
-Enable, with:
+Applies to `refs/tags/libs/*/v*`.
 
-| Setting | Value |
-|---------|-------|
-| Merge method | Squash |
-| Build concurrency | 2 |
-| Only merge if the combined status is green | on |
+| Rule | Why |
+|------|-----|
+| No deletion | — |
+| No update | A moved release tag makes every provenance attestation pointing at it meaningless (ADR-0014) |
+| No force push | — |
 
-The queue matters more here than in most repositories: with one module per
-bounded context (ADR-0004), two pull requests can each pass on their own branch
-and fail once merged, because module resolution with `GOWORK=off` sees the other
-one's published state.
+This matters more than it looks. `release.yml` signs artifacts and attests build
+provenance against a tag; if the tag can move, the attestation describes
+something that is no longer there.
 
-## Tag protection
+## Signed commits, honestly
 
-Protect `libs/*/v*` — release tags trigger the signing and provenance workflow.
-A tag that can be moved makes every attestation pointing at it meaningless.
+The ruleset requires signatures. No local signing is configured, so branch
+commits are unsigned — GitHub signs its own squash-merge commit, which is what
+lands on `main`, so merges work.
+
+The requirement is therefore weaker than it reads: it guarantees that what is on
+`main` was produced by GitHub on behalf of an authenticated user, not that the
+author signed their work. Setting up SSH signing would close that gap and is
+cheap.
 
 ## Verification
 
-There is no automated check. To audit:
-
 ```sh
-gh api repos/FabioCaffarello/financial-data-operating-system/rulesets
-gh api repos/FabioCaffarello/financial-data-operating-system/branches/main/protection
+gh api repos/FabioCaffarello/fdos/rulesets -q '.[] | "\(.name)  \(.target)  \(.enforcement)"'
+gh api repos/FabioCaffarello/fdos/rulesets/<id>
 ```
 
-If the output disagrees with this document, one of the two is wrong — and the
-repository settings are what actually gate merges, so assume the document is
-stale and fix it.
+**Nothing checks that the live rulesets match this document.** They are
+repository state, not files: someone can change them in the UI with no commit
+here and nothing would notice. A check calling the API and diffing against
+committed JSON is feasible but needs a token in CI, which is the risk ADR-0014
+declined. Recorded as an open gap in ADR-0020 rather than solved badly.
+
+If the API output disagrees with this document, the repository settings are what
+actually gate merges — assume the document is stale and fix it.
