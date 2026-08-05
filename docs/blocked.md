@@ -213,12 +213,26 @@ carry the claim, and it requires the identity it exists to assert. That is not
 an oversight in the message — it is a **missing event**. An `EntityId` comes
 into existence at some moment, and FDOS had never said what that moment is.
 
-**What unblocks it:** RFC-0007 proposes that minting is a fact, a connector
-emits a claim, and resolution is a derivation recorded in the ledger rather than
-a precondition of appending. Acceptance produces the ADRs and
-`contracts@v0.3.0` (additive).
+**DECIDED.** RFC-0007 accepted, recorded by
+[ADR-0022](adr/0022-minting-an-identity-is-a-fact.md). Minting is a fact, a
+connector emits a claim, and resolution is a derivation recorded in the ledger
+rather than a precondition of appending.
 
-**Blocks downstream:** `fdos-connectors` B-009, C2 and C4.
+Released as `contracts@v0.3.0`, additive: `kernel.v1.IdentifierClaim`,
+`ledger.payload.v1.HoldingClaimed`, `ledger.payload.v1.EntityMinted`. No existing
+message changes shape. **`fdos-connectors` B-009, C2 and C4 are unblocked** — the
+hand-off shape exists.
 
-**Not impeding this repository.** Nothing in FDOS is waiting on it; the gap only
-binds when something outside FDOS tries to produce a fact.
+**Still open, and tracked here rather than closed with the decision:**
+
+- Go domain types for claims and mints, and the resolution derivation itself.
+  Nothing in FDOS produces a `HoldingObserved` from a `HoldingClaimed` yet.
+- Codec and round-trip conformance for the three new payloads. Until they exist
+  `encodePayload` rejects them — loudly, by design, rather than emitting an
+  empty `Any`. This is exactly the residual risk `libs/ledger-wire/README.md`
+  names: a payload type added without a conformance test would drift.
+- Nobody notices an unresolved claim. Claims accumulate and no `HoldingObserved`
+  is derived; who is told, and how, is operational and undecided.
+- The claim vocabulary is an open string. A connector emitting `"Ticker"` where
+  another emits `"ticker"` produces two entities, and nothing in the contract
+  prevents it.

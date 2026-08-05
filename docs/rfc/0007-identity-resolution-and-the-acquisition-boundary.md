@@ -1,13 +1,17 @@
 ---
 id: RFC-0007
 title: Identity resolution and the acquisition boundary
-status: Proposed
+status: Accepted
 date: 2026-08-05
 authors:
   - "@FabioCaffarello"
 ---
 
 # RFC-0007 — Identity resolution and the acquisition boundary
+
+> **Accepted**, recorded by
+> [ADR-0022](../adr/0022-minting-an-identity-is-a-fact.md), which also settles
+> the four open questions below.
 
 ## Summary
 

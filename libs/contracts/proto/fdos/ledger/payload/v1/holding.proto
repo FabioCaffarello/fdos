@@ -33,3 +33,20 @@ message HoldingObserved {
   fdos.kernel.v1.EntityId instrument = 2;
   fdos.kernel.v1.Quantity quantity = 3;
 }
+
+// HoldingClaimed is what a connector emits: a holding observation in which the
+// identities are claims rather than resolved entities (ADR-0022).
+//
+// A full fact with a full envelope, and it reaches the ledger. Resolution is a
+// derivation recorded afterwards, not a precondition of appending — requiring
+// resolution first would lose the raw claim, so a resolution later found wrong
+// could not be re-done from evidence.
+//
+// HoldingObserved is derived from this, never emitted directly by a connector,
+// and its provenance is Derived naming this fact and each IdentifierAssertion
+// consumed.
+message HoldingClaimed {
+  fdos.kernel.v1.IdentifierClaim account = 1;
+  fdos.kernel.v1.IdentifierClaim instrument = 2;
+  fdos.kernel.v1.Quantity quantity = 3;
+}

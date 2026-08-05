@@ -146,6 +146,8 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0018](docs/adr/0018-contract-surface-is-protobuf.md) | The contract surface is protobuf, and wire types are never domain types |
 | [0019](docs/adr/0019-claude-export-is-not-versioned.md) | The Claude Code export is not versioned |
 | [0020](docs/adr/0020-open-core-boundary-and-pull-request-workflow.md) | The repository is named `fdos`; the boundary is proven; work moves to pull requests |
+| [0021](docs/adr/0021-purity-rules-scope.md) | The purity rules cover the kernel and exempt test and generated files |
+| [0022](docs/adr/0022-minting-an-identity-is-a-fact.md) | Minting an identity is a fact, and a connector emits a claim |
 
 ### Requests for Comment
 
@@ -162,11 +164,7 @@ above it.
 | [0005](docs/rfc/0005-event-taxonomy-and-schema-evolution.md) | Occurrences vs Observations. Events are never migrated; upcasting happens on read and is pinned. | ADR-0011 |
 | [0006](docs/rfc/0006-explainability-as-a-return-type.md) | Calculations return their computation trace, so one that cannot explain itself does not compile. | ADR-0012 |
 
-**RFC-0007 — Proposed, awaiting review.**
-[Identity resolution and the acquisition boundary](docs/rfc/0007-identity-resolution-and-the-acquisition-boundary.md)
-answers [fdos#10](https://github.com/FabioCaffarello/fdos/issues/10): no published
-message can be fully populated by a connector, because minting an identity was
-never an event. Proposes that it becomes one.
+| [0007](docs/rfc/0007-identity-resolution-and-the-acquisition-boundary.md) | Minting an identity is a fact; a connector emits a claim and resolution is a recorded derivation. | ADR-0022 |
 
 ## Roadmap
 
