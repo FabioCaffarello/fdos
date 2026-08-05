@@ -28,13 +28,14 @@ vendor/
 # ---------------------------------------------------------------------------
 # Generated AI-tool exports
 # ---------------------------------------------------------------------------
-# .claude/ is produced by exporting .context/ for Claude Code and IS versioned
-# (ADR-0017, which reversed ADR-0016 on this point). .context/ stays authoritative; .claude/agents/ are symlinks into
-# it and cannot drift. .claude/skills/ are copies and include exporter built-ins
-# that .context/ pruned — a known cost the ADR records.
+# .claude/ is a generated export of .context/ for Claude Code, and is NOT
+# versioned (ADR-0019, superseding ADR-0017). The exporter re-adds its built-in
+# skills, so the tree carries ten skills .context/ never had — three of them
+# pruned by name with recorded reasons. One reviewed roster, and it lives in
+# .context/.
 #
-# Per-user state is not shared, same rule as .vscode/.
-.claude/settings.local.json
+# `make doctor` reports when the export is missing.
+.claude/
 
 # ---------------------------------------------------------------------------
 # Local tooling / editor state

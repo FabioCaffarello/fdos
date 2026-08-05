@@ -25,7 +25,7 @@ REQUIRED_KEYS="directory purpose owner allowed forbidden"
 # which is what ADR-0006 promised. `.claude/` was excluded while it was a
 # gitignored export; ADR-0017 versions it, so it declares a contract too —
 # generated is not a reason to be unaccountable once it is committed.
-EXCLUDED_DIRS=".git"
+EXCLUDED_DIRS=".git .claude"
 
 failures=0
 

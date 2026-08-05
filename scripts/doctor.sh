@@ -76,6 +76,17 @@ fi
 modules="$(./scripts/list-modules.sh 2>/dev/null | wc -l | tr -d ' ')"
 ok "modules" "$modules"
 
+# The Claude Code export is generated and not versioned (ADR-0019). Claude Code
+# loads agents and skills from .claude/ and nowhere else, so a fresh clone has
+# none until the export runs. That absence is silent; this makes it visible.
+if [ -d .claude/agents ] && [ -n "$(ls -A .claude/agents 2>/dev/null)" ]; then
+  ok "claude export" "$(ls .claude/agents 2>/dev/null | wc -l | tr -d ' ') agents, $(ls -d .claude/skills/*/ 2>/dev/null | wc -l | tr -d ' ') skills (generated, not versioned)"
+else
+  bad "claude export" "missing — Claude Code will load no agents or skills"
+  hint "export .context/ with the dotcontext MCP server: sync exportContext"
+  hint "the reviewed roster is .context/agents and .context/skills (ADR-0019)"
+fi
+
 if git remote get-url origin >/dev/null 2>&1; then
   ok "remote" "$(git remote get-url origin)"
 else

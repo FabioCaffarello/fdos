@@ -1,15 +1,22 @@
 ---
 id: ADR-0017
 title: The Claude Code export is versioned, and .context/ stays authoritative
-status: Accepted
+status: Superseded
 date: 2026-08-05
 deciders:
   - "@FabioCaffarello"
 supersedes: []
-superseded_by: []
+superseded_by:
+  - ADR-0019
 ---
 
 # ADR-0017 — The Claude Code export is versioned, and `.context/` stays authoritative
+
+> **Superseded by [ADR-0019](0019-claude-export-is-not-versioned.md).** The
+> observation below is correct — Claude Code loads agents and skills from
+> `.claude/` and nowhere else. The conclusion did not survive measurement: ten
+> of the seventeen skills that load were never in the reviewed roster. The text
+> is preserved unaltered, as ADR-0000 requires.
 
 ## Context
 

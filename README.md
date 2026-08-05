@@ -97,7 +97,6 @@ libs/ledger/domain/rule.go:14:37: nondet: time.Now in domain package;
 | `.context/` | Structured engineering knowledge for AI agents (ADR-0006). |
 | `.devcontainer/` | Reproducible dev environment. Declares no versions of its own. |
 | `.vscode/` | Editor settings that mirror what `make` enforces. Nothing personal. |
-| `.claude/` | Generated export of `.context/`. Agents are symlinks (ADR-0017). |
 
 Every directory declares its architectural contract in the front matter of its
 `README.md`: what it permits, what it forbids, and who owns it. `make
