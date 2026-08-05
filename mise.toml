@@ -1,0 +1,30 @@
+# FDOS toolchain pins.
+#
+# Determinism begins with the compiler. A build that depends on whichever
+# toolchain happens to be installed is not reproducible, and reproducibility
+# takes precedence over convenience (see docs/constitution.md).
+#
+# This file is the single source of truth for tool versions. `mise` is the
+# recommended installer, but it is NOT required: `make toolchain-check` parses
+# this file directly and validates whatever is on PATH. The pin is enforced
+# whether or not mise is present.
+#
+#   With mise:     mise install
+#   Without mise:  install the versions below by hand; make toolchain-check
+#                  will tell you if you got one wrong.
+
+[tools]
+# Required from M0.
+go = "1.26.2"
+
+# Required from M2 (determinism toolchain). Checked if present, not yet
+# mandatory — see scripts/toolchain-check.sh.
+golangci-lint = "2.12.2"
+
+# Required from M4 (contract substrate).
+buf = "1.68.4"
+
+[env]
+# Dependencies may never be resolved implicitly. An implicit `go mod tidy`
+# during a build is a silent, unreviewed change to the dependency graph.
+GOFLAGS = "-mod=readonly"

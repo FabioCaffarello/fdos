@@ -1,0 +1,32 @@
+# Code ownership for FDOS.
+#
+# Ownership is architectural, not administrative: the owner of a path is
+# accountable for the invariants that path is required to uphold.
+#
+# Each top-level directory also declares its owner in the `owner:` field of its
+# README front matter. `make contracts-check` fails if the two disagree, so this
+# file and the directory contracts cannot drift apart.
+
+*                       @FabioCaffarello
+
+# ---------------------------------------------------------------------------
+# Governance — changes here alter the rules the whole repository is judged by.
+# ---------------------------------------------------------------------------
+/docs/constitution.md   @FabioCaffarello
+/docs/adr/              @FabioCaffarello
+/docs/rfc/              @FabioCaffarello
+/CODEOWNERS             @FabioCaffarello
+
+# ---------------------------------------------------------------------------
+# Enforcement mechanisms — the code that makes the Constitution executable.
+# ---------------------------------------------------------------------------
+/scripts/               @FabioCaffarello
+/Makefile               @FabioCaffarello
+/mise.toml              @FabioCaffarello
+/.github/               @FabioCaffarello
+
+# ---------------------------------------------------------------------------
+# Domain and application code (populated from M2 onwards).
+# ---------------------------------------------------------------------------
+/libs/                  @FabioCaffarello
+/apps/                  @FabioCaffarello

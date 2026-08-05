@@ -1,0 +1,23 @@
+Financial Data Operating System (FDOS)
+Copyright 2026 Fabio Caffarello
+
+This product includes software developed as part of the Financial Data
+Operating System project.
+
+Licensed under the Apache License, Version 2.0. See the LICENSE file for the
+full terms.
+
+--------------------------------------------------------------------------------
+Open Core
+--------------------------------------------------------------------------------
+
+FDOS follows an Open Core architecture (see docs/constitution.md).
+
+This repository contains the public core: the engineering platform, canonical
+models, ledger, SDKs, APIs, documentation, knowledge graph and testing
+infrastructure. It is licensed under Apache-2.0.
+
+Private components — authenticated providers, browser connectors,
+institution-specific plugins, provider automation and private parsers — live in
+separate repositories and are NOT covered by this license. They depend on this
+repository exclusively through published, versioned contract modules.

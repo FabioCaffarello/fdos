@@ -1,0 +1,50 @@
+# ---------------------------------------------------------------------------
+# Build output
+# ---------------------------------------------------------------------------
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+*.prof
+
+# ---------------------------------------------------------------------------
+# Go
+# ---------------------------------------------------------------------------
+# go.work is committed deliberately (see ADR-0004): it is a developer-experience
+# convenience only. CI builds with GOWORK=off so that inter-module coupling is
+# always proven against published module versions, never against local paths.
+go.work.sum
+vendor/
+
+# ---------------------------------------------------------------------------
+# .dotcontext — only versioned classifications are tracked (see ADR-0001)
+# ---------------------------------------------------------------------------
+.dotcontext/plans/
+.dotcontext/cache/
+.dotcontext/runtime/
+.dotcontext/**/archive/
+
+# ---------------------------------------------------------------------------
+# Local tooling / editor state
+# ---------------------------------------------------------------------------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.shared.json
+*.swp
+
+# ---------------------------------------------------------------------------
+# OS
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------------------------------
+# Secrets — defence in depth; gitleaks is the enforcing mechanism (M3)
+# ---------------------------------------------------------------------------
+*.pem
+*.key
+.env
+.env.*
+!.env.example

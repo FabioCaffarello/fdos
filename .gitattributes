@@ -1,0 +1,25 @@
+# Normalise line endings on commit. Reproducibility begins with bytes:
+# a checkout that differs by platform cannot produce identical builds.
+* text=auto eol=lf
+
+*.go      text eol=lf diff=golang
+*.md      text eol=lf
+*.sh      text eol=lf
+*.yaml    text eol=lf
+*.yml     text eol=lf
+*.json    text eol=lf
+*.proto   text eol=lf
+Makefile  text eol=lf
+
+*.png     binary
+*.jpg     binary
+*.gif     binary
+*.pdf     binary
+*.ico     binary
+
+# Language statistics should reflect the domain, not generated or vendored code.
+docs/**        linguist-documentation
+examples/**    linguist-documentation
+**/*_pb.go     linguist-generated
+**/*.pb.go     linguist-generated
+vendor/**      linguist-vendored
