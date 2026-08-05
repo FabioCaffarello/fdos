@@ -32,7 +32,7 @@ var ErrNoTrace = errors.New("explained: value has no derivation")
 // Value is a computed financial value paired with the trace that produced it.
 //
 // The fields are unexported and there is no literal construction: a Value comes
-// from FromObservation or from a combinator, both of which produce a trace. A
+// from an entry point or from a combinator, both of which produce a trace. A
 // bare struct literal cannot manufacture an unexplained value.
 type Value[T any] struct {
 	value T
@@ -43,22 +43,50 @@ type Value[T any] struct {
 	record provenance.DerivationRecord
 }
 
+// FromDerivation is the entry point into the explained world for a value
+// computed from things that are not themselves explained values — typically
+// ledger facts, named by reference.
+//
+// The combinators extend a trace that already exists. This creates the first
+// one, and it takes the same `parameters` and `references` they do, because a
+// derivation from facts is no less parameterised than one from values.
+//
+// Getting this wrong is not a cosmetic loss. The parameters are part of the
+// content address, so a computation whose parameters are dropped shares an
+// address with every other computation over the same inputs — including ones
+// that produced a different answer. Two derivations that differ only by their
+// as-of coordinate are exactly that case.
+func FromDerivation[T any](
+	value T,
+	method provenance.Method,
+	inputs []string,
+	parameters []provenance.Parameter,
+	references []provenance.ReferenceBinding,
+	confidence provenance.Confidence,
+) (Value[T], error) {
+	record, err := provenance.NewDerivation(method, inputs, parameters, references, confidence)
+	if err != nil {
+		return Value[T]{}, err
+	}
+	return Value[T]{value: value, trace: record.Ref(), record: record}, nil
+}
+
 // FromObservation lifts an observed value into the explained world.
 //
 // The base case: a value FDOS was told rather than computed. Its derivation
 // records the interpreter that read it, so even an unprocessed observation can
 // say where it came from.
+//
+// An observation has no parameters by construction — nothing was chosen, so
+// there is nothing to record. A caller that finds itself wanting one is not
+// lifting an observation; it is deriving, and wants [FromDerivation].
 func FromObservation[T any](
 	value T,
 	method provenance.Method,
 	inputs []string,
 	confidence provenance.Confidence,
 ) (Value[T], error) {
-	record, err := provenance.NewDerivation(method, inputs, nil, nil, confidence)
-	if err != nil {
-		return Value[T]{}, err
-	}
-	return Value[T]{value: value, trace: record.Ref(), record: record}, nil
+	return FromDerivation(value, method, inputs, nil, nil, confidence)
 }
 
 // Value returns the computed value.
