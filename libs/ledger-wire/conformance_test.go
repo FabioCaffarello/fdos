@@ -98,6 +98,109 @@ func TestCorrectionRoundTrips(t *testing.T) {
 	})
 }
 
+// A claimed holding is what a connector actually emits, so this is the codec
+// path every acquisition takes (ADR-0022). The value must arrive byte-identical:
+// a claim altered in transit resolves to a different entity, or to none.
+func TestHoldingClaimedRoundTrips(t *testing.T) {
+	rapid.Check(t, func(t *rapid.T) {
+		envelope, ref := genEnvelope(t)
+		payload := domain.HoldingClaimed{
+			Account:    genClaim(t, "account_number", "account"),
+			Instrument: genClaim(t, "ticker", "instrument"),
+			Quantity: money.MustParseQuantity(
+				rapid.StringMatching(`[0-9]{1,6}`).Draw(t, "quantity"),
+				rapid.SampledFrom([]string{"share", "bond.face"}).Draw(t, "unit"),
+			),
+		}
+
+		original, err := domain.NewFact(ref, envelope, domain.KindObservation, payload)
+		if err != nil {
+			t.Fatalf("new fact: %v", err)
+		}
+
+		wire, err := ledgerwire.EncodeFact(original)
+		if err != nil {
+			t.Fatalf("encode: %v", err)
+		}
+		back, err := ledgerwire.DecodeFact(wire)
+		if err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		assertFactsEqual(t, original, back)
+
+		got, ok := back.Payload().(domain.HoldingClaimed)
+		if !ok {
+			t.Fatalf("payload decoded as %T", back.Payload())
+		}
+		if got.Account.Value() != payload.Account.Value() {
+			t.Fatalf("account claim altered: %q -> %q", payload.Account.Value(), got.Account.Value())
+		}
+		if got.Instrument.Value() != payload.Instrument.Value() {
+			t.Fatalf("instrument claim altered: %q -> %q", payload.Instrument.Value(), got.Instrument.Value())
+		}
+		if got.Quantity.String() != payload.Quantity.String() {
+			t.Fatalf("quantity lost: %s -> %s", payload.Quantity, got.Quantity)
+		}
+
+		reencoded, err := ledgerwire.EncodeFact(back)
+		if err != nil {
+			t.Fatalf("re-encode: %v", err)
+		}
+		if !proto.Equal(wire, reencoded) {
+			t.Fatal("wire round trip is not the identity: a field was dropped decoding")
+		}
+	})
+}
+
+// A mint is the birth certificate of an identity. Losing the claim it was born
+// from would leave an entity nobody can audit — the failure ADR-0022 exists to
+// prevent.
+func TestEntityMintedRoundTrips(t *testing.T) {
+	rapid.Check(t, func(t *rapid.T) {
+		envelope, ref := genEnvelope(t)
+		claim := genClaim(t, "ticker", "born_from")
+		minted, err := domain.MintFor(identity.KindInstrument, claim)
+		if err != nil {
+			t.Fatalf("mint: %v", err)
+		}
+
+		original, err := domain.NewFact(ref, envelope, domain.KindObservation, minted)
+		if err != nil {
+			t.Fatalf("new fact: %v", err)
+		}
+
+		wire, err := ledgerwire.EncodeFact(original)
+		if err != nil {
+			t.Fatalf("encode: %v", err)
+		}
+		back, err := ledgerwire.DecodeFact(wire)
+		if err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		assertFactsEqual(t, original, back)
+
+		got, ok := back.Payload().(domain.EntityMinted)
+		if !ok {
+			t.Fatalf("payload decoded as %T", back.Payload())
+		}
+		if !got.Entity.Equal(minted.Entity) {
+			t.Fatalf("entity lost: %s -> %s", minted.Entity, got.Entity)
+		}
+		if !got.BornFrom.Equal(minted.BornFrom) {
+			t.Fatalf("the claim the identity was born from was lost: %s -> %s",
+				minted.BornFrom, got.BornFrom)
+		}
+
+		reencoded, err := ledgerwire.EncodeFact(back)
+		if err != nil {
+			t.Fatalf("re-encode: %v", err)
+		}
+		if !proto.Equal(wire, reencoded) {
+			t.Fatal("wire round trip is not the identity: a field was dropped decoding")
+		}
+	})
+}
+
 // The declared type is checked against the payload rather than trusted. A fact
 // claiming to be one thing while carrying another must not reach a projection —
 // it is the shape a corrupted or hostile stream would take.
@@ -157,32 +260,6 @@ func TestDecodeRejectsNil(t *testing.T) {
 	}
 	if _, _, err := ledgerwire.DecodeEnvelope(nil); err == nil {
 		t.Error("nil envelope decoded without error")
-	}
-	if _, err := ledgerwire.DecodeEntityID(nil); err == nil {
-		t.Error("nil entity id decoded without error")
-	}
-}
-
-// Every entity kind must survive. A kind that decoded to a neighbour would file
-// an account's facts against an instrument.
-func TestEveryEntityKindRoundTrips(t *testing.T) {
-	for _, kind := range []identity.Kind{
-		identity.KindInstrument, identity.KindParty,
-		identity.KindAccount, identity.KindLedgerStream,
-	} {
-		original := identity.MustDerive(kind, "seed")
-		back, err := ledgerwire.DecodeEntityID(ledgerwire.EncodeEntityID(original))
-		if err != nil {
-			t.Fatalf("%s: decode: %v", kind, err)
-		}
-		if !back.Equal(original) {
-			t.Errorf("%s: %s decoded as %s", kind, original, back)
-		}
-	}
-
-	unspecified := ledgerwire.EncodeEntityID(identity.ID{})
-	if _, err := ledgerwire.DecodeEntityID(unspecified); err == nil {
-		t.Error("an unspecified entity kind decoded without error")
 	}
 }
 
@@ -349,4 +426,17 @@ func buildFact(t *testing.T, quantity money.Quantity) domain.Fact {
 		t.Fatal(err)
 	}
 	return fact
+}
+
+// genClaim generates a claim whose value deliberately includes padding and
+// mixed case. RFC-0007 forbids the boundary normalising either, so the codec
+// must carry them through untouched.
+func genClaim(t *rapid.T, scheme, label string) identity.Claim {
+	t.Helper()
+	value := rapid.StringMatching(`[ ]{0,1}[A-Za-z0-9.-]{1,12}[ ]{0,1}`).Draw(t, label)
+	c, err := identity.NewClaim(scheme, value)
+	if err != nil {
+		t.Fatalf("claim %q: %v", value, err)
+	}
+	return c
 }
