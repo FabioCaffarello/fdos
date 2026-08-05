@@ -162,6 +162,12 @@ above it.
 | [0005](docs/rfc/0005-event-taxonomy-and-schema-evolution.md) | Occurrences vs Observations. Events are never migrated; upcasting happens on read and is pinned. | ADR-0011 |
 | [0006](docs/rfc/0006-explainability-as-a-return-type.md) | Calculations return their computation trace, so one that cannot explain itself does not compile. | ADR-0012 |
 
+**RFC-0007 — Proposed, awaiting review.**
+[Identity resolution and the acquisition boundary](docs/rfc/0007-identity-resolution-and-the-acquisition-boundary.md)
+answers [fdos#10](https://github.com/FabioCaffarello/fdos/issues/10): no published
+message can be fully populated by a connector, because minting an identity was
+never an event. Proposes that it becomes one.
+
 ## Roadmap
 
 | Milestone | Objective |

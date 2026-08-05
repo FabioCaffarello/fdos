@@ -183,3 +183,42 @@ Then re-add `required_signatures` to the `main` ruleset.
 
 Constitution §6 says authorship is part of provenance. Until this is done, it is
 not — and `docs/branch-protection.md` says so rather than implying coverage.
+
+---
+
+## B-007 — No published message is fully populatable by a connector
+
+**Blocked on:** acceptance of [RFC-0007](rfc/0007-identity-resolution-and-the-acquisition-boundary.md).
+
+**Raised by:** `fdos-connectors`, as [fdos#10](https://github.com/FabioCaffarello/fdos/issues/10),
+against `contracts@v0.2.0`.
+
+**The finding, verified independently here** by enumerating every published
+message rather than by reading the ones under discussion. Exactly three carry
+identity, and all three require it:
+
+| Message | Requires |
+|---------|----------|
+| `ledger.payload.v1.HoldingObserved` | 2 × `EntityId` |
+| `kernel.v1.IdentifierAssertion` | 1 × `EntityId` |
+| `kernel.v1.EntitiesIdentified` | 2 × `EntityId` |
+
+A connector knows `{scheme: "ticker", value: "PETR4"}` and cannot know an
+`EntityId`. It must not mint one: ADR-0007 records that deriving from a ticker
+makes the ticker the primary key, and a reused ticker then merges two
+instruments silently inside an append-only ledger.
+
+**The circularity underneath.** `IdentifierAssertion` is the shape that would
+carry the claim, and it requires the identity it exists to assert. That is not
+an oversight in the message — it is a **missing event**. An `EntityId` comes
+into existence at some moment, and FDOS had never said what that moment is.
+
+**What unblocks it:** RFC-0007 proposes that minting is a fact, a connector
+emits a claim, and resolution is a derivation recorded in the ledger rather than
+a precondition of appending. Acceptance produces the ADRs and
+`contracts@v0.3.0` (additive).
+
+**Blocks downstream:** `fdos-connectors` B-009, C2 and C4.
+
+**Not impeding this repository.** Nothing in FDOS is waiting on it; the gap only
+binds when something outside FDOS tries to produce a fact.
