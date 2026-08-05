@@ -22,6 +22,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	kernelv1 "github.com/FabioCaffarello/fdos/libs/contracts/gen/fdos/kernel/v1"
+	"github.com/FabioCaffarello/fdos/libs/kernel/identity"
 	"github.com/FabioCaffarello/fdos/libs/kernel/money"
 	"github.com/FabioCaffarello/fdos/libs/kernel/provenance"
 	"github.com/FabioCaffarello/fdos/libs/kernel/temporal"
@@ -35,6 +36,92 @@ import (
 // it and an invalid value — so every decode goes through them rather than
 // setting fields.
 var ErrMalformed = errors.New("kernelwire: malformed wire value")
+
+// --- identity ----------------------------------------------------------------
+
+// EncodeEntityID converts an entity identifier to its wire form.
+//
+// The kind travels with the value. Without it a decoder cannot rebuild the
+// domain type, and re-deriving is not an option — `Derive` assigns an identifier
+// from a natural key, and an entity whose key has since changed would get a
+// different one (ADR-0007).
+func EncodeEntityID(id identity.ID) *kernelv1.EntityId {
+	return &kernelv1.EntityId{Value: id.String(), Kind: encodeEntityKind(id.Kind())}
+}
+
+// DecodeEntityID rebuilds an entity identifier.
+func DecodeEntityID(w *kernelv1.EntityId) (identity.ID, error) {
+	if w == nil {
+		return identity.ID{}, fmt.Errorf("%w: entity id is nil", ErrMalformed)
+	}
+	kind, err := decodeEntityKind(w.GetKind())
+	if err != nil {
+		return identity.ID{}, err
+	}
+	id, err := identity.Restore(kind, w.GetValue())
+	if err != nil {
+		return identity.ID{}, fmt.Errorf("%w: %w", ErrMalformed, err)
+	}
+	return id, nil
+}
+
+func encodeEntityKind(k identity.Kind) kernelv1.EntityKind {
+	switch k {
+	case identity.KindInstrument:
+		return kernelv1.EntityKind_ENTITY_KIND_INSTRUMENT
+	case identity.KindParty:
+		return kernelv1.EntityKind_ENTITY_KIND_PARTY
+	case identity.KindAccount:
+		return kernelv1.EntityKind_ENTITY_KIND_ACCOUNT
+	case identity.KindLedgerStream:
+		return kernelv1.EntityKind_ENTITY_KIND_LEDGER_STREAM
+	default:
+		return kernelv1.EntityKind_ENTITY_KIND_UNSPECIFIED
+	}
+}
+
+func decodeEntityKind(w kernelv1.EntityKind) (identity.Kind, error) {
+	switch w {
+	case kernelv1.EntityKind_ENTITY_KIND_INSTRUMENT:
+		return identity.KindInstrument, nil
+	case kernelv1.EntityKind_ENTITY_KIND_PARTY:
+		return identity.KindParty, nil
+	case kernelv1.EntityKind_ENTITY_KIND_ACCOUNT:
+		return identity.KindAccount, nil
+	case kernelv1.EntityKind_ENTITY_KIND_LEDGER_STREAM:
+		return identity.KindLedgerStream, nil
+	default:
+		return identity.KindUnspecified,
+			fmt.Errorf("%w: entity kind %s has no domain equivalent", ErrMalformed, w)
+	}
+}
+
+// EncodeClaim converts an identifier claim to its wire form.
+//
+// The value travels verbatim. A codec that trimmed or case-folded it would be
+// making a resolution decision in a place with no provenance, and RFC-0007 is
+// explicit that canonicalisation is a resolver's decision to record rather than
+// a parser's to make silently.
+func EncodeClaim(c identity.Claim) *kernelv1.IdentifierClaim {
+	return &kernelv1.IdentifierClaim{Scheme: c.Scheme(), Value: c.Value()}
+}
+
+// DecodeClaim rebuilds an identifier claim.
+//
+// Through the domain constructor, which rejects a non-canonical scheme. A claim
+// arriving with scheme "Ticker" is a claim FDOS cannot compare byte-exactly to
+// one written "ticker", and admitting it would let two entities exist for one
+// thing.
+func DecodeClaim(w *kernelv1.IdentifierClaim) (identity.Claim, error) {
+	if w == nil {
+		return identity.Claim{}, fmt.Errorf("%w: identifier claim is nil", ErrMalformed)
+	}
+	c, err := identity.NewClaim(w.GetScheme(), w.GetValue())
+	if err != nil {
+		return identity.Claim{}, fmt.Errorf("%w: %w", ErrMalformed, err)
+	}
+	return c, nil
+}
 
 // --- money -------------------------------------------------------------------
 
