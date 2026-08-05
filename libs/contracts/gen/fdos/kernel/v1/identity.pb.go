@@ -142,6 +142,75 @@ func (x *EntityId) GetKind() EntityKind {
 	return EntityKind_ENTITY_KIND_UNSPECIFIED
 }
 
+// IdentifierClaim is a {scheme, value} pair exactly as a provider stated it.
+//
+// It is NOT an identity, and it deliberately carries no EntityId. This is the
+// shape a connector can fully populate: it reads "PETR4" off a page and knows
+// {scheme: "ticker", value: "PETR4"} and nothing more (ADR-0022).
+//
+// A connector must not mint an EntityId from one. Deriving an identity from a
+// ticker makes the ticker the primary key, and the day the external world
+// reuses one, two different things merge silently inside an append-only ledger
+// (ADR-0007).
+//
+// The value is verbatim. "PETR4 " with a trailing space is what the provider
+// said; canonicalising it is a resolver's decision to record, not a parser's to
+// make silently.
+type IdentifierClaim struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Open vocabulary: "isin", "cusip", "figi", "ticker", "account_number". An
+	// enum would force a public contract release for every new institution a
+	// private connector supports.
+	Scheme        string `protobuf:"bytes,1,opt,name=scheme,proto3" json:"scheme,omitempty"`
+	Value         string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IdentifierClaim) Reset() {
+	*x = IdentifierClaim{}
+	mi := &file_fdos_kernel_v1_identity_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IdentifierClaim) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IdentifierClaim) ProtoMessage() {}
+
+func (x *IdentifierClaim) ProtoReflect() protoreflect.Message {
+	mi := &file_fdos_kernel_v1_identity_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IdentifierClaim.ProtoReflect.Descriptor instead.
+func (*IdentifierClaim) Descriptor() ([]byte, []int) {
+	return file_fdos_kernel_v1_identity_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *IdentifierClaim) GetScheme() string {
+	if x != nil {
+		return x.Scheme
+	}
+	return ""
+}
+
+func (x *IdentifierClaim) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
 // IdentifierAssertion is a sourced, timestamped claim that an entity is
 // identified by some external scheme value.
 //
@@ -166,7 +235,7 @@ type IdentifierAssertion struct {
 
 func (x *IdentifierAssertion) Reset() {
 	*x = IdentifierAssertion{}
-	mi := &file_fdos_kernel_v1_identity_proto_msgTypes[1]
+	mi := &file_fdos_kernel_v1_identity_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -178,7 +247,7 @@ func (x *IdentifierAssertion) String() string {
 func (*IdentifierAssertion) ProtoMessage() {}
 
 func (x *IdentifierAssertion) ProtoReflect() protoreflect.Message {
-	mi := &file_fdos_kernel_v1_identity_proto_msgTypes[1]
+	mi := &file_fdos_kernel_v1_identity_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -191,7 +260,7 @@ func (x *IdentifierAssertion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IdentifierAssertion.ProtoReflect.Descriptor instead.
 func (*IdentifierAssertion) Descriptor() ([]byte, []int) {
-	return file_fdos_kernel_v1_identity_proto_rawDescGZIP(), []int{1}
+	return file_fdos_kernel_v1_identity_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *IdentifierAssertion) GetEntity() *EntityId {
@@ -252,7 +321,7 @@ type EntitiesIdentified struct {
 
 func (x *EntitiesIdentified) Reset() {
 	*x = EntitiesIdentified{}
-	mi := &file_fdos_kernel_v1_identity_proto_msgTypes[2]
+	mi := &file_fdos_kernel_v1_identity_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -264,7 +333,7 @@ func (x *EntitiesIdentified) String() string {
 func (*EntitiesIdentified) ProtoMessage() {}
 
 func (x *EntitiesIdentified) ProtoReflect() protoreflect.Message {
-	mi := &file_fdos_kernel_v1_identity_proto_msgTypes[2]
+	mi := &file_fdos_kernel_v1_identity_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -277,7 +346,7 @@ func (x *EntitiesIdentified) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntitiesIdentified.ProtoReflect.Descriptor instead.
 func (*EntitiesIdentified) Descriptor() ([]byte, []int) {
-	return file_fdos_kernel_v1_identity_proto_rawDescGZIP(), []int{2}
+	return file_fdos_kernel_v1_identity_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *EntitiesIdentified) GetCanonical() *EntityId {
@@ -322,7 +391,10 @@ const file_fdos_kernel_v1_identity_proto_rawDesc = "" +
 	"\x1dfdos/kernel/v1/identity.proto\x12\x0efdos.kernel.v1\x1a\x1ffdos/kernel/v1/provenance.proto\x1a\x1dfdos/kernel/v1/temporal.proto\"P\n" +
 	"\bEntityId\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\x12.\n" +
-	"\x04kind\x18\x02 \x01(\x0e2\x1a.fdos.kernel.v1.EntityKindR\x04kind\"\xf2\x01\n" +
+	"\x04kind\x18\x02 \x01(\x0e2\x1a.fdos.kernel.v1.EntityKindR\x04kind\"?\n" +
+	"\x0fIdentifierClaim\x12\x16\n" +
+	"\x06scheme\x18\x01 \x01(\tR\x06scheme\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\"\xf2\x01\n" +
 	"\x13IdentifierAssertion\x120\n" +
 	"\x06entity\x18\x01 \x01(\v2\x18.fdos.kernel.v1.EntityIdR\x06entity\x12\x16\n" +
 	"\x06scheme\x18\x02 \x01(\tR\x06scheme\x12\x14\n" +
@@ -363,25 +435,26 @@ func file_fdos_kernel_v1_identity_proto_rawDescGZIP() []byte {
 }
 
 var file_fdos_kernel_v1_identity_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_fdos_kernel_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_fdos_kernel_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_fdos_kernel_v1_identity_proto_goTypes = []any{
 	(EntityKind)(0),             // 0: fdos.kernel.v1.EntityKind
 	(*EntityId)(nil),            // 1: fdos.kernel.v1.EntityId
-	(*IdentifierAssertion)(nil), // 2: fdos.kernel.v1.IdentifierAssertion
-	(*EntitiesIdentified)(nil),  // 3: fdos.kernel.v1.EntitiesIdentified
-	(*EffectiveInterval)(nil),   // 4: fdos.kernel.v1.EffectiveInterval
-	(*Provenance)(nil),          // 5: fdos.kernel.v1.Provenance
-	(Confidence)(0),             // 6: fdos.kernel.v1.Confidence
+	(*IdentifierClaim)(nil),     // 2: fdos.kernel.v1.IdentifierClaim
+	(*IdentifierAssertion)(nil), // 3: fdos.kernel.v1.IdentifierAssertion
+	(*EntitiesIdentified)(nil),  // 4: fdos.kernel.v1.EntitiesIdentified
+	(*EffectiveInterval)(nil),   // 5: fdos.kernel.v1.EffectiveInterval
+	(*Provenance)(nil),          // 6: fdos.kernel.v1.Provenance
+	(Confidence)(0),             // 7: fdos.kernel.v1.Confidence
 }
 var file_fdos_kernel_v1_identity_proto_depIdxs = []int32{
 	0, // 0: fdos.kernel.v1.EntityId.kind:type_name -> fdos.kernel.v1.EntityKind
 	1, // 1: fdos.kernel.v1.IdentifierAssertion.entity:type_name -> fdos.kernel.v1.EntityId
-	4, // 2: fdos.kernel.v1.IdentifierAssertion.effective:type_name -> fdos.kernel.v1.EffectiveInterval
-	5, // 3: fdos.kernel.v1.IdentifierAssertion.provenance:type_name -> fdos.kernel.v1.Provenance
+	5, // 2: fdos.kernel.v1.IdentifierAssertion.effective:type_name -> fdos.kernel.v1.EffectiveInterval
+	6, // 3: fdos.kernel.v1.IdentifierAssertion.provenance:type_name -> fdos.kernel.v1.Provenance
 	1, // 4: fdos.kernel.v1.EntitiesIdentified.canonical:type_name -> fdos.kernel.v1.EntityId
 	1, // 5: fdos.kernel.v1.EntitiesIdentified.alias:type_name -> fdos.kernel.v1.EntityId
-	6, // 6: fdos.kernel.v1.EntitiesIdentified.confidence:type_name -> fdos.kernel.v1.Confidence
-	5, // 7: fdos.kernel.v1.EntitiesIdentified.provenance:type_name -> fdos.kernel.v1.Provenance
+	7, // 6: fdos.kernel.v1.EntitiesIdentified.confidence:type_name -> fdos.kernel.v1.Confidence
+	6, // 7: fdos.kernel.v1.EntitiesIdentified.provenance:type_name -> fdos.kernel.v1.Provenance
 	8, // [8:8] is the sub-list for method output_type
 	8, // [8:8] is the sub-list for method input_type
 	8, // [8:8] is the sub-list for extension type_name
@@ -402,7 +475,7 @@ func file_fdos_kernel_v1_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_fdos_kernel_v1_identity_proto_rawDesc), len(file_fdos_kernel_v1_identity_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

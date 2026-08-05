@@ -33,6 +33,29 @@ enum EntityKind {
   ENTITY_KIND_LEDGER_STREAM = 4;
 }
 
+// IdentifierClaim is a {scheme, value} pair exactly as a provider stated it.
+//
+// It is NOT an identity, and it deliberately carries no EntityId. This is the
+// shape a connector can fully populate: it reads "PETR4" off a page and knows
+// {scheme: "ticker", value: "PETR4"} and nothing more (ADR-0022).
+//
+// A connector must not mint an EntityId from one. Deriving an identity from a
+// ticker makes the ticker the primary key, and the day the external world
+// reuses one, two different things merge silently inside an append-only ledger
+// (ADR-0007).
+//
+// The value is verbatim. "PETR4 " with a trailing space is what the provider
+// said; canonicalising it is a resolver's decision to record, not a parser's to
+// make silently.
+message IdentifierClaim {
+  // Open vocabulary: "isin", "cusip", "figi", "ticker", "account_number". An
+  // enum would force a public contract release for every new institution a
+  // private connector supports.
+  string scheme = 1;
+
+  string value = 2;
+}
+
 // IdentifierAssertion is a sourced, timestamped claim that an entity is
 // identified by some external scheme value.
 //

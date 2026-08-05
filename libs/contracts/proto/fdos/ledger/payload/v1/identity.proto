@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package fdos.ledger.payload.v1;
+
+import "fdos/kernel/v1/identity.proto";
+
+// EntityMinted records that an EntityId came into existence, and the claim it
+// was born from (ADR-0022).
+//
+// The missing event. Before this, an EntityId appeared in a fact with no
+// recorded origin — unauditable, and a wrong one unretractable because there
+// was nothing to retract.
+//
+// ADR-0007 had already settled the analogous case: "merging is recorded, never
+// performed, so a wrong merge is reversible by a new fact that retracts it."
+// The same argument governs minting.
+//
+// Exactly one mint per EntityId. That cardinality is why this is a separate
+// fact from IdentifierAssertion, which is many-per-entity from many sources:
+// merging the two would make "the assertion that happens to be first" special,
+// and orderings change as facts arrive with earlier effective times.
+message EntityMinted {
+  fdos.kernel.v1.EntityId entity = 1;
+
+  // The claim that caused the mint. An account minted from operator
+  // configuration before any fetch carries the configured claim, not a
+  // provider's.
+  fdos.kernel.v1.IdentifierClaim born_from = 2;
+}

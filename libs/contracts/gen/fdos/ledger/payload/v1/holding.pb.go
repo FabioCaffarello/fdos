@@ -89,6 +89,77 @@ func (x *HoldingObserved) GetQuantity() *v1.Quantity {
 	return nil
 }
 
+// HoldingClaimed is what a connector emits: a holding observation in which the
+// identities are claims rather than resolved entities (ADR-0022).
+//
+// A full fact with a full envelope, and it reaches the ledger. Resolution is a
+// derivation recorded afterwards, not a precondition of appending — requiring
+// resolution first would lose the raw claim, so a resolution later found wrong
+// could not be re-done from evidence.
+//
+// HoldingObserved is derived from this, never emitted directly by a connector,
+// and its provenance is Derived naming this fact and each IdentifierAssertion
+// consumed.
+type HoldingClaimed struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Account       *v1.IdentifierClaim    `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	Instrument    *v1.IdentifierClaim    `protobuf:"bytes,2,opt,name=instrument,proto3" json:"instrument,omitempty"`
+	Quantity      *v1.Quantity           `protobuf:"bytes,3,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HoldingClaimed) Reset() {
+	*x = HoldingClaimed{}
+	mi := &file_fdos_ledger_payload_v1_holding_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HoldingClaimed) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HoldingClaimed) ProtoMessage() {}
+
+func (x *HoldingClaimed) ProtoReflect() protoreflect.Message {
+	mi := &file_fdos_ledger_payload_v1_holding_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HoldingClaimed.ProtoReflect.Descriptor instead.
+func (*HoldingClaimed) Descriptor() ([]byte, []int) {
+	return file_fdos_ledger_payload_v1_holding_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *HoldingClaimed) GetAccount() *v1.IdentifierClaim {
+	if x != nil {
+		return x.Account
+	}
+	return nil
+}
+
+func (x *HoldingClaimed) GetInstrument() *v1.IdentifierClaim {
+	if x != nil {
+		return x.Instrument
+	}
+	return nil
+}
+
+func (x *HoldingClaimed) GetQuantity() *v1.Quantity {
+	if x != nil {
+		return x.Quantity
+	}
+	return nil
+}
+
 var File_fdos_ledger_payload_v1_holding_proto protoreflect.FileDescriptor
 
 const file_fdos_ledger_payload_v1_holding_proto_rawDesc = "" +
@@ -98,6 +169,12 @@ const file_fdos_ledger_payload_v1_holding_proto_rawDesc = "" +
 	"\aaccount\x18\x01 \x01(\v2\x18.fdos.kernel.v1.EntityIdR\aaccount\x128\n" +
 	"\n" +
 	"instrument\x18\x02 \x01(\v2\x18.fdos.kernel.v1.EntityIdR\n" +
+	"instrument\x124\n" +
+	"\bquantity\x18\x03 \x01(\v2\x18.fdos.kernel.v1.QuantityR\bquantity\"\xc2\x01\n" +
+	"\x0eHoldingClaimed\x129\n" +
+	"\aaccount\x18\x01 \x01(\v2\x1f.fdos.kernel.v1.IdentifierClaimR\aaccount\x12?\n" +
+	"\n" +
+	"instrument\x18\x02 \x01(\v2\x1f.fdos.kernel.v1.IdentifierClaimR\n" +
 	"instrument\x124\n" +
 	"\bquantity\x18\x03 \x01(\v2\x18.fdos.kernel.v1.QuantityR\bquantityB\xfa\x01\n" +
 	"\x1acom.fdos.ledger.payload.v1B\fHoldingProtoP\x01ZSgithub.com/FabioCaffarello/fdos/libs/contracts/gen/fdos/ledger/payload/v1;payloadv1\xa2\x02\x03FLP\xaa\x02\x16Fdos.Ledger.Payload.V1\xca\x02\x16Fdos\\Ledger\\Payload\\V1\xe2\x02\"Fdos\\Ledger\\Payload\\V1\\GPBMetadata\xea\x02\x19Fdos::Ledger::Payload::V1b\x06proto3"
@@ -114,21 +191,26 @@ func file_fdos_ledger_payload_v1_holding_proto_rawDescGZIP() []byte {
 	return file_fdos_ledger_payload_v1_holding_proto_rawDescData
 }
 
-var file_fdos_ledger_payload_v1_holding_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_fdos_ledger_payload_v1_holding_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_fdos_ledger_payload_v1_holding_proto_goTypes = []any{
-	(*HoldingObserved)(nil), // 0: fdos.ledger.payload.v1.HoldingObserved
-	(*v1.EntityId)(nil),     // 1: fdos.kernel.v1.EntityId
-	(*v1.Quantity)(nil),     // 2: fdos.kernel.v1.Quantity
+	(*HoldingObserved)(nil),    // 0: fdos.ledger.payload.v1.HoldingObserved
+	(*HoldingClaimed)(nil),     // 1: fdos.ledger.payload.v1.HoldingClaimed
+	(*v1.EntityId)(nil),        // 2: fdos.kernel.v1.EntityId
+	(*v1.Quantity)(nil),        // 3: fdos.kernel.v1.Quantity
+	(*v1.IdentifierClaim)(nil), // 4: fdos.kernel.v1.IdentifierClaim
 }
 var file_fdos_ledger_payload_v1_holding_proto_depIdxs = []int32{
-	1, // 0: fdos.ledger.payload.v1.HoldingObserved.account:type_name -> fdos.kernel.v1.EntityId
-	1, // 1: fdos.ledger.payload.v1.HoldingObserved.instrument:type_name -> fdos.kernel.v1.EntityId
-	2, // 2: fdos.ledger.payload.v1.HoldingObserved.quantity:type_name -> fdos.kernel.v1.Quantity
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	2, // 0: fdos.ledger.payload.v1.HoldingObserved.account:type_name -> fdos.kernel.v1.EntityId
+	2, // 1: fdos.ledger.payload.v1.HoldingObserved.instrument:type_name -> fdos.kernel.v1.EntityId
+	3, // 2: fdos.ledger.payload.v1.HoldingObserved.quantity:type_name -> fdos.kernel.v1.Quantity
+	4, // 3: fdos.ledger.payload.v1.HoldingClaimed.account:type_name -> fdos.kernel.v1.IdentifierClaim
+	4, // 4: fdos.ledger.payload.v1.HoldingClaimed.instrument:type_name -> fdos.kernel.v1.IdentifierClaim
+	3, // 5: fdos.ledger.payload.v1.HoldingClaimed.quantity:type_name -> fdos.kernel.v1.Quantity
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_fdos_ledger_payload_v1_holding_proto_init() }
@@ -142,7 +224,7 @@ func file_fdos_ledger_payload_v1_holding_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_fdos_ledger_payload_v1_holding_proto_rawDesc), len(file_fdos_ledger_payload_v1_holding_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
