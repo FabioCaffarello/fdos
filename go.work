@@ -4,4 +4,5 @@ use (
 	./libs/analysis
 	./libs/contracts
 	./libs/kernel
+	./libs/ledger
 )

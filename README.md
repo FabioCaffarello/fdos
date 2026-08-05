@@ -10,11 +10,11 @@ reference data.
 
 That constraint is the whole design. Everything else follows from it.
 
-> **Status: M5 complete — open core boundary. Next: M6 (the Ledger).**
-> `libs/contracts/v0.1.0` is published and a module outside this repository
-> compiles against it through the Go proxy — no workspace, no `replace`, no
-> local path. `main` is protected and work moves through pull requests. Domain
-> code lands with the Ledger at M6.
+> **Status: M6 complete — the Ledger vertical slice. Next: M7.**
+> Six principles reached **rung 1** — the type system. A position cannot be
+> stored, a stream cannot be shortened, a fact cannot omit provenance, a query
+> cannot omit its as-of, and a projection returns `Explained[Position]` or
+> nothing at all.
 >
 > One acceptance criterion is **blocked**: no *private* repository has consumed
 > the contract yet, because `financial-connectors` is empty. See
@@ -175,7 +175,7 @@ above it.
 | M3.5 | Developer experience — devcontainer, IDE configuration, task ergonomics ✅ |
 | M4 | Contracts — protobuf schemas, `buf breaking` gate, generated Go SDK ✅ |
 | M5 | Open core boundary — published contract module, consumer proof, branch protection ✅ |
-| **M6** | First domain — the Ledger, as a vertical slice validating everything above |
+| M6 | First domain — the Ledger, as a vertical slice validating everything above ✅ |
 
 ## Open Core
 
