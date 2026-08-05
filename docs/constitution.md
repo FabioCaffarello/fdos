@@ -191,14 +191,14 @@ an earlier target was not achievable.
 
 | # | Principle | Mechanism today | Rung | Target |
 |---|-----------|-----------------|------|--------|
-| 1 | Financial Truth | — | 6 | 1 (M6) |
+| 1 | Financial Truth | `Position` is a projection return value with no persist path (`domain.ProjectPosition`) | 1 | 1 ✅ |
 | 2 | Deterministic Engineering | `nondet`, `nofloat` analysers, now covering the kernel (`make analyze`) | 2 | 2 ✅ |
 | 3 | Canonical Model First | `impurity`, `layering` analysers (`make analyze`) | 2 | 2 ✅ |
-| 4 | Immutable Ledger | — | 6 | 1 (M6) |
-| 5 | Event Sourcing | — | 6 | 1 (M6) |
-| 6 | Provenance | envelope required on every ledger fact (`make proto-check`) | 3 | 1 (M6) |
-| 7 | Temporal Modeling | both axes in the fact envelope (`make proto-check`) | 3 | 1 (M6) |
-| 8 | Explainability | derivation carried on the wire; `Explained[T]` not yet built | 5 | 1 (M6, unproven) |
+| 4 | Immutable Ledger | `Stream` has Append and no Update or Delete; the store refuses a shorter stream | 1 | 1 ✅ |
+| 5 | Event Sourcing | every read is a fold over facts; there is no state to read from | 1 | 1 ✅ |
+| 6 | Provenance | `NewEnvelope` requires it and `Provenance` has no incomplete constructor | 1 | 1 ✅ |
+| 7 | Temporal Modeling | both axes required; knowledge time never a caller's parameter; no query without an `AsOf` | 1 | 1 ✅ |
+| 8 | Explainability | `ProjectPosition` returns `Explained[Position]`; combinators build the trace | 1 | 1 ✅ |
 | 9 | Reproducibility | double-build diff, tidy and toolchain pins, SHA-pinned build inputs (`make repro-check`, `tidy-check`, `toolchain-check`, `action-pinning-check`) | 3 | 3 ✅ |
 | 10 | Domain Before Infrastructure | `impurity`, `layering` analysers + directory contracts | 2 | 2 ✅ |
 | 11 | Contracts Over Implementations | `layering` plus `buf breaking` against main (`make proto-check`) | 3 | 3 ✅ |
@@ -223,7 +223,16 @@ names a `make` target, a script, an ADR or a link now has to be describing
 something that exists (`make context-check`), and agent playbooks declare
 obligations that can be checked as data (`make agent-contract-check`).
 
-M6 found that the analysers did not cover `libs/kernel` at all — the one
+M6 moved six principles to rung 1 — the type system — which is where the
+Constitution has been pointing since M0. §1 has no position type to store, §4
+has a Stream with no Update, §6 has no constructor that omits provenance, §7 has
+no query without an `AsOf`, and §8 has a projection that returns
+`Explained[Position]` or nothing at all.
+
+Seven principles were at rung 6 after M4. Two remain: §12 (Knowledge Graph,
+target rung 5 — it is a projection strategy, not an invariant) and nothing else.
+
+M6 also found that the analysers did not cover `libs/kernel` at all — the one
 package holding `Money`, where the float ban matters most, was unchecked for
 four milestones (ADR-0021). Fixed, and the gap is recorded rather than quietly
 closed: a rule is only worth its coverage.

@@ -69,8 +69,18 @@ and holds mutable state, all of which the `impurity` analyser correctly rejects.
 **Why it matters.** Wire and domain will diverge unless something proves they do
 not. Nothing does today.
 
-**What unblocks it:** a round-trip conformance test at M6 — domain → wire →
-domain must be the identity, and every wire field must be reachable.
+**What unblocks it:** a round-trip conformance test — domain → wire → domain
+must be the identity, and every wire field must be reachable.
+
+**Status after M6.** Still open, and now concrete rather than anticipated. The
+domain types exist (`libs/kernel`, `libs/ledger/domain`) and the wire types
+exist (`libs/contracts/gen`), and **nothing maps between them**. The M6 slice is
+end-to-end within the domain: observe → append → project → explain, with an
+in-memory store. No codec was written, so there is no drift yet — but also no
+mechanism preventing it the moment one is.
+
+The codec belongs in `libs/ledger/adapters/wire` and is the first thing M7
+should build.
 
 **Recorded in:** ADR-0018 Consequences, as the largest unpaid cost of that
 decision.
