@@ -50,6 +50,21 @@ still marked `Accepted`. ADR-0001 → ADR-0006 is the worked example in the repo
 
 Fixing a typo is fine. Changing what a decision *says* is not.
 
+## Pull requests
+
+Since M5, `main` is protected: direct pushes are impossible and every change
+goes through a pull request with a green `verify` (ADR-0020).
+
+`.github/pull_request_template.md` carries what the gate cannot check — whether
+an ADR is required, whether a new mechanism was negative-tested, whether §15
+moved, and whether documentation was updated in the same change.
+
+Required approvals is 0 because a solo repository with one required approval
+cannot merge anything. It rises to 1 with a second maintainer.
+
+Work that cannot be finished is registered in `docs/blocked.md` rather than
+silently omitted: an unrecorded block becomes an unexplained gap.
+
 ## Verification
 
 ```sh

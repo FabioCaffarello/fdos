@@ -22,7 +22,7 @@ is open, the answer is almost always whichever option preserves reproducibility.
 
 ## Current state
 
-**M4 complete — contract surface.** Next: M5 (open core boundary).
+**M5 complete — open core boundary.** Next: M6 (the Ledger).
 
 There is **no domain code and no application**. The Go in the repository is
 `libs/analysis` — the four static analysers that turn Constitution principles
@@ -92,8 +92,8 @@ rather than assumed (ADR-0004).
 | M2.5 ✅ | AI engineering — prompt contracts, knowledge-base staleness checks |
 | M3.5 ✅ | Developer experience — devcontainer, editor config, `make doctor` |
 | M4 ✅ | Contracts — protobuf schemas, `buf breaking` gate, generated Go SDK |
-| **M5** | Open core boundary |
-| M6 | First domain — the Ledger, as a vertical slice |
+| M5 ✅ | Open core boundary — published module, consumer proof, branch protection |
+| **M6** | First domain — the Ledger, as a vertical slice |
 
 M1.5 produces **no code**. That is its purpose.
 

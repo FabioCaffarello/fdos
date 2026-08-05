@@ -91,7 +91,7 @@ if git remote get-url origin >/dev/null 2>&1; then
   ok "remote" "$(git remote get-url origin)"
 else
   bad "remote" "no origin configured"
-  hint "git remote add origin git@github.com:FabioCaffarello/financial-data-operating-system.git"
+  hint "git remote add origin git@github.com:FabioCaffarello/fdos.git"
 fi
 
 # --- environment that silently changes behaviour -----------------------------

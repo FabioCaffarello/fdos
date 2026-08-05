@@ -27,7 +27,7 @@ endef
 
 .PHONY: help bootstrap hooks doctor verify affected \
 	toolchain-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
-	context-check agent-contract-check proto-check proto-gen proto-lint proto-breaking \
+	context-check agent-contract-check proto-check proto-gen proto-lint proto-breaking consumer-check \
 	fmt fmt-check vet lint test analyze repro-check tidy tidy-check build clean \
 	secrets-check secrets-check-staged vuln-check
 
@@ -109,6 +109,13 @@ proto-lint: ## Lint the proto schemas
 
 proto-breaking: ## Check the contract surface for breaking changes against main
 	@buf breaking --against '.git#branch=main'
+
+# Deliberately NOT in `verify`: it depends on a published tag having propagated
+# to a third-party proxy, which is latency the per-commit gate must not inherit
+# (ADR-0018 made that mistake once with a remote codegen plugin). Runs at
+# release and on demand.
+consumer-check: ## Prove the published contract module is consumable from outside
+	@$(SCRIPTS_DIR)/verify-consumer.sh $(VERSION)
 
 # ---------------------------------------------------------------------------
 # Security and supply chain

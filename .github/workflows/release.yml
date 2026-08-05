@@ -94,6 +94,12 @@ jobs:
       - name: Sign the checksum manifest
         run: cosign sign-blob --yes --output-signature dist/SHA256SUMS.sig dist/SHA256SUMS
 
+      # The tag is published; prove it is consumable from outside the repository
+      # before the release is announced (ADR-0020). Not in `make verify`: it
+      # depends on proxy propagation, which the per-commit gate must not inherit.
+      - name: Prove the published module is consumable
+        run: make consumer-check
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
