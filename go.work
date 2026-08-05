@@ -6,4 +6,5 @@ use (
 	./libs/kernel
 	./libs/kernel-wire
 	./libs/ledger
+	./libs/ledger-wire
 )
