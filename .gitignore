@@ -38,6 +38,17 @@ vendor/
 .claude/
 
 # ---------------------------------------------------------------------------
+# Property-test failure artifacts
+# ---------------------------------------------------------------------------
+# rapid writes testdata/rapid/*.fail so a found counterexample replays. Useful
+# while debugging, wrong to commit: most of ours come from deliberately breaking
+# a codec to prove the test can go red, and that debris is meaningless later.
+#
+# A genuine regression becomes a written test case with a name and a reason —
+# not an opaque seed file.
+**/testdata/rapid/
+
+# ---------------------------------------------------------------------------
 # Local tooling / editor state
 # ---------------------------------------------------------------------------
 # JetBrains project files mix shared configuration with machine-local paths and
