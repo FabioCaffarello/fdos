@@ -7,7 +7,9 @@ import (
 	"google.golang.org/protobuf/proto"
 	"pgregory.net/rapid"
 
+	kernelv1 "github.com/FabioCaffarello/fdos/libs/contracts/gen/fdos/kernel/v1"
 	kernelwire "github.com/FabioCaffarello/fdos/libs/kernel-wire"
+	"github.com/FabioCaffarello/fdos/libs/kernel/identity"
 	"github.com/FabioCaffarello/fdos/libs/kernel/money"
 	"github.com/FabioCaffarello/fdos/libs/kernel/provenance"
 	"github.com/FabioCaffarello/fdos/libs/kernel/temporal"
@@ -28,6 +30,103 @@ import (
 // codec that never reads `published_at` would pass the first property forever,
 // because the value it fails to carry was never in the domain value it compares
 // against.
+
+func TestEntityIDRoundTrips(t *testing.T) {
+	rapid.Check(t, func(t *rapid.T) {
+		kind := rapid.SampledFrom([]identity.Kind{
+			identity.KindInstrument,
+			identity.KindParty,
+			identity.KindAccount,
+			identity.KindLedgerStream,
+		}).Draw(t, "kind")
+		original := identity.MustDerive(kind, rapid.StringMatching(`[a-z0-9:_-]{1,24}`).Draw(t, "seed"))
+
+		wire := kernelwire.EncodeEntityID(original)
+		back, err := kernelwire.DecodeEntityID(wire)
+		if err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+
+		if !back.Equal(original) {
+			t.Fatalf("domain round trip lost information: %s/%s -> %s/%s",
+				original.Kind(), original, back.Kind(), back)
+		}
+		if !proto.Equal(wire, kernelwire.EncodeEntityID(back)) {
+			t.Fatal("wire round trip is not the identity: a field was dropped decoding")
+		}
+	})
+}
+
+// A claim's value travels verbatim, which is the property RFC-0007 rests on: a
+// codec that trimmed or case-folded would be making a resolution decision in a
+// place with no provenance. The generator deliberately produces values with
+// leading and trailing space, mixed case, and inner punctuation.
+func TestClaimRoundTripsVerbatim(t *testing.T) {
+	rapid.Check(t, func(t *rapid.T) {
+		scheme := rapid.StringMatching(`[a-z][a-z0-9_]{0,15}`).Draw(t, "scheme")
+		value := rapid.StringMatching(`[ ]{0,2}[A-Za-z0-9./ -]{1,24}[ ]{0,2}`).Draw(t, "value")
+
+		// Not a skip: the generators produce a canonical scheme and a non-empty
+		// value by construction, so every draw must be constructible. A skip here
+		// would let the property pass while covering nothing.
+		original, err := identity.NewClaim(scheme, value)
+		if err != nil {
+			t.Fatalf("generated claim is not constructible: %v", err)
+		}
+
+		wire := kernelwire.EncodeClaim(original)
+		back, dErr := kernelwire.DecodeClaim(wire)
+		if dErr != nil {
+			t.Fatalf("decode: %v", dErr)
+		}
+
+		if back.Value() != original.Value() {
+			t.Fatalf("the codec altered the value: %q -> %q", original.Value(), back.Value())
+		}
+		if !back.Equal(original) {
+			t.Fatalf("domain round trip lost information: %s -> %s", original, back)
+		}
+		if !proto.Equal(wire, kernelwire.EncodeClaim(back)) {
+			t.Fatal("wire round trip is not the identity: a field was dropped decoding")
+		}
+	})
+}
+
+// The decoder goes through the domain constructor, so a scheme the domain
+// refuses cannot enter through the wire. "Ticker" and "ticker" would be two
+// entities for one thing.
+func TestDecodingRejectsANonCanonicalScheme(t *testing.T) {
+	for _, scheme := range []string{"Ticker", "TICKER", " ticker", "ticker "} {
+		if _, err := kernelwire.DecodeClaim(&kernelv1.IdentifierClaim{
+			Scheme: scheme, Value: "PETR4",
+		}); err == nil {
+			t.Errorf("scheme %q decoded without error", scheme)
+		}
+	}
+}
+
+// Every entity kind must survive. A kind that decoded to a neighbour would file
+// an account's facts against an instrument.
+func TestEveryEntityKindRoundTrips(t *testing.T) {
+	for _, kind := range []identity.Kind{
+		identity.KindInstrument, identity.KindParty,
+		identity.KindAccount, identity.KindLedgerStream,
+	} {
+		original := identity.MustDerive(kind, "seed")
+		back, err := kernelwire.DecodeEntityID(kernelwire.EncodeEntityID(original))
+		if err != nil {
+			t.Fatalf("%s: decode: %v", kind, err)
+		}
+		if !back.Equal(original) {
+			t.Errorf("%s: %s decoded as %s", kind, original, back)
+		}
+	}
+
+	unspecified := kernelwire.EncodeEntityID(identity.ID{})
+	if _, err := kernelwire.DecodeEntityID(unspecified); err == nil {
+		t.Error("an unspecified entity kind decoded without error")
+	}
+}
 
 func TestMoneyRoundTrips(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
@@ -275,6 +374,12 @@ func TestDecodingRejectsInvalidWireValues(t *testing.T) {
 	}
 	if _, err := kernelwire.DecodeCoordinates(nil); err == nil {
 		t.Error("nil coordinates decoded without error")
+	}
+	if _, err := kernelwire.DecodeEntityID(nil); err == nil {
+		t.Error("nil entity id decoded without error")
+	}
+	if _, err := kernelwire.DecodeClaim(nil); err == nil {
+		t.Error("nil claim decoded without error")
 	}
 }
 

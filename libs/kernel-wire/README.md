@@ -43,6 +43,24 @@ Both are property-tested over generated values, and both were **negative-tested*
 deliberately dropping `published_at` and deliberately mapping a rounding mode to
 the wrong enum each make the suite fail.
 
+## Identity, and a claim's value
+
+`identity.ID` and `identity.Claim` are kernel types and `EntityId` and
+`IdentifierClaim` are kernel messages, so their codecs are here. They lived in
+`libs/ledger-wire` until M7, which was placement by convenience rather than by
+contract — `EntityId` was already in `contracts@v0.1.0`, which this module
+already pinned, so nothing ever required it.
+
+A claim's **value** travels verbatim. A codec that trimmed or case-folded it
+would be making a resolution decision in a place with no provenance, and
+RFC-0007 is explicit that canonicalisation is a resolver's decision to record
+rather than a parser's to make silently. `TestClaimRoundTripsVerbatim` generates
+values with padding and mixed case for exactly that reason.
+
+A claim's **scheme** is the opposite: it is FDOS vocabulary, so the decoder
+refuses a non-canonical one rather than normalising it. `"Ticker"` admitted
+alongside `"ticker"` is two entities for one thing.
+
 ## Decoding is validation
 
 Every decode goes through the domain constructor rather than assigning fields. A
