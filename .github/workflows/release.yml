@@ -1,0 +1,109 @@
+# Release: signed binaries with an SBOM and verifiable build provenance.
+#
+# Scope. Go *libraries* are not released by this workflow — a Go module release
+# is a tag, and the module proxy serves it from the repository (ADR-0004). The
+# only artifact FDOS produces today is `fdoslint`, the binary that enforces the
+# domain purity rules. It is released so that a consumer can verify the tool
+# gating their code was built from the source it claims.
+#
+# Tags follow Go's subdirectory-prefixed convention: libs/<name>/vX.Y.Z.
+#
+# Every action is pinned to a full commit SHA.
+
+name: release
+
+on:
+  push:
+    tags:
+      - "libs/*/v*"
+
+permissions:
+  contents: read
+
+env:
+  GOWORK: "off"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write # create the release
+      id-token: write # keyless signing and provenance
+      attestations: write # attach the provenance attestation
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Resolve pinned Go version
+        id: pins
+        run: echo "go=$(scripts/tool-version.sh go)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ steps.pins.outputs.go }}
+          check-latest: false
+
+      # The gate runs again on the exact tagged commit. A release built from
+      # source that has not passed verification is a release of unknown code.
+      - name: make verify
+        run: make verify
+
+      - name: Build release binaries
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cd libs/analysis
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+            os="${target%/*}"; arch="${target#*/}"
+            GOOS="$os" GOARCH="$arch" go build \
+              -trimpath -buildvcs=false \
+              -o "../../dist/fdoslint_${os}_${arch}" \
+              ./cmd/fdoslint
+          done
+          cd ../..
+          ( cd dist && sha256sum fdoslint_* > SHA256SUMS )
+          cat dist/SHA256SUMS
+
+      # `make repro-check` already proves the host build is reproducible. This
+      # records what the released bytes actually are, so the claim is checkable
+      # by someone who does not trust this workflow.
+      - name: Generate SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          path: ./libs/analysis
+          format: spdx-json
+          output-file: dist/fdoslint.spdx.json
+          upload-artifact: false
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: dist/fdoslint_*
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      # Keyless signing: the identity is the workflow, bound by the OIDC token.
+      # There is no private key to leak, and no key custody to get wrong.
+      - name: Sign the checksum manifest
+        run: cosign sign-blob --yes --output-signature dist/SHA256SUMS.sig dist/SHA256SUMS
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --generate-notes \
+            dist/fdoslint_* \
+            dist/SHA256SUMS \
+            dist/SHA256SUMS.sig \
+            dist/fdoslint.spdx.json

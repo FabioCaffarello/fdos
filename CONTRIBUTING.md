@@ -10,7 +10,7 @@ authority in this repository, and it is short.
 ## Getting started
 
 ```sh
-make bootstrap   # validate the toolchain against the pins in mise.toml
+make bootstrap   # validate the toolchain, install git hooks
 make verify      # run every enforcement mechanism available at this milestone
 make help        # list targets
 ```
@@ -20,6 +20,16 @@ that is a bug in this repository, not in your machine — please report it.
 
 `mise` is recommended but not required. `make toolchain-check` reads `mise.toml`
 directly and validates whatever is on your `PATH`.
+
+### Git hooks
+
+`make bootstrap` installs them via `lefthook`. Pre-commit runs the fast checks —
+formatting, the governance logs, a staged-content secret scan. Pre-push runs the
+full `make verify`.
+
+Hooks are a convenience, never the guarantee. `--no-verify` is fine when you
+know what you are doing: CI runs the full gate regardless, so bypassing costs
+you a round trip and cannot let anything through.
 
 ## Architecture before implementation
 
@@ -108,7 +118,13 @@ embodies and any decision it supersedes. If you added a check, say it was
 negative-tested.
 
 Conventional prefixes: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`,
-`build`. Imperative mood, subject under 50 characters, no trailing period.
+`build`, `perf`, `ci`, `revert`. Imperative mood, no trailing period. Keep the
+subject under 50 characters; the `commit-msg` hook hard-fails above 72 and warns
+between the two.
+
+The hook checks the subject only. That the body records **why**, and states the
+costs accepted, is not something a regexp can check — it stays a review
+obligation.
 
 ## Definition of done
 

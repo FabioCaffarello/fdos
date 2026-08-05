@@ -56,6 +56,12 @@ without pushing, and drifts from what developers actually execute.
 | `make tidy-check` | `go.mod`/`go.sum` are tidy in every module |
 | `make fmt-check` / `fmt` | Go source is canonically formatted |
 | `make vet` / `lint` / `test` / `build` | Standard Go targets, run per module |
+| `make adr-immutability-check` | No accepted ADR has been rewritten since its introducing commit |
+| `make action-pinning-check` | Every GitHub Action is pinned to a full commit SHA |
+| `make secrets-check` | Full git history scanned for secrets (`gitleaks`) |
+| `make vuln-check` | No known vulnerability reachable from FDOS code (`govulncheck`) |
+| `make hooks` | Install the git hooks (`lefthook`) |
+| `make affected` | Print the modules a change affects |
 | `make clean` | Remove build output |
 
 **`GOWORK=off` on every Go target.** This is the load-bearing half of ADR-0004:
@@ -81,6 +87,13 @@ unreviewed change to the dependency graph.
 | `verify-reproducible-build.sh` | §9 — builds are byte-reproducible | 3 |
 | `verify-tidy.sh` | §9 — the dependency graph is reviewed, not resolved at build time | 3 |
 | `verify-gofmt.sh` | §9 — identical source for every checkout | 3 |
+| `verify-adr-immutability.sh` | §14, ADR-0000 — the decision log is not rewritten | 3 |
+| `verify-action-pinning.sh` | §9, ADR-0014 — build inputs are identified by digest | 3 |
+| `verify-secrets.sh` | §13, §14 — no secret in history | 3 |
+| `verify-vulns.sh` | §14 — no reachable vulnerability | 3 |
+| `verify-commit-message.sh` | §14 — commit subject convention | 4 |
+| `tool-version.sh` | shared helper — the single parser for `mise.toml` pins | — |
+| `affected-modules.sh` | shared helper — the Nx compensation (ADR-0004) | — |
 | `list-modules.sh` | shared helper (ADR-0004 makes commands per-module) | — |
 | `lib/frontmatter.sh` | shared helper | — |
 
@@ -101,7 +114,23 @@ verify. They also run on macOS's bash 3.2, so no associative arrays and no
 Step 3 caught real defects in two of the four existing checks. Skipping it
 produces checks that are green because they cannot fail.
 
+## CI and hooks
+
+CI invokes `make` targets and contains no logic of its own (ADR-0014). The
+narrow exception is tool installation, and even there the **version comes from
+`mise.toml`** through `scripts/tool-version.sh` — CI never declares a version of
+its own, so the pins developers use and the pins CI uses cannot diverge.
+
+Every GitHub Action is pinned to a full commit SHA. A tag can be moved under the
+repository with no commit here, which is an unreviewed third party with write
+access to the build.
+
+`lefthook.yml` runs a fast subset pre-commit and the full `make verify`
+pre-push. Hooks call the same `make` targets, and are explicitly bypassable: CI
+re-runs everything, so `--no-verify` costs a round trip and cannot let anything
+through.
+
 ## Not yet present
 
-`golangci-lint` and `buf` are pinned but unused — there is no Go code and no
-proto. Devcontainer, IDE settings and task ergonomics are **M3.5**. CI is **M3**.
+`buf` is pinned but unused — there is no proto yet (M4). Devcontainer and IDE
+settings are **M3.5**.

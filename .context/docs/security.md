@@ -44,19 +44,27 @@ the public core.
 
 ## Supply chain
 
-Planned for M3, none of it in place yet:
+In place since M3:
 
-- `govulncheck` on every build
-- SBOM generation (`syft`)
+- `govulncheck` in `make verify` and on a weekly schedule
+- SBOM generation (`syft`, SPDX) at release
 - SLSA provenance attestation for release artifacts
-- `cosign` signing
-- dependency review on pull requests
-- **all GitHub Actions pinned to full commit SHAs**
+- `cosign` keyless signing of the checksum manifest
+- dependency review on pull requests, copyleft licences denied
+- **all GitHub Actions pinned to full commit SHAs**, enforced by
+  `make action-pinning-check`
 
 The last is load-bearing. An action referenced by `@v4` can change under the
 repository with no commit here — an unreviewed third party with write access to
-the build. For software asking institutions to trust its output, that is not
-acceptable.
+the build, and therefore to every artifact and attestation it produces. An
+attestation is worth exactly as much as the weakest input to it.
+
+The accepted cost: pinned actions do not receive security fixes automatically,
+so the pins will lag. ADR-0014 records why that trade was made rather than the
+reverse.
+
+Keyless signing means there is no private key to leak and no key custody to get
+wrong: the signing identity is the workflow itself, bound by an OIDC token.
 
 ## Toolchain integrity
 
@@ -77,21 +85,45 @@ Until then it is a principle in a document, which is to say it is rung 6. Treat
 any proposal that routes model output toward persistence as a design error and
 say so explicitly.
 
-## Current gaps
+## Current posture — M3
+
+| Control | Mechanism | Where |
+|---------|-----------|-------|
+| Secret scanning | `gitleaks`, **full history** | `make secrets-check`, pre-commit hook, weekly schedule |
+| Reachable vulnerabilities | `govulncheck` at a pinned module version | `make vuln-check`, weekly schedule |
+| Dependency delta review | `dependency-review-action`, copyleft denied | pull requests |
+| Build input integrity | every action pinned by commit SHA | `make action-pinning-check` |
+| Decision-log integrity | ADR diffed against its introducing commit | `make adr-immutability-check` |
+| Release integrity | SBOM, SLSA provenance attestation, cosign keyless signature | `release.yml` |
+
+The secret scan reads **history, not the working tree**. A secret committed and
+then removed is still leaked: the object stays reachable, and anyone who cloned
+before the removal already has it.
+
+`govulncheck` runs through `go run` at a pinned version rather than as an
+installed binary. A govulncheck built with go1.25 cannot parse go1.26 source and
+fails with a toolchain error that reads exactly like a scan result — a failure
+mode worth designing out.
+
+## Remaining gaps
 
 Stated plainly so nobody assumes coverage that does not exist:
 
 | Gap | Closes at |
 |-----|-----------|
-| No secret scanning | M3 |
-| No dependency vulnerability scanning | M3 |
-| No SBOM or provenance attestation | M3 |
-| No signed releases | M3 |
 | No enforcement of the LLM boundary | M4 |
-| No branch protection or required checks | M3 |
+| Branch protection is documentation, not a mechanism | — see below |
+| The gitleaks CI install is pinned by version, not checksum | M3.5 |
 
-At M1 the security posture rests almost entirely on review. That is accurate,
-and it is why M3 exists.
+**Branch protection, required checks and the merge queue are GitHub settings,
+not files.** They cannot be enforced from this repository.
+`docs/branch-protection.md` records the intended configuration and says openly
+that it is a checklist. Raising it to a mechanism needs an admin-scoped token in
+CI, which is a worse risk than the one it solves (ADR-0014).
+
+The gitleaks install step downloads a release tarball by version but does not
+verify a checksum. Every other build input is digest-pinned; this one is not,
+and it is recorded rather than glossed over.
 
 ## Reporting
 

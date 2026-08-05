@@ -25,9 +25,10 @@ define FOR_EACH_MODULE
 	done
 endef
 
-.PHONY: help bootstrap verify \
-	toolchain-check contracts-check adr-check rfc-check constitution-check \
-	fmt fmt-check vet lint test analyze repro-check tidy tidy-check build clean
+.PHONY: help bootstrap hooks verify affected \
+	toolchain-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
+	fmt fmt-check vet lint test analyze repro-check tidy tidy-check build clean \
+	secrets-check secrets-check-staged vuln-check
 
 help: ## Show available targets
 	@printf 'FDOS — Financial Data Operating System\n\n'
@@ -39,11 +40,22 @@ help: ## Show available targets
 bootstrap: ## Prepare a working copy for development
 	@printf '==> Bootstrapping FDOS\n'
 	@$(MAKE) --no-print-directory toolchain-check
+	@$(MAKE) --no-print-directory hooks
 	@printf '\nBootstrap complete. Run `make verify` to check the repository.\n'
 
-verify: toolchain-check contracts-check adr-check rfc-check constitution-check \
-        tidy-check fmt-check vet lint test analyze repro-check ## Run every enforcement mechanism available at this milestone
+hooks: ## Install the git hooks (lefthook)
+	@if command -v lefthook >/dev/null 2>&1; then \
+		lefthook install >/dev/null && printf 'Git hooks installed.\n'; \
+	else \
+		printf 'lefthook not installed — hooks skipped. See mise.toml.\n'; \
+	fi
+
+verify: toolchain-check contracts-check adr-check adr-immutability-check rfc-check constitution-check \
+        action-pinning-check secrets-check tidy-check fmt-check vet lint test analyze vuln-check repro-check ## Run every enforcement mechanism available at this milestone
 	@printf '\nAll checks passed.\n'
+
+affected: ## Print the modules affected by the current change
+	@$(SCRIPTS_DIR)/affected-modules.sh $(BASE)
 
 # ---------------------------------------------------------------------------
 # Governance
@@ -58,11 +70,30 @@ contracts-check: ## Assert every directory declares a valid architectural contra
 adr-check: ## Assert the decision log is well-formed and append-only
 	@$(SCRIPTS_DIR)/verify-adr.sh
 
+adr-immutability-check: ## Assert no accepted ADR has been rewritten
+	@$(SCRIPTS_DIR)/verify-adr-immutability.sh
+
 rfc-check: ## Assert the RFC set is well-formed and accepted RFCs produced ADRs
 	@$(SCRIPTS_DIR)/verify-rfc.sh
 
 constitution-check: ## Assert every principle appears in the §15 enforcement table
 	@$(SCRIPTS_DIR)/verify-constitution-coverage.sh
+
+action-pinning-check: ## Assert every GitHub Action is pinned to a commit SHA
+	@$(SCRIPTS_DIR)/verify-action-pinning.sh
+
+# ---------------------------------------------------------------------------
+# Security and supply chain
+# ---------------------------------------------------------------------------
+
+secrets-check: ## Scan the full history for committed secrets
+	@$(SCRIPTS_DIR)/verify-secrets.sh history
+
+secrets-check-staged: ## Scan staged changes for secrets (used by the pre-commit hook)
+	@$(SCRIPTS_DIR)/verify-secrets.sh staged
+
+vuln-check: ## Assert no known vulnerability is reachable from FDOS code
+	@$(SCRIPTS_DIR)/verify-vulns.sh
 
 # ---------------------------------------------------------------------------
 # Go

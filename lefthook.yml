@@ -1,0 +1,64 @@
+# lefthook — git hooks for FDOS.
+#
+# Hooks call `make` targets and contain no logic of their own, for the same
+# reason CI does (ADR-0014): a check that exists only in a hook cannot be run in
+# CI, cannot be debugged without committing, and drifts from what actually gates
+# the branch.
+#
+# The split is by cost. Pre-commit runs only what is fast enough to feel
+# instant; anything slower waits for pre-push. A hook that makes committing feel
+# slow gets bypassed with --no-verify, and a bypassed hook enforces nothing.
+#
+# Hooks are a convenience, never the guarantee. CI runs the full `make verify`
+# regardless, so `--no-verify` costs the author a round trip and cannot let
+# anything through.
+#
+#   make hooks     install
+#   lefthook run pre-push   run manually
+
+min_version: 2.0.0
+
+# No `env:` block here on purpose. GOWORK=off and GOFLAGS=-mod=readonly are set
+# by the Makefile, which every job below goes through. Restating them would
+# create a second place they can drift.
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: formatting
+      glob: "*.go"
+      run: make fmt-check
+
+    - name: directory-contracts
+      glob: "**/README.md"
+      run: make contracts-check
+
+    - name: decision-log
+      glob: "docs/adr/*.md"
+      run: make adr-check adr-immutability-check
+
+    - name: rfc-log
+      glob: "docs/rfc/*.md"
+      run: make rfc-check
+
+    - name: constitution-coverage
+      glob: "docs/constitution.md"
+      run: make constitution-check
+
+    # Catches the paste before it becomes history. Scanning staged content only
+    # keeps this in the tens of milliseconds.
+    - name: secrets
+      run: make secrets-check-staged
+
+commit-msg:
+  jobs:
+    - name: message-convention
+      run: scripts/verify-commit-message.sh {1}
+
+pre-push:
+  parallel: false
+  jobs:
+    # The full gate — identical to what CI runs. If this passes, CI passes for
+    # any reason other than the environment itself.
+    - name: verify
+      run: make verify

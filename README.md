@@ -10,20 +10,25 @@ reference data.
 
 That constraint is the whole design. Everything else follows from it.
 
-> **Status: M2 complete — Determinism Toolchain. Next: M3 (CI/CD).**
-> The M1.5 RFCs are accepted and recorded in ADR-0007 … ADR-0012. The first Go
-> code in the repository is the toolchain that enforces them: four static
-> analysers that turn Constitution principles into build errors. There is still
-> no domain code — the canonical model lands with the Ledger at M6.
+> **Status: M3 complete — CI/CD and supply chain. Next: M2.5 (AI engineering).**
+> Fifteen checks now run on every pull request, every build input is pinned by
+> digest, and releases carry an SBOM, provenance attestation and signature.
+> There is still no domain code — the canonical model lands with the Ledger at
+> M6.
 
 ## Quick start
 
 ```sh
-make bootstrap   # validate the toolchain against the pins in mise.toml
+make bootstrap   # validate the toolchain, install git hooks
 make verify      # run every enforcement mechanism available at this milestone
 make analyze     # domain purity and layer boundaries
 make help        # list available targets
 ```
+
+`make verify` is the whole gate. CI runs exactly this and nothing else
+(ADR-0014), so a green local run is a meaningful prediction of a green pipeline.
+Git hooks run a fast subset on commit and the full gate on push; they are
+bypassable, because CI re-runs everything regardless.
 
 A clean clone must pass `make verify` with no tribal knowledge. If it does not,
 that is a bug in this repository, not in your machine.
@@ -119,6 +124,7 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0011](docs/adr/0011-fact-taxonomy-and-upcasting.md) | Facts are Occurrences or Observations; schemas evolve by upcast-on-read |
 | [0012](docs/adr/0012-explained-return-type.md) | Domain calculations producing financial values return `Explained[T]` |
 | [0013](docs/adr/0013-layer-structure-and-module-topology.md) | Modules follow bounded contexts; layers are packages within them |
+| [0014](docs/adr/0014-ci-runs-make-and-pins-everything.md) | CI invokes `make` and nothing else; every build input is pinned by digest |
 
 ### Requests for Comment
 
@@ -143,8 +149,8 @@ above it.
 | M1 | Governance substrate — `.context`, contribution and release process ✅ |
 | M1.5 | Canonical domain architecture — RFCs only: identity, numerics, bitemporality, provenance, event taxonomy, explainability ✅ |
 | M2 | Determinism toolchain — layer boundaries, custom analysers, reproducible builds ✅ |
-| **M3** | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing |
-| M2.5 | AI engineering — agent playbooks, prompt contracts, staleness checks |
+| M3 | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing ✅ |
+| **M2.5** | AI engineering — agent playbooks, prompt contracts, staleness checks |
 | M3.5 | Developer experience — devcontainer, IDE configuration, task ergonomics |
 | M4 | Contracts and observability — proto → buf → OpenAPI → SDK → MCP → docs |
 | M5 | Open core boundary — published contract modules, plugin conformance suite |

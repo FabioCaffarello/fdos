@@ -6,25 +6,44 @@
 #
 # This file is the single source of truth for tool versions. `mise` is the
 # recommended installer, but it is NOT required: `make toolchain-check` parses
-# this file directly and validates whatever is on PATH. The pin is enforced
-# whether or not mise is present.
+# this file directly and validates whatever is on PATH, and CI reads the same
+# pins through scripts/tool-version.sh. The pin is enforced everywhere,
+# regardless of how the tool was installed.
 #
 #   With mise:     mise install
 #   Without mise:  install the versions below by hand; make toolchain-check
 #                  will tell you if you got one wrong.
+#
+# GitHub Actions are NOT pinned here. They are pinned by full commit SHA in the
+# workflow files, which is the only pin that means anything for an action — a
+# tag can be moved under the repository without any commit here (ADR-0014).
 
 [tools]
 # Required from M0.
 go = "1.26.2"
 
-# Required from M2 (determinism toolchain). Checked if present, not yet
-# mandatory — see scripts/toolchain-check.sh.
+# Required from M2 (determinism toolchain).
 golangci-lint = "2.12.2"
 
-# Required from M4 (contract substrate).
+# Required from M3 (CI/CD and supply chain).
+lefthook = "2.1.8"
+gitleaks = "8.30.0"
+
+# Required from M4 (contract substrate). Checked if present, not yet mandatory.
 buf = "1.68.4"
+
+# Go module tools. These are not PATH binaries: they are run with `go run` so
+# that they are built by the pinned toolchain rather than by whichever Go
+# compiled the binary that happens to be installed. A govulncheck built with
+# go1.25 cannot parse go1.26 source, which is a toolchain failure wearing the
+# costume of a security finding.
+"go:golang.org/x/vuln/cmd/govulncheck" = "v1.6.0"
 
 [env]
 # Dependencies may never be resolved implicitly. An implicit `go mod tidy`
 # during a build is a silent, unreviewed change to the dependency graph.
 GOFLAGS = "-mod=readonly"
+
+# Module resolution goes through published versions, never local workspace
+# paths (ADR-0004). go.work exists for editor convenience only.
+GOWORK = "off"

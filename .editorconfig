@@ -1,3 +1,13 @@
+# Editor defaults for FDOS.
+#
+# Reproducibility begins with bytes (Constitution §9): a checkout that differs
+# by editor cannot produce identical builds, and a diff full of whitespace noise
+# hides the change that actually matters from review.
+#
+# `.gitattributes` normalises line endings on commit; this normalises them
+# before the commit exists. `make fmt-check` is the enforcing mechanism for Go —
+# this file is the ergonomics that keep it from firing.
+
 root = true
 
 [*]
@@ -12,9 +22,35 @@ indent_size = 2
 indent_style = tab
 indent_size = 4
 
-[Makefile]
+[{Makefile,*.mk}]
 indent_style = tab
+
+[*.{sh,bash}]
+indent_style = space
+indent_size = 2
+
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[*.{json,jsonc}]
+indent_style = space
+indent_size = 2
+
+[*.{toml,tf}]
+indent_style = space
+indent_size = 2
+
+[*.proto]
+indent_style = space
+indent_size = 2
 
 [*.md]
 # Trailing whitespace is significant in Markdown line breaks.
 trim_trailing_whitespace = false
+
+# Analyser fixtures are deliberately non-compliant Go — that is what makes them
+# fixtures. Leave them exactly as written.
+[**/testdata/**]
+trim_trailing_whitespace = false
+insert_final_newline = false

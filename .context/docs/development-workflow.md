@@ -69,7 +69,15 @@ make help        # list targets
 | `constitution-check` | Every Constitution principle appears in the §15 enforcement table |
 | `analyze` | Domain purity and layer boundaries (`nofloat`, `nondet`, `impurity`, `layering`) |
 | `repro-check` | Every command builds byte-reproducibly |
+| `adr-immutability-check` | No accepted ADR rewritten since its introducing commit |
+| `action-pinning-check` | Every GitHub Action pinned to a full commit SHA |
+| `secrets-check`, `vuln-check` | Full-history secret scan; reachable vulnerabilities |
 | `tidy-check`, `fmt-check`, `vet`, `lint`, `test` | Standard Go hygiene, per module, with `GOWORK=off` |
+
+CI runs `make verify` and nothing else (ADR-0014), so a green local run is a
+meaningful prediction of a green pipeline. Git hooks (`lefthook`) run the fast
+subset on commit and the full gate on push; they are bypassable because CI
+re-runs everything regardless.
 
 A clean clone must pass `make verify` with no tribal knowledge. If it does not,
 that is a repository bug.

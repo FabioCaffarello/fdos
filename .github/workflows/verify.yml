@@ -1,0 +1,84 @@
+# The gate. Every pull request and every push to main runs this.
+#
+# It invokes `make verify` and nothing else (ADR-0014). A check that exists only
+# in workflow YAML cannot be run locally, cannot be debugged without pushing,
+# and drifts from what developers actually execute — producing the familiar
+# failure where `make verify` passes and CI does not, and nobody can say why.
+#
+# Every action is pinned to a full commit SHA. A tag can be moved under the
+# repository with no commit here, which is an unreviewed third party with write
+# access to the build.
+
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege. Nothing in this workflow writes.
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The load-bearing half of ADR-0004. Without it, module resolution goes
+  # through local workspace paths and the open-core boundary silently stops
+  # being verified, with nothing to indicate that it has stopped.
+  GOWORK: "off"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history: the ADR immutability check compares every decision
+          # against the commit that introduced it, and the secret scan reads
+          # every commit rather than the working tree.
+          fetch-depth: 0
+
+      # mise.toml is the single source of truth for every tool version. CI reads
+      # the same pins developers do rather than declaring its own, so the two
+      # cannot drift.
+      - name: Resolve pinned tool versions
+        id: pins
+        run: |
+          echo "go=$(scripts/tool-version.sh go)" >> "$GITHUB_OUTPUT"
+          echo "golangci-lint=$(scripts/tool-version.sh golangci-lint)" >> "$GITHUB_OUTPUT"
+          echo "gitleaks=$(scripts/tool-version.sh gitleaks)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ steps.pins.outputs.go }}
+          check-latest: false
+          cache-dependency-path: "**/go.sum"
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v${{ steps.pins.outputs.golangci-lint }}
+          install-mode: binary
+          # The Makefile runs it per module; this step only installs it.
+          args: --help
+          only-new-issues: false
+
+      - name: Install gitleaks
+        env:
+          VERSION: ${{ steps.pins.outputs.gitleaks }}
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+          tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: make verify
+        run: make verify

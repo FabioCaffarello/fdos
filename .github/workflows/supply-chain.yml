@@ -1,0 +1,89 @@
+# Supply chain checks that need GitHub context rather than a local toolchain.
+#
+# `make verify` already runs the secret and vulnerability scans, so those are
+# not repeated here. This workflow covers what only the forge can do: reviewing
+# the dependency delta of a pull request, and reporting findings into the
+# security tab.
+#
+# Every action is pinned to a full commit SHA.
+
+name: supply-chain
+
+on:
+  pull_request:
+  schedule:
+    # Vulnerability databases change without the repository changing. A scan
+    # that only runs on push reports the state of the world on the day of the
+    # last commit, which for a stable module is arbitrarily long ago.
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supply-chain-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOWORK: "off"
+
+jobs:
+  dependency-review:
+    # Only meaningful on a pull request: it compares the dependency graph before
+    # and after the change.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: low
+          # Apache-2.0 core (ADR-0002). A copyleft dependency would make the
+          # licence claim in NOTICE false, which matters more here than usual:
+          # the open-core split is a commitment to downstream users.
+          deny-licenses: AGPL-3.0, GPL-2.0, GPL-3.0, SSPL-1.0
+          comment-summary-in-pr: on-failure
+
+  vulnerabilities:
+    # The scheduled arm. On pull requests `make verify` has already run this.
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Resolve pinned Go version
+        id: pins
+        run: echo "go=$(scripts/tool-version.sh go)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ steps.pins.outputs.go }}
+          check-latest: false
+
+      - name: make vuln-check
+        run: make vuln-check
+
+  secrets:
+    # The full-history scan, on the schedule as well as in `make verify`. A
+    # secret committed and then removed is still leaked: the object stays
+    # reachable and anyone who cloned before the removal already has it.
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Scan history for secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml

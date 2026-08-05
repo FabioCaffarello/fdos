@@ -1,0 +1,50 @@
+# gitleaks configuration for FDOS.
+#
+# Enforces the secret policy in .context/docs/security.md. The default ruleset
+# is extended rather than replaced: a hand-maintained ruleset falls behind the
+# upstream one, and falling behind is indistinguishable from not scanning.
+
+[extend]
+useDefault = true
+
+# ---------------------------------------------------------------------------
+# Additional rules for the credentials FDOS specifically handles.
+#
+# Private connector repositories hold real institution credentials. This
+# repository must never acquire one, not even in an example.
+# ---------------------------------------------------------------------------
+
+[[rules]]
+id = "fdos-institution-credential"
+description = "Institution or broker credential assigned in source"
+regex = '''(?i)(broker|custodian|institution|clearing)[_-]?(password|secret|token|api[_-]?key)\s*[:=]\s*['"][^'"]{6,}['"]'''
+tags = ["fdos", "credential"]
+
+[[rules]]
+id = "fdos-account-number"
+description = "Literal account or portfolio identifier in source"
+regex = '''(?i)(account|portfolio)[_-]?(number|id)\s*[:=]\s*['"][0-9][0-9-]{7,}['"]'''
+tags = ["fdos", "pii"]
+
+# ---------------------------------------------------------------------------
+# Allowlist
+#
+# Every entry here is a hole in the scan. Each one states why the match cannot
+# be a real secret, and none is a path-wide exemption for source code.
+# ---------------------------------------------------------------------------
+
+[allowlist]
+description = "Non-secret matches"
+
+paths = [
+  # Analyser fixtures are deliberately synthetic Go, never real values.
+  '''libs/analysis/.*/testdata/.*''',
+  # This file necessarily contains the patterns it searches for.
+  '''\.gitleaks\.toml''',
+]
+
+regexes = [
+  # Placeholders in environment templates. `.env.example` carries these by
+  # design; a real value there would not match.
+  '''(?i)(changeme|placeholder|example|your[_-]?\w+[_-]?here|xxx+)''',
+]
