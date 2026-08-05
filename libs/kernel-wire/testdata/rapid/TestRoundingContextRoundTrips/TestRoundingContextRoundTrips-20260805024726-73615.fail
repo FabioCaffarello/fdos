@@ -1,0 +1,9 @@
+# 2026/08/05 02:47:26.619649 [TestRoundingContextRoundTrips] [rapid] draw precision: 0x1
+# 2026/08/05 02:47:26.619653 [TestRoundingContextRoundTrips] [rapid] draw mode: 0x5
+# 2026/08/05 02:47:26.619655 [TestRoundingContextRoundTrips] lost information: precision=1,mode=ceiling -> precision=1,mode=floor
+# 
+v0.4.8#14892093827430803187
+0x0
+0x0
+0x6b74f03291620
+0x4
