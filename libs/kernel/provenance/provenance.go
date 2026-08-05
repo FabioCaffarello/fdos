@@ -279,6 +279,32 @@ func (p Provenance) IsZero() bool { return p.source.value == "" }
 // addressing keeps lineage a DAG and deduplicates identical derivations.
 type Ref struct{ hash string }
 
+// NewRef rebuilds a reference from a content address.
+//
+// Exists for one reason: a codec decoding a fact from the wire must reconstruct
+// the derivation reference it carries, and every other route to a Ref goes
+// through building the DerivationRecord itself — which a decoder cannot do,
+// because the record lives elsewhere.
+//
+// Deliberately minimal validation. This asserts the address is well-formed, not
+// that the record exists: resolving it is a store's job, and a kernel that
+// tried would need I/O it must not have.
+func NewRef(hash string) (Ref, error) {
+	if len(hash) != sha256HexLen {
+		return Ref{}, fmt.Errorf("%w: content address is not a %d-character hex digest", ErrIncomplete, sha256HexLen)
+	}
+	for _, r := range hash {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
+			return Ref{}, fmt.Errorf("%w: content address %q is not lowercase hex", ErrIncomplete, hash)
+		}
+	}
+	return Ref{hash: hash}, nil
+}
+
+// sha256HexLen is the length of a hex-encoded SHA-256 digest, which is what
+// contentAddress produces.
+const sha256HexLen = 64
+
 // Hash returns the content address.
 func (r Ref) Hash() string { return r.hash }
 
