@@ -55,6 +55,18 @@ That boundary exists because the envelope rule fired on `HoldingObserved` during
 M7 and was right to. The alternative was exempting messages by name, and an
 exemption by name is a rule waiting to be worked around.
 
+## Identity codecs are not here
+
+`EncodeEntityID` and `EncodeClaim` live in `libs/kernel-wire`. They were here
+until M7, when adding the claim codec forced the question: `identity.ID` and
+`identity.Claim` are kernel types and `EntityId` and `IdentifierClaim` are kernel
+messages, so nothing about either was ever the ledger's. The original placement
+had no technical cause — `EntityId` was in `contracts@v0.1.0`, which
+`libs/kernel-wire` already pinned.
+
+Recorded rather than quietly corrected, because the drift survived a milestone
+by looking like a reasonable place for the code to be.
+
 ## Why a separate module
 
 Go resolves dependencies per module. A codec inside `libs/ledger` would put the

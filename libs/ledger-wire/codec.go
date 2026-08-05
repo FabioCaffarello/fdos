@@ -23,7 +23,6 @@ import (
 	payloadv1 "github.com/FabioCaffarello/fdos/libs/contracts/gen/fdos/ledger/payload/v1"
 	ledgerv1 "github.com/FabioCaffarello/fdos/libs/contracts/gen/fdos/ledger/v1"
 	kernelwire "github.com/FabioCaffarello/fdos/libs/kernel-wire"
-	"github.com/FabioCaffarello/fdos/libs/kernel/identity"
 	"github.com/FabioCaffarello/fdos/libs/kernel/provenance"
 	"github.com/FabioCaffarello/fdos/libs/ledger/domain"
 )
@@ -44,63 +43,13 @@ type provenanceBinding = provenance.ReferenceBinding
 var ErrMalformed = errors.New("ledgerwire: malformed wire value")
 
 // --- identity ----------------------------------------------------------------
-
-// EncodeEntityID converts an entity identifier to its wire form.
 //
-// The kind travels with the value. Without it a decoder cannot rebuild the
-// domain type, and re-deriving is not an option — `Derive` assigns an identifier
-// from a natural key, and an entity whose key has since changed would get a
-// different one (ADR-0007).
-func EncodeEntityID(id identity.ID) *kernelv1.EntityId {
-	return &kernelv1.EntityId{Value: id.String(), Kind: encodeEntityKind(id.Kind())}
-}
-
-// DecodeEntityID rebuilds an entity identifier.
-func DecodeEntityID(w *kernelv1.EntityId) (identity.ID, error) {
-	if w == nil {
-		return identity.ID{}, fmt.Errorf("%w: entity id is nil", ErrMalformed)
-	}
-	kind, err := decodeEntityKind(w.GetKind())
-	if err != nil {
-		return identity.ID{}, err
-	}
-	id, err := identity.Restore(kind, w.GetValue())
-	if err != nil {
-		return identity.ID{}, fmt.Errorf("%w: %w", ErrMalformed, err)
-	}
-	return id, nil
-}
-
-func encodeEntityKind(k identity.Kind) kernelv1.EntityKind {
-	switch k {
-	case identity.KindInstrument:
-		return kernelv1.EntityKind_ENTITY_KIND_INSTRUMENT
-	case identity.KindParty:
-		return kernelv1.EntityKind_ENTITY_KIND_PARTY
-	case identity.KindAccount:
-		return kernelv1.EntityKind_ENTITY_KIND_ACCOUNT
-	case identity.KindLedgerStream:
-		return kernelv1.EntityKind_ENTITY_KIND_LEDGER_STREAM
-	default:
-		return kernelv1.EntityKind_ENTITY_KIND_UNSPECIFIED
-	}
-}
-
-func decodeEntityKind(w kernelv1.EntityKind) (identity.Kind, error) {
-	switch w {
-	case kernelv1.EntityKind_ENTITY_KIND_INSTRUMENT:
-		return identity.KindInstrument, nil
-	case kernelv1.EntityKind_ENTITY_KIND_PARTY:
-		return identity.KindParty, nil
-	case kernelv1.EntityKind_ENTITY_KIND_ACCOUNT:
-		return identity.KindAccount, nil
-	case kernelv1.EntityKind_ENTITY_KIND_LEDGER_STREAM:
-		return identity.KindLedgerStream, nil
-	default:
-		return identity.KindUnspecified,
-			fmt.Errorf("%w: entity kind %s has no domain equivalent", ErrMalformed, w)
-	}
-}
+// The identity and claim codecs live in `libs/kernel-wire`, where the directory
+// contract says codecs for kernel types belong. They were here until the claim
+// codec forced the question and made the drift visible; `identity.ID` and
+// `identity.Claim` are kernel types and `fdos.kernel.v1.EntityId` and
+// `IdentifierClaim` are kernel messages, so nothing about them was ever the
+// ledger's.
 
 // --- refs and envelope -------------------------------------------------------
 
@@ -268,9 +217,20 @@ func encodePayload(p domain.Payload) (protoMessage, error) {
 	switch v := p.(type) {
 	case domain.HoldingObserved:
 		return &payloadv1.HoldingObserved{
-			Account:    EncodeEntityID(v.Account),
-			Instrument: EncodeEntityID(v.Instrument),
+			Account:    kernelwire.EncodeEntityID(v.Account),
+			Instrument: kernelwire.EncodeEntityID(v.Instrument),
 			Quantity:   kernelwire.EncodeQuantity(v.Quantity),
+		}, nil
+	case domain.HoldingClaimed:
+		return &payloadv1.HoldingClaimed{
+			Account:    kernelwire.EncodeClaim(v.Account),
+			Instrument: kernelwire.EncodeClaim(v.Instrument),
+			Quantity:   kernelwire.EncodeQuantity(v.Quantity),
+		}, nil
+	case domain.EntityMinted:
+		return &payloadv1.EntityMinted{
+			Entity:   kernelwire.EncodeEntityID(v.Entity),
+			BornFrom: kernelwire.EncodeClaim(v.BornFrom),
 		}, nil
 	case domain.FactCorrected:
 		return &ledgerv1.Correction{
@@ -294,11 +254,11 @@ func decodePayload(w *anypb.Any) (domain.Payload, error) {
 
 	switch v := unpacked.(type) {
 	case *payloadv1.HoldingObserved:
-		account, aErr := DecodeEntityID(v.GetAccount())
+		account, aErr := kernelwire.DecodeEntityID(v.GetAccount())
 		if aErr != nil {
 			return nil, aErr
 		}
-		instrument, iErr := DecodeEntityID(v.GetInstrument())
+		instrument, iErr := kernelwire.DecodeEntityID(v.GetInstrument())
 		if iErr != nil {
 			return nil, iErr
 		}
@@ -307,6 +267,32 @@ func decodePayload(w *anypb.Any) (domain.Payload, error) {
 			return nil, qErr
 		}
 		return domain.HoldingObserved{Account: account, Instrument: instrument, Quantity: quantity}, nil
+
+	case *payloadv1.HoldingClaimed:
+		account, aErr := kernelwire.DecodeClaim(v.GetAccount())
+		if aErr != nil {
+			return nil, aErr
+		}
+		instrument, iErr := kernelwire.DecodeClaim(v.GetInstrument())
+		if iErr != nil {
+			return nil, iErr
+		}
+		quantity, qErr := kernelwire.DecodeQuantity(v.GetQuantity())
+		if qErr != nil {
+			return nil, qErr
+		}
+		return domain.HoldingClaimed{Account: account, Instrument: instrument, Quantity: quantity}, nil
+
+	case *payloadv1.EntityMinted:
+		entity, eErr := kernelwire.DecodeEntityID(v.GetEntity())
+		if eErr != nil {
+			return nil, eErr
+		}
+		bornFrom, bErr := kernelwire.DecodeClaim(v.GetBornFrom())
+		if bErr != nil {
+			return nil, bErr
+		}
+		return domain.EntityMinted{Entity: entity, BornFrom: bornFrom}, nil
 
 	case *ledgerv1.Correction:
 		corrects, rErr := DecodeRef(v.GetCorrects())
