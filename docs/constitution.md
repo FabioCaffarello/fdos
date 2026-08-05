@@ -201,7 +201,7 @@ an earlier target was not achievable.
 | 8 | Explainability | `ProjectPosition` returns `Explained[Position]`; combinators build the trace | 1 | 1 ✅ |
 | 9 | Reproducibility | double-build diff, tidy and toolchain pins, SHA-pinned build inputs (`make repro-check`, `tidy-check`, `toolchain-check`, `action-pinning-check`) | 3 | 3 ✅ |
 | 10 | Domain Before Infrastructure | `impurity`, `layering` analysers + directory contracts | 2 | 2 ✅ |
-| 11 | Contracts Over Implementations | `layering` plus `buf breaking` against main (`make proto-check`) | 3 | 3 ✅ |
+| 11 | Contracts Over Implementations | `layering`, `buf breaking` against main, and wire/domain round-trip conformance (`make proto-check`, `make test`) | 3 | 3 ✅ |
 | 12 | Knowledge Graph Strategy | — | 6 | 5 |
 | 13 | Open Core | `GOWORK=off` everywhere, published-module consumer proof, branch and tag rulesets (`make consumer-check`) | 3 | 3 ✅ |
 | 14 | Engineering Culture | ADR and RFC logs, ADR immutability against git history, enforcement-table coverage, documentation references, agent prompt contracts, secret and vulnerability scans (`make adr-check`, `adr-immutability-check`, `rfc-check`, `constitution-check`, `context-check`, `agent-contract-check`, `secrets-check`, `vuln-check`) | 3 | 3 ✅ |

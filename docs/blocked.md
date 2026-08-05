@@ -88,9 +88,21 @@ and mis-mapping a rounding mode each make the suite fail.
 Writing it needed exactly one addition to the kernel (`provenance.NewRef`),
 which is a good signal for the encapsulation.
 
-**Still open for the ledger types.** `Fact`, `Envelope` and `Correction` have no
-codec. `libs/ledger-wire` is the next module, depending on `libs/ledger@v0.1.0`
-and `libs/kernel-wire`, following the same two-property pattern.
+**RESOLVED for the ledger types (M7).** `libs/ledger-wire` maps `Fact`,
+`Envelope`, `Correction` and the `HoldingObserved` payload under the same two
+properties, negative-tested three ways: dropping reference bindings, mapping an
+entity kind to the wrong value, and skipping the declared-type check each make
+the suite fail.
+
+`DecodeFact` checks the declared `type` and `type_version` against the unpacked
+payload rather than trusting them. A fact claiming to be a `ledger.TradeSettled`
+while carrying a holding observation is the shape a corrupted stream takes.
+
+**B-003 is closed.** Every canonical concept now has a mechanism proving its two
+definitions agree. What remains is scope rather than absence: a payload type
+added without a conformance test would still drift, which is why
+`libs/ledger-wire/README.md` makes the test part of the procedure for adding
+one.
 
 **Recorded in:** ADR-0018 Consequences, as the largest unpaid cost of that
 decision.
