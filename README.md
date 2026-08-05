@@ -10,17 +10,18 @@ reference data.
 
 That constraint is the whole design. Everything else follows from it.
 
-> **Status: M1.5 — Canonical Domain Architecture. Six RFCs proposed, awaiting
-> review.**
-> There is still no domain code, and that is deliberate. M1.5 produces design
-> and nothing else; implementation begins only once these RFCs are accepted and
-> the ADRs recording them exist.
+> **Status: M2 complete — Determinism Toolchain. Next: M3 (CI/CD).**
+> The M1.5 RFCs are accepted and recorded in ADR-0007 … ADR-0012. The first Go
+> code in the repository is the toolchain that enforces them: four static
+> analysers that turn Constitution principles into build errors. There is still
+> no domain code — the canonical model lands with the Ledger at M6.
 
 ## Quick start
 
 ```sh
 make bootstrap   # validate the toolchain against the pins in mise.toml
 make verify      # run every enforcement mechanism available at this milestone
+make analyze     # domain purity and layer boundaries
 make help        # list available targets
 ```
 
@@ -61,6 +62,16 @@ highest feasible mechanism (ADR-0005):
 Human discipline is the last line of defence, never the first. Constitution §15
 records where every principle currently sits — including, honestly, the ones
 still at rung 6.
+
+As of M2, six principles reached their target rung. Determinism, canonical-model
+purity and layer boundaries are enforced by static analysis; reproducibility by a
+double-build diff. The seven principles still unenforced need types that do not
+exist yet, and climb at M4 and M6.
+
+```
+libs/ledger/domain/rule.go:14:37: nondet: time.Now in domain package;
+  the clock is injected; a domain rule that reads it cannot be replayed (Constitution §2)
+```
 
 ## Layout
 
@@ -107,6 +118,7 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0010](docs/adr/0010-provenance-envelope-reference-versioning.md) | Every fact carries a provenance envelope and pins its reference-data versions |
 | [0011](docs/adr/0011-fact-taxonomy-and-upcasting.md) | Facts are Occurrences or Observations; schemas evolve by upcast-on-read |
 | [0012](docs/adr/0012-explained-return-type.md) | Domain calculations producing financial values return `Explained[T]` |
+| [0013](docs/adr/0013-layer-structure-and-module-topology.md) | Modules follow bounded contexts; layers are packages within them |
 
 ### Requests for Comment
 
@@ -130,8 +142,8 @@ above it.
 | M0 | Repository genesis — governance and enforcement substrate ✅ |
 | M1 | Governance substrate — `.context`, contribution and release process ✅ |
 | M1.5 | Canonical domain architecture — RFCs only: identity, numerics, bitemporality, provenance, event taxonomy, explainability ✅ |
-| M2 | Determinism toolchain — layer boundaries, custom analysers, reproducible builds |
-| M3 | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing |
+| M2 | Determinism toolchain — layer boundaries, custom analysers, reproducible builds ✅ |
+| **M3** | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing |
 | M2.5 | AI engineering — agent playbooks, prompt contracts, staleness checks |
 | M3.5 | Developer experience — devcontainer, IDE configuration, task ergonomics |
 | M4 | Contracts and observability — proto → buf → OpenAPI → SDK → MCP → docs |

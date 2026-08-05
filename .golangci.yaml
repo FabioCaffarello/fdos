@@ -1,0 +1,70 @@
+# golangci-lint configuration for FDOS.
+#
+# This handles general Go correctness. The FDOS-specific architectural rules —
+# domain purity, layer boundaries, no binary floating point — are NOT here:
+# they live in libs/analysis as go/analysis passes, because they need type
+# information and because they are tested against violating and compliant code
+# rather than configured. Run them with `make analyze`.
+#
+# Enforcement ladder position: static analysis, rung 2 (ADR-0005).
+
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck      # unchecked errors: a swallowed error is a lost fact
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - bodyclose
+    - gosec
+    - revive
+    - errorlint     # wrapped-error comparisons that silently stop matching
+    - durationcheck
+    - makezero
+    - nilerr
+    - copyloopvar
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment  # readability of canonical models outranks padding
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+        - name: var-naming
+        - name: indent-error-flow
+        - name: errorf
+
+  exclusions:
+    generated: lax
+    rules:
+      # Analyser fixtures are deliberately wrong Go: that is what they test.
+      - path: testdata/
+        linters:
+          - errcheck
+          - gosec
+          - revive
+          - staticcheck
+          - unused
+      # Table-driven tests and fixtures do not need the production error bar.
+      - path: _test\.go$
+        linters:
+          - errcheck
+          - gosec
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/FabioCaffarello/fdos

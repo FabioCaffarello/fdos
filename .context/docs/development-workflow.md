@@ -67,6 +67,9 @@ make help        # list targets
 | `adr-check` | The decision log is well-formed and supersession is bidirectional |
 | `rfc-check` | The RFC set is well-formed, and an `Accepted` RFC produced the ADRs recording it |
 | `constitution-check` | Every Constitution principle appears in the §15 enforcement table |
+| `analyze` | Domain purity and layer boundaries (`nofloat`, `nondet`, `impurity`, `layering`) |
+| `repro-check` | Every command builds byte-reproducibly |
+| `tidy-check`, `fmt-check`, `vet`, `lint`, `test` | Standard Go hygiene, per module, with `GOWORK=off` |
 
 A clean clone must pass `make verify` with no tribal knowledge. If it does not,
 that is a repository bug.

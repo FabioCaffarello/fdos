@@ -12,6 +12,7 @@ forbidden:
   - Canonical model definitions
   - Logic that cannot be tested without starting a process
   - Imports between applications
+  - Developer tooling (it carries its own cmd/ — see ADR-0013)
 ---
 
 # apps
@@ -21,8 +22,14 @@ Each subdirectory is a deployable application: an independent Go module with a
 
 ## Status: empty by design
 
-`apps/` contains no applications at M0. Applications compose libraries, and
-`libs/` is deliberately empty until M2 (see `libs/README.md`).
+`apps/` contains no applications at M2. Applications compose bounded contexts,
+and no context module exists until M6 (see `libs/README.md`).
+
+**`apps/` means deployable, not "has a `func main`".** Developer tooling carries
+its own `cmd/` inside its module — `libs/analysis/cmd/fdoslint` is the current
+example. Splitting a tool across two modules would require a local-path
+`replace` directive, reintroducing the by-path coupling ADR-0004 exists to
+prevent. The distinction is deployment (ADR-0013).
 
 ## Composition roots, not logic
 

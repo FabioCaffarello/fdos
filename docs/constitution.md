@@ -178,29 +178,33 @@ feasible, adopting it is not optional.
 
 ### Current position
 
-Recorded as of Constitution 1.0.0 (M0). This table is the repository's honest
-self-assessment and is expected to improve every milestone.
+Recorded as of M2. This table is the repository's honest self-assessment and is
+expected to improve every milestone.
 
 | # | Principle | Mechanism today | Rung | Target |
 |---|-----------|-----------------|------|--------|
 | 1 | Financial Truth | — | 6 | 1 (M6) |
-| 2 | Deterministic Engineering | — | 6 | 2 (M2) |
-| 3 | Canonical Model First | — | 6 | 2 (M2) |
+| 2 | Deterministic Engineering | `nondet`, `nofloat` analysers (`make analyze`) | 2 | 2 ✅ |
+| 3 | Canonical Model First | `impurity`, `layering` analysers (`make analyze`) | 2 | 2 ✅ |
 | 4 | Immutable Ledger | — | 6 | 1 (M6) |
 | 5 | Event Sourcing | — | 6 | 1 (M6) |
 | 6 | Provenance | — | 6 | 1 (M4) |
 | 7 | Temporal Modeling | — | 6 | 1 (M4) |
 | 8 | Explainability | — | 6 | 1 (M4, unproven) |
-| 9 | Reproducibility | — | 6 | 3 (M2) |
-| 10 | Domain Before Infrastructure | directory contracts (`make contracts-check`) | 3 | 2 (M2) |
-| 11 | Contracts Over Implementations | — | 6 | 3 (M4) |
+| 9 | Reproducibility | double-build diff, tidy and toolchain pins (`make repro-check`, `tidy-check`, `toolchain-check`) | 3 | 3 ✅ |
+| 10 | Domain Before Infrastructure | `impurity`, `layering` analysers + directory contracts | 2 | 2 ✅ |
+| 11 | Contracts Over Implementations | `layering` forbids cross-context coupling; versioning not yet enforced | 2 | 2 + M4 |
 | 12 | Knowledge Graph Strategy | — | 6 | 5 |
-| 13 | Open Core | — | 6 | 3 (M5) |
-| 14 | Engineering Culture | ADR log + enforcement-table coverage (`make adr-check`, `make constitution-check`) | 3 | 3 |
+| 13 | Open Core | `GOWORK=off` in every Go target | 3 | 3 ✅ |
+| 14 | Engineering Culture | ADR and RFC logs, enforcement-table coverage (`make adr-check`, `rfc-check`, `constitution-check`) | 3 | 3 ✅ |
 
-At M1 almost everything still sits at rung 6. That is the accurate reading of a
-repository three commits old, and stating it plainly is the point: the table
-exists to make the gap visible and to make closing it measurable.
+Six principles reached their target at M2. The seven still at rung 6 are the
+ones that need types that do not exist yet: the canonical model and the ledger.
+They climb at M4 and M6, and until then the honest reading is that they are
+unenforced.
+
+§8 (Explainability) remains the weakest. ADR-0012 decided the mechanism; nothing
+implements it yet.
 
 `make constitution-check` asserts that this table lists every principle above,
 by number and by name, in both directions. The table cannot silently fall behind

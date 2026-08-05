@@ -22,16 +22,29 @@ is open, the answer is almost always whichever option preserves reproducibility.
 
 ## Current state
 
-**M1.5 — Canonical Domain Architecture.** Six RFCs proposed, awaiting review.
+**M2 complete — Determinism Toolchain.** Next: M3 (CI/CD).
 
-There is **no Go code**, no `go.mod`, no application, no test suite and no CI
-pipeline. This is deliberate, not incomplete: the canonical financial model is
-an output of the M1.5 RFCs, and writing code before that design lands would
-pre-judge it.
+There is **no domain code and no application**. The only Go in the repository is
+`libs/analysis` — the four static analysers that turn Constitution principles
+into build errors — plus its `cmd/fdoslint`. There is no CI pipeline yet either;
+that is M3.
 
-What exists is the governance and enforcement substrate everything else will be
-held to. An agent asked to "add a feature" at this stage should say there is
-nothing yet to add it to, and point at the roadmap.
+This is deliberate, not incomplete. The canonical model is defined by ADR-0007 …
+ADR-0012 but lands as code with the Ledger at **M6**, so that the first domain
+is built under the constraints rather than retrofitted to them.
+
+An agent asked to "add a feature" should say there is nothing yet to add it to,
+and point at the roadmap. An agent asked to create `libs/kernel` or a bounded
+context ahead of M6 should say the same.
+
+What exists today, and is enforced:
+
+```sh
+make analyze   # nofloat · nondet · impurity · layering
+make verify    # the above plus governance, formatting, tidiness, reproducibility
+```
+
+A `time.Now()` or a `float64` in a domain package fails the build, by name.
 
 ## What FDOS refuses to be
 
@@ -67,7 +80,7 @@ rather than assumed (ADR-0004).
 | M0 ✅ | Repository genesis — governance and enforcement substrate |
 | M1 ✅ | Governance substrate — `.context`, contribution and release process |
 | M1.5 ✅ | Canonical domain architecture — **RFCs only**. Six accepted (RFC-0001 … RFC-0006), recorded by ADR-0007 … ADR-0012 |
-| M2 | Determinism toolchain — layer boundaries, custom analysers, reproducible builds |
+| M2 ✅ | Determinism toolchain — four analysers, reproducible builds, layer boundaries |
 | M3 | CI/CD and supply chain |
 | M2.5 | AI engineering — agent playbooks, prompt contracts, staleness checks |
 | M3.5 | Developer experience |

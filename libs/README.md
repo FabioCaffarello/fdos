@@ -9,9 +9,10 @@ allowed:
   - Infrastructure adapters implementing domain-owned ports
   - Contract packages published for consumption by private repositories
 forbidden:
-  - Executable entry points (main packages belong in apps/)
+  - Entry points for deployable services (those belong in apps/)
   - Provider-specific or institution-specific concepts in domain packages
   - Dependencies from a lower layer onto a higher one
+  - Imports that cross between bounded contexts
   - Modules without a README declaring their own contract
 ---
 
@@ -21,46 +22,65 @@ Every subdirectory of `libs/` is an **independent Go module** with its own
 `go.mod`, published under `github.com/FabioCaffarello/fdos/libs/<name>`
 (ADR-0003, ADR-0004).
 
-## Status: empty by design
+## Current modules
 
-`libs/` contains no modules at M0. The layer structure — the boundaries between
-pure domain, application orchestration and infrastructure adapters — is an
-output of the **M1.5 canonical-architecture RFCs**. Creating modules before that
-RFC lands would pre-judge its outcome, which the review process exists to
-prevent.
+| Module | Kind | Purpose |
+|--------|------|---------|
+| [`analysis/`](analysis/README.md) | tooling | The static analysers that enforce the rules below |
 
-Modules arrive in **M2**, together with the static analysis that enforces the
-boundaries between them.
+`libs/kernel` and the bounded-context modules arrive when there is something to
+put in them — the kernel at **M6** with the Ledger. Creating them empty now
+would reproduce the M0 scaffold problem: directories that survive no clone and
+carry no meaning.
 
-## Module contracts are executable
+## Topology (ADR-0013)
 
-Each module will carry its own `README.md` declaring its `allowed` and
-`forbidden` dependencies in front matter, exactly as this file does.
+Modules follow **bounded contexts**. Layers are packages inside them.
 
-From M2 these declarations are the **source** of the import-boundary
-configuration, not a description of it. The linter is generated from the
-READMEs. A README that misdescribes its module's real dependencies will fail the
-build.
+```
+libs/kernel/                 cross-domain canonical primitives
+libs/<context>/              one bounded context
+    domain/                  pure: no I/O, clocks, concurrency, or float
+    app/                     use cases, ports, orchestration
+    adapters/                pure adapters only
+libs/<context>-<tech>/       infrastructure-heavy adapters
+```
 
-This is the concrete meaning of "documentation is production code"
-(Constitution §14): the document is not a record of the rule, it *is* the rule.
+| Layer | May import | Enforced by |
+|-------|------------|-------------|
+| `kernel` | nothing first-party | `layering` |
+| `<context>/domain` | `kernel` | `layering`, `impurity`, `nofloat`, `nondet` |
+| `<context>/app` | `kernel`, own `domain` | `layering` |
+| `<context>/adapters` | `kernel`, own `domain`, own `app` | `layering` |
 
-## Layering
+No context reaches into another context's `domain` or `app`. Contexts integrate
+through published contracts (Constitution §11), never through shared types.
 
-The layer names below are the working hypothesis to be confirmed, refined or
-replaced by the M1.5 RFCs. They are recorded here as intent, not as decided
-architecture.
+**Infrastructure-heavy adapters are separate modules.** Go resolves dependencies
+per module: an adapter with a database driver inside `libs/ledger` would put that
+driver in the graph of everyone importing `libs/ledger/domain`. That would make
+Constitution §10 true at the package level and false at the level that decides
+what a consumer is actually coupled to.
 
-| Layer | May depend on | Notably forbidden |
-|-------|---------------|-------------------|
-| domain | nothing outside itself | I/O, concurrency, clocks, randomness, serialisation, binary floating point |
-| app | domain | direct infrastructure imports |
-| adapters | domain, app | — |
+## Enforcement
 
-The domain layer is intended to be a pure functional core: data in, facts and
-decisions out. It is the layer where Constitution §2 (Deterministic
-Engineering), §3 (Canonical Model First) and §10 (Domain Before Infrastructure)
-are enforced mechanically rather than observed by convention.
+The domain layer is where Constitution §2, §3 and §10 stop being conventions.
+`make analyze` fails the build on:
+
+| Forbidden in `domain` | Rule |
+|-----------------------|------|
+| `float32`, `float64` | `nofloat` — floating-point addition is not associative, so fold order changes the total |
+| `time.Now`, `math/rand`, `os.Getenv` | `nondet` — hidden inputs cannot be reproduced from the ledger |
+| range over a map (except key collection) | `nondet` — Go randomises iteration order |
+| goroutines, channels, `select`, `sync` | `impurity` — a pure core has no shared mutable state |
+| `context.Context` | `impurity` — an I/O concern; ports belong in `app` |
+| `json`/`db` struct tags | `impurity` — the wire format belongs to adapters |
+| layer inversion, cross-context imports | `layering` |
+
+Each module also carries its own `README.md` contract, exactly as this file
+does. These are binding: a module whose real dependencies contradict its
+declared contract is a defect, caught in review today and by generated
+configuration once more than one context module exists.
 
 ## Cross-module development
 

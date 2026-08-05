@@ -12,8 +12,31 @@ scaffoldVersion: "2.0.0"
 
 ## Today
 
-There is no Go code and therefore no unit or integration tests. What exists is
-tested, and the discipline applied to it is the one that will carry forward.
+The only Go code is the toolchain in `libs/analysis`. It is tested with
+`analysistest` fixtures, and the discipline applied there is the one that
+carries forward to domain code.
+
+### An analyser needs a compliant fixture, not just a violating one
+
+Every rule has fixtures under `testdata/src/ctx/domain/` (must fire) **and**
+`testdata/src/ctx/adapters/` (must stay silent).
+
+The second is not symmetry for its own sake. An analyser that fires on
+legitimate code gets switched off, and a switched-off rule enforces nothing. The
+violating fixture tests sensitivity; the compliant one tests specificity, and
+specificity decides whether the rule survives.
+
+This found a real defect: the remedy for "do not range over a map" is itself a
+map range —
+
+```go
+for k := range m { keys = append(keys, k) }
+sort.Strings(keys)
+```
+
+— and the first version of `nondet` reported it, which would have made the rule
+impossible to satisfy without a suppression comment. Only the compliant fixture
+exposed that.
 
 **The fitness functions in `scripts/` are tested against negative cases.** Each
 of `toolchain-check`, `contracts-check`, `adr-check` and `constitution-check`
@@ -62,6 +85,16 @@ For financial calculations, only the second question matters.
 
 Likely a nightly job rather than per-PR — it is slow, and the Go tooling is
 thinner than the JVM equivalent. That trade-off is unresolved.
+
+### Deferred from M2, deliberately
+
+The M2 plan listed a property-based testing harness and mutation testing. Both
+were **deferred to M6** rather than built: there is no domain code to exercise,
+and a shared test harness written against no caller is scaffold — exactly the
+"playbook with no subject" problem that pruned `.context/` at M1.
+
+`make analyze` was the acceptance criterion for M2, and it is met. Stating the
+deferral here rather than quietly dropping it is the point.
 
 ### Examples are tests
 

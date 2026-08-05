@@ -51,11 +51,22 @@ without pushing, and drifts from what developers actually execute.
 | `make adr-check` | Decision log well-formed; supersession bidirectional |
 | `make rfc-check` | RFC set well-formed; an Accepted RFC produced ADRs |
 | `make constitution-check` | Every principle appears in the §15 enforcement table |
+| `make analyze` | Domain purity and layer boundaries (the FDOS analysers) |
+| `make repro-check` | Every command builds byte-reproducibly |
+| `make tidy-check` | `go.mod`/`go.sum` are tidy in every module |
+| `make fmt-check` / `fmt` | Go source is canonically formatted |
+| `make vet` / `lint` / `test` / `build` | Standard Go targets, run per module |
 | `make clean` | Remove build output |
 
-`fmt`, `lint`, `test` and `build` arrive at M2 with the first Go code. They are
-absent rather than stubbed: a target that does nothing is worse than a missing
-one, because it reports work that did not happen.
+**`GOWORK=off` on every Go target.** This is the load-bearing half of ADR-0004:
+it forces module resolution through published versions instead of local
+workspace paths. Without it the open-core boundary silently stops being
+verified, with nothing to indicate that it has stopped. `go.work` exists only
+for editor convenience.
+
+`GOFLAGS=-mod=readonly` is exported by the Makefile, so it holds whether or not
+`mise` is installed. An implicit `go mod tidy` during a build is a silent,
+unreviewed change to the dependency graph.
 
 ## Enforcement scripts
 
@@ -66,6 +77,11 @@ one, because it reports work that did not happen.
 | `verify-adr.sh` | §14 — append-only decision log | 3 |
 | `verify-rfc.sh` | §14 — design is decided before it is built | 3 |
 | `verify-constitution-coverage.sh` | ADR-0005 — the ladder table stays honest | 3 |
+| `run-analyzers.sh` | §2, §3, §10, §11 — domain purity and layering | 2 |
+| `verify-reproducible-build.sh` | §9 — builds are byte-reproducible | 3 |
+| `verify-tidy.sh` | §9 — the dependency graph is reviewed, not resolved at build time | 3 |
+| `verify-gofmt.sh` | §9 — identical source for every checkout | 3 |
+| `list-modules.sh` | shared helper (ADR-0004 makes commands per-module) | — |
 | `lib/frontmatter.sh` | shared helper | — |
 
 **They deliberately use nothing beyond `bash`, `awk` and `grep`.** These are the

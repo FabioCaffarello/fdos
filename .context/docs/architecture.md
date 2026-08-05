@@ -68,18 +68,36 @@ this.
 
 Releases use Go's subdirectory-prefixed tags (`libs/<name>/vX.Y.Z`).
 
-## Intended layering — hypothesis, not decision
+## Layering — decided by ADR-0013
 
-To be confirmed, refined or replaced by the M1.5 RFCs:
+Modules follow **bounded contexts**. Layers are packages inside them.
 
-| Layer | May depend on | Forbidden |
-|-------|---------------|-----------|
-| `domain` | nothing outside itself | I/O, concurrency, clocks, randomness, serialisation, binary floating point |
-| `app` | domain | direct infrastructure imports |
-| `adapters` | domain, app | — |
+```
+libs/kernel/                 cross-domain canonical primitives
+libs/<context>/domain        pure functional core
+libs/<context>/app           use cases, ports, orchestration
+libs/<context>/adapters      pure adapters only
+libs/<context>-<tech>/       infrastructure-heavy adapters (separate module)
+```
 
-The intent is a **pure functional core with an imperative shell**: data in, facts
-and decisions out.
+| Layer | May import | Enforced by |
+|-------|------------|-------------|
+| `kernel` | nothing first-party | `layering` |
+| `<context>/domain` | `kernel` | `layering`, `impurity`, `nofloat`, `nondet` |
+| `<context>/app` | `kernel`, own `domain` | `layering` |
+| `<context>/adapters` | `kernel`, own `domain`, own `app` | `layering` |
+
+No context imports another context's `domain` or `app`. Contexts integrate
+through published contracts, never shared types.
+
+**Infrastructure-heavy adapters live in separate modules.** Go resolves
+dependencies per module: a database driver inside `libs/ledger` would appear in
+the graph of everyone importing `libs/ledger/domain`. That would make
+Constitution §10 true at the package level and false at the level that decides
+what a consumer is coupled to.
+
+The domain is a **pure functional core with an imperative shell**: data in,
+facts and decisions out.
 
 Two consequences that are easy to get wrong:
 
@@ -89,23 +107,31 @@ Two consequences that are easy to get wrong:
 - **Serialisation is not a domain concern.** JSON struct tags on canonical models
   are provider leakage into the domain — precisely what Constitution §3 forbids.
 
-## Determinism constraints (M2)
+## Determinism constraints — enforced since M2
 
-The domain layer is where Constitution §2, §3 and §10 stop being conventions.
-Planned static analysis bans, inside domain packages:
+The domain layer is where Constitution §2, §3 and §10 stopped being conventions.
+`make analyze` fails the build. The rules live in `libs/analysis`.
 
-| Banned | Why |
-|--------|-----|
-| `float64`, `float32` | Binary floating point destroys reproducibility and silently corrupts money. Decimals or integer minor units only. |
-| `time.Now()` | Non-deterministic. Clocks are injected. |
-| `math/rand` | Non-deterministic. Entropy is injected. |
-| `os.Getenv` | Hidden input; makes a calculation unreproducible from the ledger alone. |
-| goroutines, channels, `sync.Mutex` | A pure core has no shared mutable state. Their presence signals misplaced I/O. |
-| `context.Context` | An I/O concern. Its presence means the code belongs in `app`. |
-| `encoding/json` | Serialisation is an adapter concern. |
+| Banned in `domain` | Rule | Why |
+|--------------------|------|-----|
+| `float64`, `float32` | `nofloat` | Floating-point addition is not associative: the same events folded in a different order give a different total |
+| `time.Now`, `time.Since` | `nondet` | The clock is injected; a rule that reads it cannot be replayed |
+| `math/rand`, `crypto/rand` | `nondet` | Entropy is injected, so the draw is recorded as provenance |
+| `os.Getenv` | `nondet` | Hidden input; unreproducible from the ledger alone |
+| range over a map | `nondet` | Go randomises iteration order. Collecting keys to sort them is exempt |
+| goroutines, channels, `select`, `sync` | `impurity` | A pure core has no shared mutable state |
+| `context.Context` | `impurity` | An I/O concern; ports belong in `app` |
+| `json`/`db`/`xml` struct tags | `impurity` | The wire format belongs to adapters |
+| layer inversion, cross-context import | `layering` | ADR-0013 |
 
-The highest-leverage item is the `float` ban: it turns "financial calculations
-are correct and reproducible" from an aspiration into a build error.
+The highest-leverage rule is `nofloat`. The usual objection to float in
+financial code is representation error; the decisive one here is
+**non-associativity**, which breaks Constitution §9 independently of precision.
+
+Every rule applies **only to the layer it governs**. Adapters are supposed to
+read the clock and start goroutines. An analyser that fires on legitimate code
+gets disabled, and a disabled rule enforces nothing — so each has fixtures
+proving it stays silent outside the domain.
 
 ## The enforcement ladder
 
