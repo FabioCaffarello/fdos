@@ -184,6 +184,23 @@ by the type, and a typo becomes a silent new scheme.
 
 ## Notes
 
+> **Correction, same day.** This ADR was implemented with a *remote* BSR plugin,
+> and a clean-clone run failed with `resource_exhausted: too many requests`.
+> That made every `make verify` depend on an external, rate-limited service —
+> an availability dependency on the build that ADR-0014 exists to prevent, and
+> one that fails for reasons unrelated to the change.
+>
+> `buf.gen.yaml` now uses a local plugin,
+> `go run google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.6`: pinned exactly,
+> built by the project toolchain, resolved from the module cache after first
+> use. Same reasoning as govulncheck in `scripts/verify-vulns.sh`. The generated
+> output is byte-identical, so the contract is unchanged.
+>
+> The Decision below is unaffected — it requires an exactly-pinned plugin and
+> never specified remote. The negative consequence about network access is now
+> historical, and `make proto-check` fails if the plugin is ever moved back to
+> the remote form.
+
 Deferred from M4, deliberately, each for lack of a subject:
 
 - **OpenAPI.** There is no service and no HTTP surface. Generating an API

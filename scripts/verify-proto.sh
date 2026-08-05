@@ -79,12 +79,15 @@ fi
 # Generated code is a build input. A floating plugin tag makes the output
 # irreproducible with no commit here — the same argument that pins every
 # GitHub Action to a commit SHA (ADR-0014).
-if grep -qE '^\s*-\s*remote:.*:(latest|main)\s*$' buf.gen.yaml; then
-  fail "pinned: buf.gen.yaml uses a floating plugin tag"
+if grep -qE '(@latest|@main|:latest|:main)' buf.gen.yaml; then
+  fail "pinned: buf.gen.yaml uses a floating plugin version"
+elif grep -qE '^\s*-\s*local:.*@v[0-9]+\.[0-9]+\.[0-9]+' buf.gen.yaml; then
+  printf '  pinned     %s\n' "$(grep -oE '[a-z.]+/[^"]*@v[0-9]+\.[0-9]+\.[0-9]+' buf.gen.yaml | head -1)"
 elif grep -qE '^\s*-\s*remote:.*:v[0-9]+\.[0-9]+\.[0-9]+\s*$' buf.gen.yaml; then
-  printf '  pinned     %s\n' "$(grep -oE 'buf\.build/[^ ]+' buf.gen.yaml | head -1)"
+  fail "pinned: the codegen plugin is remote — every run then depends on BSR"
+  fail "    use a local \`go run pkg@version\` plugin instead (ADR-0018)"
 else
-  fail "pinned: no exactly-pinned remote plugin found in buf.gen.yaml"
+  fail "pinned: no exactly-pinned plugin found in buf.gen.yaml"
 fi
 
 # --- generated code matches the schemas --------------------------------------

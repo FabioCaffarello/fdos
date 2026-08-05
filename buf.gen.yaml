@@ -20,6 +20,15 @@ managed:
       value: github.com/FabioCaffarello/fdos/libs/contracts/gen
 
 plugins:
-  - remote: buf.build/protocolbuffers/go:v1.36.6
+  # A LOCAL plugin, run through the project's own Go toolchain, not a remote
+  # BSR plugin. The remote form made every `make verify` depend on an external,
+  # rate-limited service — a build input that can fail for reasons unrelated to
+  # the change, and an availability dependency ADR-0014 exists to prevent. It
+  # was caught by a clean-clone run returning "resource_exhausted".
+  #
+  # `go run pkg@version` pins exactly and builds with the pinned toolchain, the
+  # same reasoning as govulncheck in scripts/verify-vulns.sh. After the first
+  # run it resolves from the module cache and needs no network.
+  - local: ["go", "run", "google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.6"]
     out: libs/contracts/gen
     opt: paths=source_relative
