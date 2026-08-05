@@ -22,7 +22,7 @@ is open, the answer is almost always whichever option preserves reproducibility.
 
 ## Current state
 
-**M2.5 complete — AI engineering.** Next: M3.5 (developer experience).
+**M3.5 complete — developer experience.** Next: M4 (contracts and observability).
 
 There is **no domain code and no application**. The only Go in the repository is
 `libs/analysis` — the four static analysers that turn Constitution principles
@@ -85,8 +85,8 @@ rather than assumed (ADR-0004).
 | M2 ✅ | Determinism toolchain — four analysers, reproducible builds, layer boundaries |
 | M3 ✅ | CI/CD and supply chain — SHA-pinned inputs, SBOM, provenance, signing |
 | M2.5 ✅ | AI engineering — prompt contracts, knowledge-base staleness checks |
-| **M3.5** | Developer experience |
-| M4 | Contracts and observability — proto → buf → OpenAPI → SDK → MCP → docs |
+| M3.5 ✅ | Developer experience — devcontainer, editor config, `make doctor` |
+| **M4** | Contracts and observability — proto → buf → OpenAPI → SDK → MCP → docs |
 | M5 | Open core boundary |
 | M6 | First domain — the Ledger, as a vertical slice |
 

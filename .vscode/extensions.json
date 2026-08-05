@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "golang.go",
+    "editorconfig.editorconfig",
+    "timonwong.shellcheck",
+    "tamasfe.even-better-toml",
+    "redhat.vscode-yaml"
+  ],
+  "unwantedRecommendations": [
+    // Formats Markdown on save in ways that fight .editorconfig's
+    // trim_trailing_whitespace exemption, which Markdown line breaks depend on.
+    "esbenp.prettier-vscode"
+  ]
+}

@@ -77,6 +77,16 @@ an agent actually reads its `must_read` or honours its `must_not`. Those stay at
 rung 6, recorded as such in ADR-0015. A green check is not evidence of agent
 compliance.
 
+### `.claude/` is an export, not a source
+
+Exporting this directory for Claude Code produces `.claude/`, and the exporter
+re-adds its built-in skills — including `api-design`, `refactoring` and
+`bug-investigation`, which are absent here on purpose.
+
+`.claude/` is gitignored, excluded from every check, and **not authoritative**.
+If it disagrees with this directory, this directory wins. Versioning it would
+put a contradicting second roster in the repository (ADR-0016).
+
 Generating `.context/` from `docs/` outright was considered and rejected for now
 — the two have genuinely different audiences, and a generator would either
 produce unusable prose or push so much annotation into `docs/` that the

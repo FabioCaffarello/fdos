@@ -62,6 +62,7 @@ without pushing, and drifts from what developers actually execute.
 | `make vuln-check` | No known vulnerability reachable from FDOS code (`govulncheck`) |
 | `make hooks` | Install the git hooks (`lefthook`) |
 | `make affected` | Print the modules a change affects |
+| `make doctor` | Diagnose this working copy and name the fix for each problem |
 | `make clean` | Remove build output |
 
 **`GOWORK=off` on every Go target.** This is the load-bearing half of ADR-0004:
@@ -130,7 +131,40 @@ pre-push. Hooks call the same `make` targets, and are explicitly bypassable: CI
 re-runs everything, so `--no-verify` costs a round trip and cannot let anything
 through.
 
+## Developer environment
+
+`.devcontainer/` gives a zero-configuration path: it installs `mise`, and `mise`
+installs the toolchain from `mise.toml`. **No version is declared there** —
+devcontainer features for Go were rejected because a feature declares its own
+(ADR-0016).
+
+The container is *not* a build input. CI does not use it and nothing built in it
+is released or attested to, which is the only reason its image is tag-pinned and
+its installer arrives by `curl | sh`. Both would be unacceptable in
+`.github/workflows/`.
+
+`.vscode/settings.json` is committed, restricted to settings that mirror what
+`make` already enforces — `goimports` local prefix, `-race`, `staticcheck`.
+Theme, font and keybindings stay in user settings. `.idea/` is not committed:
+JetBrains mixes shared configuration with machine-local paths in the same files.
+
+`make doctor` diagnoses a working copy and **never fails**. `toolchain-check`
+answers "is this correct" and exits non-zero; `doctor` answers "why does this not
+work on my machine", a question only asked when something is already broken.
+
+## No second task runner
+
+There is no Taskfile, no Just, no npm scripts, and no abbreviated fast-path
+target. `make` is the only entry point, and CI runs it (ADR-0014).
+
+The full gate measured **9.2 seconds** at M3.5 — `test` 3.2s, `vuln-check` 1.2s,
+`context-check` 1.1s, everything else under 0.6s. That does not justify a second
+path, and a fast target that omits checks becomes the one people run.
+
+Revisit above roughly 60 seconds, and the fix is then
+`scripts/affected-modules.sh` driving a separate CI job — not a narrower local
+gate.
+
 ## Not yet present
 
-`buf` is pinned but unused — there is no proto yet (M4). Devcontainer and IDE
-settings are **M3.5**.
+`buf` is pinned but unused — there is no proto yet (M4).

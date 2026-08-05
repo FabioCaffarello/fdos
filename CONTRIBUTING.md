@@ -10,10 +10,15 @@ authority in this repository, and it is short.
 ## Getting started
 
 ```sh
+make doctor      # what is installed, what is missing, what to do about it
 make bootstrap   # validate the toolchain, install git hooks
 make verify      # run every enforcement mechanism available at this milestone
 make help        # list targets
 ```
+
+Or open the repository in the [devcontainer](.devcontainer/README.md) and skip
+the installation entirely. `make doctor` never fails — it is a diagnostic, and a
+diagnostic that exits non-zero cannot be run when things are broken.
 
 A clean clone must pass `make verify` with no tribal knowledge. If it does not,
 that is a bug in this repository, not in your machine — please report it.
@@ -40,10 +45,15 @@ Question → RFC (if design exploration is needed) → ADR (decision) → implem
 This ordering is not negotiable (Constitution §14). Code that ships becomes the
 decision, and the reasoning is never recorded afterwards.
 
-**FDOS currently has no Go code, deliberately.** The canonical financial model is
-an output of the M1.5 RFCs. A contribution that adds domain types, `go.mod`
-files or business rules before those RFCs land will be declined — not because it
-is bad work, but because it settles open questions by accident.
+**FDOS currently has no domain code, deliberately.** The canonical model is
+decided — RFC-0001 … RFC-0006 are accepted and recorded in ADR-0007 … ADR-0012 —
+but it lands as code with the Ledger at **M6**, so the first bounded context is
+built under the constraints rather than retrofitted to them.
+
+The only Go in the repository is `libs/analysis`, the analysers that turn those
+constraints into build errors. A contribution creating `libs/kernel` or a
+bounded context ahead of M6 will be declined: not because it is bad work, but
+because sequencing is itself a decision (ADR-0013).
 
 ## When you need an ADR
 
@@ -135,18 +145,26 @@ obligation.
 - Documentation updated **in the same change**
 
 Documentation is production code. A change leaving `docs/` stale is not
-finished, and from M2 a directory README that misdescribes its module will fail
-the build outright.
+finished — `make context-check` fails on a reference to a `make` target, script,
+link or ADR that does not exist.
+
+It cannot catch a paragraph that is merely wrong. Three statements in this file
+were stale when M3.5 audited it, all of them passing every check. That residue
+is why review still matters.
 
 ## Releases
 
-Not yet automated. There are no modules to publish and no artifacts to sign.
+Automated since M3. Pushing a tag matching `libs/<name>/vX.Y.Z` (Go's
+subdirectory-prefixed convention, per ADR-0004) runs `make verify` again on the
+tagged commit, then builds, generates an SPDX SBOM, attests build provenance and
+signs the checksum manifest with keyless `cosign`.
 
-When releases begin, they use Go's subdirectory-prefixed tags
-(`libs/<name>/vX.Y.Z`, per ADR-0004) and are driven by automation landing in
-**M3**, together with SBOM generation, SLSA provenance attestation and artifact
-signing. Manual tagging is not an acceptable fallback — cross-module version
-chains are too easy to get wrong by hand.
+Go *libraries* need no artifact — a module release is a tag, served by the
+proxy. The only binary released today is `fdoslint`, so that a consumer can
+verify the tool gating their code was built from the source it claims.
+
+Manual tagging is not an acceptable fallback: cross-module version chains are
+too easy to get wrong by hand.
 
 ## Working with AI agents
 

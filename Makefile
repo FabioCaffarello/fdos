@@ -25,7 +25,7 @@ define FOR_EACH_MODULE
 	done
 endef
 
-.PHONY: help bootstrap hooks verify affected \
+.PHONY: help bootstrap hooks doctor verify affected \
 	toolchain-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
 	context-check agent-contract-check \
 	fmt fmt-check vet lint test analyze repro-check tidy tidy-check build clean \
@@ -33,7 +33,8 @@ endef
 
 help: ## Show available targets
 	@printf 'FDOS — Financial Data Operating System\n\n'
-	@printf 'Current milestone: M2 (Determinism Toolchain)\n\n'
+	@printf 'New here?  make doctor   diagnose this working copy\n'
+	@printf '           make verify   the full gate (exactly what CI runs)\n\n'
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@printf '\n'
@@ -43,6 +44,9 @@ bootstrap: ## Prepare a working copy for development
 	@$(MAKE) --no-print-directory toolchain-check
 	@$(MAKE) --no-print-directory hooks
 	@printf '\nBootstrap complete. Run `make verify` to check the repository.\n'
+
+doctor: ## Diagnose this working copy and say what to fix
+	@$(SCRIPTS_DIR)/doctor.sh
 
 hooks: ## Install the git hooks (lefthook)
 	@if command -v lefthook >/dev/null 2>&1; then \

@@ -1,0 +1,48 @@
+{
+  // Committed deliberately, and kept to the minimum that makes the repository's
+  // own rules easy to satisfy. Personal preferences (theme, keybindings, font)
+  // belong in user settings and are not here.
+  //
+  // Formatting and whitespace come from .editorconfig; this file only covers
+  // what EditorConfig cannot express.
+
+  "editor.formatOnSave": true,
+
+  // gopls, matching what `make lint` and `make fmt` enforce.
+  "gopls": {
+    "formatting.local": "github.com/FabioCaffarello/fdos",
+    "ui.diagnostic.staticcheck": true
+  },
+  "go.useLanguageServer": true,
+  "go.formatTool": "goimports",
+  "go.lintTool": "golangci-lint",
+  "go.lintFlags": ["--path-mode=abs"],
+
+  // `make test` runs with -race. Matching it here means a green editor run and
+  // a green gate agree.
+  "go.testFlags": ["-race"],
+
+  // go.work is committed for exactly this: cross-module navigation while
+  // editing (ADR-0004). Every make target and CI job overrides it with
+  // GOWORK=off, so the editor is the one place it is meant to apply.
+  "go.toolsEnvVars": {
+    "GOFLAGS": "-mod=readonly"
+  },
+
+  // Analyser fixtures are deliberately non-compliant Go. Formatting or
+  // "fixing" them silently breaks the tests that depend on their exact shape.
+  "files.watcherExclude": {
+    "**/testdata/**": true
+  },
+  "[go]": {
+    "editor.defaultFormatter": "golang.go"
+  },
+
+  "yaml.schemas": {
+    "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yml"
+  },
+
+  "files.associations": {
+    "*.mdc": "markdown"
+  }
+}

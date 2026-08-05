@@ -1,0 +1,42 @@
+{
+  "name": "FDOS",
+
+  // Plain base image, then mise installs the toolchain from mise.toml.
+  //
+  // Deliberately NOT using devcontainer features for Go and friends: a feature
+  // declares its own version, which would make the devcontainer a second place
+  // tool versions are pinned. mise.toml is the single source of truth, and this
+  // container reads it like everything else does.
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "postCreateCommand": ".devcontainer/post-create.sh",
+
+  "containerEnv": {
+    // The Makefile exports these too. Setting them here means a shell opened
+    // directly in the container behaves the same as one going through make.
+    "GOFLAGS": "-mod=readonly",
+    // NOTE: GOWORK is deliberately NOT set to off here. The editor is the one
+    // place go.work is meant to be used (ADR-0004); every make target and every
+    // CI job overrides it per command.
+    "GOTOOLCHAIN": "local"
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "editorconfig.editorconfig",
+        "timonwong.shellcheck",
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml"
+      ]
+    }
+  },
+
+  "remoteUser": "vscode"
+}

@@ -36,6 +36,22 @@ while IFS= read -r doc; do
   dir="$(dirname "$doc")"
   files=$((files + 1))
 
+  # The decision log is a historical record, not live documentation, and
+  # ADR-0000 forbids editing an accepted entry. Two consequences:
+  #
+  #   - An ADR legitimately names things that do not exist: a rejected
+  #     alternative is recorded precisely so the reasoning survives.
+  #   - If a `make` target or script is renamed years from now, every ADR
+  #     naming it becomes "stale" and none of them may be corrected.
+  #
+  # So ADRs and RFCs are exempt from the mutable-name checks. Links and
+  # ADR/RFC identifiers are still verified: those name stable things, and a
+  # broken one is a real defect rather than the passage of time.
+  historical=false
+  case "$doc" in
+    docs/adr/*|docs/rfc/*) historical=true ;;
+  esac
+
   # --- relative links resolve -------------------------------------------------
   while IFS= read -r link; do
     [ -n "$link" ] || continue
@@ -50,25 +66,27 @@ while IFS= read -r doc; do
   done < <(grep -oE '\]\([^)]+\)' "$doc" 2>/dev/null | sed -E 's/^\]\((.*)\)$/\1/' || true)
 
   # --- `make <target>` names a real target ------------------------------------
-  while IFS= read -r target; do
-    [ -n "$target" ] || continue
-    if ! printf '%s\n' "$make_targets" | grep -qx -- "$target"; then
-      fail "${doc}: references \`make ${target}\`, which is not a Makefile target"
-    fi
-  done < <(
-    {
-      grep -oE '`make [a-z][a-z0-9-]*' "$doc" 2>/dev/null | sed 's/^`make //'
-      grep -oE '^make [a-z][a-z0-9-]*' "$doc" 2>/dev/null | sed 's/^make //'
-    } | sort -u || true
-  )
+  if [ "$historical" = false ]; then
+    while IFS= read -r target; do
+      [ -n "$target" ] || continue
+      if ! printf '%s\n' "$make_targets" | grep -qx -- "$target"; then
+        fail "${doc}: references \`make ${target}\`, which is not a Makefile target"
+      fi
+    done < <(
+      {
+        grep -oE '`make [a-z][a-z0-9-]*' "$doc" 2>/dev/null | sed 's/^`make //'
+        grep -oE '^make [a-z][a-z0-9-]*' "$doc" 2>/dev/null | sed 's/^make //'
+      } | sort -u || true
+    )
 
-  # --- scripts/*.sh exists ----------------------------------------------------
-  while IFS= read -r script; do
-    [ -n "$script" ] || continue
-    if [ ! -f "$script" ]; then
-      fail "${doc}: references '${script}', which does not exist"
-    fi
-  done < <(grep -oE 'scripts/[a-zA-Z0-9_/-]+\.sh' "$doc" 2>/dev/null | sort -u || true)
+    # --- scripts/*.sh exists --------------------------------------------------
+    while IFS= read -r script; do
+      [ -n "$script" ] || continue
+      if [ ! -f "$script" ]; then
+        fail "${doc}: references '${script}', which does not exist"
+      fi
+    done < <(grep -oE 'scripts/[a-zA-Z0-9_/-]+\.sh' "$doc" 2>/dev/null | sort -u || true)
+  fi
 
   # --- ADR / RFC identifiers resolve ------------------------------------------
   while IFS= read -r id; do
@@ -96,6 +114,7 @@ done < <(
     -not -path '*/node_modules/*' \
     -not -path './.context/cache/*' \
     -not -path './.context/runtime/*' \
+    -not -path './.claude/*' \
     2>/dev/null | sed 's|^\./||' | sort || true
 )
 

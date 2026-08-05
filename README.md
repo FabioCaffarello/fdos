@@ -10,20 +10,24 @@ reference data.
 
 That constraint is the whole design. Everything else follows from it.
 
-> **Status: M2.5 complete — AI engineering. Next: M3.5 (developer experience).**
-> Eighteen checks run on every pull request. The knowledge base agents work
-> from is now checked against the repository it describes, so stale context
-> fails a build instead of producing a confident wrong answer. There is still no
-> domain code — the canonical model lands with the Ledger at M6.
+> **Status: M3.5 complete — developer experience. Next: M4 (contracts).**
+> Clone, open in the devcontainer, `make verify` passes. Eighteen checks run on
+> every pull request and nothing is configured in two places. There is still no
+> domain code — the canonical model lands with the Ledger at M6, and M4 is where
+> provenance, bitemporality and explainability finally leave rung 6.
 
 ## Quick start
 
 ```sh
+make doctor      # what is installed, what is missing, what to do about it
 make bootstrap   # validate the toolchain, install git hooks
 make verify      # run every enforcement mechanism available at this milestone
-make analyze     # domain purity and layer boundaries
 make help        # list available targets
 ```
+
+Or open the repository in the [devcontainer](.devcontainer/README.md): it
+installs `mise`, `mise` installs the toolchain from `mise.toml`, and nothing
+declares a version twice.
 
 `make verify` is the whole gate. CI runs exactly this and nothing else
 (ADR-0014), so a green local run is a meaningful prediction of a green pipeline.
@@ -91,6 +95,8 @@ libs/ledger/domain/rule.go:14:37: nondet: time.Now in domain package;
 | `scripts/` | Enforcement mechanisms, invoked through `make`. |
 | `.github/` | CI workflows. Runs `make`, contains no logic of its own. |
 | `.context/` | Structured engineering knowledge for AI agents (ADR-0006). |
+| `.devcontainer/` | Reproducible dev environment. Declares no versions of its own. |
+| `.vscode/` | Editor settings that mirror what `make` enforces. Nothing personal. |
 
 Every directory declares its architectural contract in the front matter of its
 `README.md`: what it permits, what it forbids, and who owns it. `make
@@ -131,6 +137,7 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0013](docs/adr/0013-layer-structure-and-module-topology.md) | Modules follow bounded contexts; layers are packages within them |
 | [0014](docs/adr/0014-ci-runs-make-and-pins-everything.md) | CI invokes `make` and nothing else; every build input is pinned by digest |
 | [0015](docs/adr/0015-ai-engineering-policy.md) | AI-assisted work is bounded by enforced gates and a checkable knowledge base |
+| [0016](docs/adr/0016-developer-experience.md) | One entry point, one source of truth, and no second copy of the rules |
 
 ### Requests for Comment
 
@@ -157,8 +164,8 @@ above it.
 | M2 | Determinism toolchain — layer boundaries, custom analysers, reproducible builds ✅ |
 | M3 | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing ✅ |
 | M2.5 | AI engineering — agent playbooks, prompt contracts, staleness checks ✅ |
-| **M3.5** | Developer experience — devcontainer, IDE configuration, task ergonomics |
-| M4 | Contracts and observability — proto → buf → OpenAPI → SDK → MCP → docs |
+| M3.5 | Developer experience — devcontainer, IDE configuration, task ergonomics ✅ |
+| **M4** | Contracts and observability — proto → buf → OpenAPI → SDK → MCP → docs |
 | M5 | Open core boundary — published contract modules, plugin conformance suite |
 | M6 | First domain — the Ledger, as a vertical slice validating everything above |
 

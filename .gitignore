@@ -26,12 +26,29 @@ vendor/
 .context/**/archive/
 
 # ---------------------------------------------------------------------------
+# Generated AI-tool exports
+# ---------------------------------------------------------------------------
+# .claude/ is produced by exporting .context/ for Claude Code. It is derived,
+# regenerable, and NOT authoritative — and because the exporter re-adds its
+# built-in skills, it will contain roles .context/ deliberately pruned
+# (api-design, refactoring, bug-investigation). Versioning it would put a
+# contradicting second roster in the repository (ADR-0015, ADR-0016).
+.claude/
+
+# ---------------------------------------------------------------------------
 # Local tooling / editor state
 # ---------------------------------------------------------------------------
+# JetBrains project files mix shared configuration with machine-local paths and
+# per-user state in the same files. Committing them produces constant noise and
+# occasional breakage; .editorconfig covers what actually needs sharing.
 .idea/
+
+# VS Code: share only what makes the repository's own rules easy to satisfy
+# (ADR-0016). Personal preferences stay in user settings.
 .vscode/*
+!.vscode/settings.json
 !.vscode/extensions.json
-!.vscode/settings.shared.json
+!.vscode/README.md
 *.swp
 
 # ---------------------------------------------------------------------------
