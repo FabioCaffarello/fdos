@@ -68,11 +68,11 @@ history, calculation method, confidence.
 
 No computation may lose provenance.
 
-> **Addressed by [RFC-0004](rfc/0004-provenance-and-reference-data.md)
-> (Proposed).** The founding text qualified this with "whenever applicable".
-> Optional provenance becomes absent provenance. RFC-0004 proposes a universal,
-> structural envelope — a fact without provenance is unrepresentable rather than
-> discouraged. Pending acceptance and the ADRs recording it.
+> **Decided by [ADR-0010](adr/0010-provenance-envelope-reference-versioning.md)
+> (RFC-0004, Accepted).** The founding text qualified this with "whenever
+> applicable". Optional provenance becomes absent provenance. The envelope is
+> universal and structural — a fact without provenance is unrepresentable
+> rather than discouraged.
 
 ## 7. Temporal Modeling
 
@@ -80,11 +80,11 @@ FDOS adopts bitemporal modeling. Always distinguish when a fact became true from
 when FDOS learned about it. Historical analysis must never introduce look-ahead
 bias.
 
-> **Addressed by [RFC-0003](rfc/0003-bitemporal-event-model.md) (Proposed).** The
-> founding text qualified this with "whenever appropriate". RFC-0003 proposes
-> universal bitemporality, with no default as-of on any query — the mechanism
-> that makes look-ahead bias structurally impossible rather than merely
-> discouraged. Pending acceptance and the ADRs recording it.
+> **Decided by [ADR-0009](adr/0009-universal-bitemporality.md) (RFC-0003,
+> Accepted).** The founding text qualified this with "whenever appropriate".
+> Bitemporality is universal, with no default as-of on any query — the
+> mechanism that makes look-ahead bias structurally impossible rather than
+> merely discouraged.
 
 ## 8. Explainability
 
@@ -93,25 +93,26 @@ deterministic calculations, assumptions, provenance and confidence.
 
 AI improves communication. Never financial truth.
 
-> **Weakest principle in the system.** As of version 1.0.0 this is the only
-> principle with no enforcement mechanism above "documentation".
-> [RFC-0006](rfc/0006-explainability-as-a-return-type.md) (Proposed) makes the
-> computation trace part of every calculation's return type, so a calculation
-> that does not explain does not compile. If accepted, this is the largest
-> single climb available in the table below: rung 6 to rung 1.
+> **Weakest principle in the system — now with a decided path up.** As of
+> version 1.0.0 this was the only principle with no enforcement mechanism above
+> "documentation". [ADR-0012](adr/0012-explained-return-type.md) (RFC-0006,
+> Accepted) makes the computation trace part of every calculation's return
+> type, so a calculation that does not explain does not compile. Once the M2
+> analyser lands, this is the largest single climb available in the table
+> below: rung 6 to rung 1.
 
 ## 9. Reproducibility
 
 Every report is reproducible years later using the same ledger and reference
 datasets. Reproducibility takes precedence over convenience.
 
-> **Addressed by [RFC-0004](rfc/0004-provenance-and-reference-data.md)
-> (Proposed).** Reference datasets are versioned data. Reproducing a 2026 report
-> in 2031 requires the 2026 reference data, not today's. This is not
-> retrofittable: if the canonical model does not carry a reference-dataset
+> **Decided by [ADR-0010](adr/0010-provenance-envelope-reference-versioning.md)
+> (RFC-0004, Accepted).** Reference datasets are versioned data. Reproducing a
+> 2026 report in 2031 requires the 2026 reference data, not today's. This is
+> not retrofittable: if the canonical model does not carry a reference-dataset
 > version from the first event, historical reproducibility is permanently lost.
-> RFC-0004 adds a third leg most systems forget — the *code* must be pinned too,
-> alongside the ledger and the reference data.
+> The decision adds a third leg most systems forget — the *code* must be pinned
+> too, alongside the ledger and the reference data.
 
 ## 10. Domain Before Infrastructure
 

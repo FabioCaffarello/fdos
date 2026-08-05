@@ -13,25 +13,27 @@ scaffoldVersion: "2.0.0"
 ## What is decided and what is not
 
 **Decided, binding today:** repository structure, module granularity, module
-path, licence, decision process, enforcement philosophy. See ADR-0000 through
-ADR-0006.
+path, licence, decision process, enforcement philosophy (ADR-0000 through
+ADR-0006) — and, since M1.5 closed, the canonical domain architecture
+(ADR-0007 through ADR-0012).
 
-**Proposed, not decided — the M1.5 RFC set.** Each is written and awaiting
-review. **Proposed is not binding**: none takes effect until accepted and
-recorded in an ADR.
+**The M1.5 RFC set — all Accepted.** Each acceptance is recorded by an ADR
+stating what it settled; the ADR is the binding statement, the RFC holds the
+full design exploration.
 
-| RFC | Proposes |
-|-----|----------|
-| [RFC-0001](../../docs/rfc/0001-identity-and-aggregate-boundaries.md) | Internal deterministic identity; external identifiers as timestamped assertions; positions are projections, not aggregates |
-| [RFC-0002](../../docs/rfc/0002-money-and-numeric-representation.md) | Arbitrary-precision decimals, `Money` carrying currency, no default rounding context |
-| [RFC-0003](../../docs/rfc/0003-bitemporal-event-model.md) | Universal bitemporality; no default as-of on any query |
-| [RFC-0004](../../docs/rfc/0004-provenance-and-reference-data.md) | Structural provenance envelope; reference datasets and code pinned by version |
-| [RFC-0005](../../docs/rfc/0005-event-taxonomy-and-schema-evolution.md) | Occurrences vs Observations; upcast on read, never migrate |
-| [RFC-0006](../../docs/rfc/0006-explainability-as-a-return-type.md) | `Explained[T]` — a calculation that cannot explain itself does not compile |
+| RFC | Decides | ADR |
+|-----|---------|-----|
+| [RFC-0001](../../docs/rfc/0001-identity-and-aggregate-boundaries.md) | Internal deterministic identity; external identifiers as timestamped assertions; positions are projections, not aggregates | [ADR-0007](../../docs/adr/0007-internal-deterministic-identity.md) |
+| [RFC-0002](../../docs/rfc/0002-money-and-numeric-representation.md) | Arbitrary-precision decimals, `Money` carrying currency, no default rounding context | [ADR-0008](../../docs/adr/0008-decimal-money-explicit-rounding.md) |
+| [RFC-0003](../../docs/rfc/0003-bitemporal-event-model.md) | Universal bitemporality; no default as-of on any query | [ADR-0009](../../docs/adr/0009-universal-bitemporality.md) |
+| [RFC-0004](../../docs/rfc/0004-provenance-and-reference-data.md) | Structural provenance envelope; reference datasets and code pinned by version | [ADR-0010](../../docs/adr/0010-provenance-envelope-reference-versioning.md) |
+| [RFC-0005](../../docs/rfc/0005-event-taxonomy-and-schema-evolution.md) | Occurrences vs Observations; upcast on read, never migrate | [ADR-0011](../../docs/adr/0011-fact-taxonomy-and-upcasting.md) |
+| [RFC-0006](../../docs/rfc/0006-explainability-as-a-return-type.md) | `Explained[T]` — a calculation that cannot explain itself does not compile | [ADR-0012](../../docs/adr/0012-explained-return-type.md) |
 
-Do not implement against a Proposed RFC. Doing so converts a proposal into a
-decision without an ADR. Where this document describes layering, it records
-*intent*, marked as such.
+Open questions each ADR deliberately leaves unresolved are listed in its Notes
+section, with the milestone that must settle them. Where this document
+describes layering, it still records *intent*, marked as such — the layering
+itself has no ADR yet.
 
 ## Repository structure
 

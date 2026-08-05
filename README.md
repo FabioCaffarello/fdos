@@ -101,20 +101,27 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0004](docs/adr/0004-module-granularity.md) | One module per `libs/*`; CI builds with `GOWORK=off` |
 | [0005](docs/adr/0005-enforcement-ladder.md) | Principles are enforced at the highest feasible mechanism |
 | [0006](docs/adr/0006-context-directory-naming.md) | `.context` is the canonical AI knowledge directory |
+| [0007](docs/adr/0007-internal-deterministic-identity.md) | Entity identity is internal, deterministic and assertion-based |
+| [0008](docs/adr/0008-decimal-money-explicit-rounding.md) | Money is arbitrary-precision decimal; no division has a default rounding |
+| [0009](docs/adr/0009-universal-bitemporality.md) | Every canonical fact is bitemporal; no query has a default as-of |
+| [0010](docs/adr/0010-provenance-envelope-reference-versioning.md) | Every fact carries a provenance envelope and pins its reference-data versions |
+| [0011](docs/adr/0011-fact-taxonomy-and-upcasting.md) | Facts are Occurrences or Observations; schemas evolve by upcast-on-read |
+| [0012](docs/adr/0012-explained-return-type.md) | Domain calculations producing financial values return `Explained[T]` |
 
 ### Requests for Comment
 
-The M1.5 canonical-architecture set. All **Proposed** — none is a decision until
-accepted and recorded in an ADR. Read in order; each depends on the ones above.
+The M1.5 canonical-architecture set. All **Accepted**, each recorded by the ADR
+above that states what it settled. Read in order; each depends on the ones
+above it.
 
-| RFC | Proposal |
-|-----|----------|
-| [0001](docs/rfc/0001-identity-and-aggregate-boundaries.md) | External identifiers are claims about entities, never keys. Positions are projections, not aggregates. |
-| [0002](docs/rfc/0002-money-and-numeric-representation.md) | Arbitrary-precision decimals; no binary float; no default rounding context. |
-| [0003](docs/rfc/0003-bitemporal-event-model.md) | Universal bitemporality; no default as-of, making look-ahead bias impossible. |
-| [0004](docs/rfc/0004-provenance-and-reference-data.md) | Provenance is structural, not optional. Reference datasets pinned by version — and so is the code. |
-| [0005](docs/rfc/0005-event-taxonomy-and-schema-evolution.md) | Occurrences vs Observations. Events are never migrated; upcasting happens on read and is pinned. |
-| [0006](docs/rfc/0006-explainability-as-a-return-type.md) | Calculations return their computation trace, so one that cannot explain itself does not compile. |
+| RFC | Proposal | Decided by |
+|-----|----------|------------|
+| [0001](docs/rfc/0001-identity-and-aggregate-boundaries.md) | External identifiers are claims about entities, never keys. Positions are projections, not aggregates. | ADR-0007 |
+| [0002](docs/rfc/0002-money-and-numeric-representation.md) | Arbitrary-precision decimals; no binary float; no default rounding context. | ADR-0008 |
+| [0003](docs/rfc/0003-bitemporal-event-model.md) | Universal bitemporality; no default as-of, making look-ahead bias impossible. | ADR-0009 |
+| [0004](docs/rfc/0004-provenance-and-reference-data.md) | Provenance is structural, not optional. Reference datasets pinned by version — and so is the code. | ADR-0010 |
+| [0005](docs/rfc/0005-event-taxonomy-and-schema-evolution.md) | Occurrences vs Observations. Events are never migrated; upcasting happens on read and is pinned. | ADR-0011 |
+| [0006](docs/rfc/0006-explainability-as-a-return-type.md) | Calculations return their computation trace, so one that cannot explain itself does not compile. | ADR-0012 |
 
 ## Roadmap
 
@@ -122,7 +129,7 @@ accepted and recorded in an ADR. Read in order; each depends on the ones above.
 |-----------|-----------|
 | M0 | Repository genesis — governance and enforcement substrate ✅ |
 | M1 | Governance substrate — `.context`, contribution and release process ✅ |
-| **M1.5** | Canonical domain architecture — RFCs only: identity, numerics, bitemporality, provenance, event taxonomy, explainability 🔍 |
+| M1.5 | Canonical domain architecture — RFCs only: identity, numerics, bitemporality, provenance, event taxonomy, explainability ✅ |
 | M2 | Determinism toolchain — layer boundaries, custom analysers, reproducible builds |
 | M3 | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing |
 | M2.5 | AI engineering — agent playbooks, prompt contracts, staleness checks |

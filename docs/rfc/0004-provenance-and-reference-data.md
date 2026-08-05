@@ -1,7 +1,7 @@
 ---
 id: RFC-0004
 title: Provenance envelope and reference data versioning
-status: Proposed
+status: Accepted
 date: 2026-08-05
 authors:
   - "@FabioCaffarello"

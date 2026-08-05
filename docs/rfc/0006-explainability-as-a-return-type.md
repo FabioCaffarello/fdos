@@ -1,7 +1,7 @@
 ---
 id: RFC-0006
 title: Explainability as a return type
-status: Proposed
+status: Accepted
 date: 2026-08-05
 authors:
   - "@FabioCaffarello"

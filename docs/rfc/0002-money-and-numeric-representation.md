@@ -1,7 +1,7 @@
 ---
 id: RFC-0002
 title: Money, quantity and numeric representation
-status: Proposed
+status: Accepted
 date: 2026-08-05
 authors:
   - "@FabioCaffarello"

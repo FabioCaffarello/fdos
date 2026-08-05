@@ -66,7 +66,7 @@ rather than assumed (ADR-0004).
 |-----------|-----------|
 | M0 ✅ | Repository genesis — governance and enforcement substrate |
 | M1 ✅ | Governance substrate — `.context`, contribution and release process |
-| **M1.5** | Canonical domain architecture — **RFCs only**. Six proposed (RFC-0001 … RFC-0006), none accepted |
+| M1.5 ✅ | Canonical domain architecture — **RFCs only**. Six accepted (RFC-0001 … RFC-0006), recorded by ADR-0007 … ADR-0012 |
 | M2 | Determinism toolchain — layer boundaries, custom analysers, reproducible builds |
 | M3 | CI/CD and supply chain |
 | M2.5 | AI engineering — agent playbooks, prompt contracts, staleness checks |
@@ -77,10 +77,10 @@ rather than assumed (ADR-0004).
 
 M1.5 produces **no code**. That is its purpose.
 
-The six RFCs are listed in [architecture.md](./architecture.md). They are
-*Proposed*: none binds anything until accepted and recorded in an ADR.
-Implementing against a Proposed RFC converts a proposal into a decision without
-one, which is the specific failure the RFC stage exists to prevent.
+The six RFCs are listed in [architecture.md](./architecture.md). All are
+*Accepted*, each recorded by the ADR stating what it settled (ADR-0007 …
+ADR-0012). The ADRs bind; their Notes sections list the questions each decision
+deliberately leaves open and the milestone that must settle them.
 
 ## Authority
 

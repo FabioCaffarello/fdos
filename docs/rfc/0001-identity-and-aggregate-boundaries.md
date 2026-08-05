@@ -1,7 +1,7 @@
 ---
 id: RFC-0001
 title: Identity and aggregate boundaries in the Canonical Financial Model
-status: Proposed
+status: Accepted
 date: 2026-08-05
 authors:
   - "@FabioCaffarello"

@@ -1,7 +1,7 @@
 ---
 id: RFC-0005
 title: Event taxonomy and schema evolution
-status: Proposed
+status: Accepted
 date: 2026-08-05
 authors:
   - "@FabioCaffarello"
@@ -111,7 +111,8 @@ information. If a v1 → v2 transformation would lose data, v2 is the wrong desi
 
 ### Correction semantics
 
-Three distinct operations, from RFC-0003:
+Three distinct operations — the first two defined by RFC-0003, the third added
+here:
 
 | Operation | Asserts |
 |-----------|---------|

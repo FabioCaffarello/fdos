@@ -28,20 +28,20 @@ and under what constraints.
 | `adr/` | Architecture Decision Records. Append-only, immutable (ADR-0000). |
 | `rfc/` | Requests for Comments — decisions requiring design exploration. |
 
-### Current RFC set — M1.5, all Proposed
+### Current RFC set — M1.5, all Accepted
 
-| RFC | Proposal |
-|-----|----------|
-| [0001](rfc/0001-identity-and-aggregate-boundaries.md) | Identity and aggregate boundaries |
-| [0002](rfc/0002-money-and-numeric-representation.md) | Money, quantity and numeric representation |
-| [0003](rfc/0003-bitemporal-event-model.md) | Bitemporal event model |
-| [0004](rfc/0004-provenance-and-reference-data.md) | Provenance envelope and reference data versioning |
-| [0005](rfc/0005-event-taxonomy-and-schema-evolution.md) | Event taxonomy and schema evolution |
-| [0006](rfc/0006-explainability-as-a-return-type.md) | Explainability as a return type |
+Each acceptance is recorded by the ADR that states what the RFC settled — a
+rule `make rfc-check` enforces: an RFC marked `Accepted` with no ADR
+referencing it fails the build.
 
-**Proposed is not decided.** None of these binds anything until it is accepted
-and an ADR records what it settled — a rule `make rfc-check` enforces: an RFC
-marked `Accepted` with no ADR referencing it fails the build.
+| RFC | Proposal | Decided by |
+|-----|----------|------------|
+| [0001](rfc/0001-identity-and-aggregate-boundaries.md) | Identity and aggregate boundaries | [ADR-0007](adr/0007-internal-deterministic-identity.md) |
+| [0002](rfc/0002-money-and-numeric-representation.md) | Money, quantity and numeric representation | [ADR-0008](adr/0008-decimal-money-explicit-rounding.md) |
+| [0003](rfc/0003-bitemporal-event-model.md) | Bitemporal event model | [ADR-0009](adr/0009-universal-bitemporality.md) |
+| [0004](rfc/0004-provenance-and-reference-data.md) | Provenance envelope and reference data versioning | [ADR-0010](adr/0010-provenance-envelope-reference-versioning.md) |
+| [0005](rfc/0005-event-taxonomy-and-schema-evolution.md) | Event taxonomy and schema evolution | [ADR-0011](adr/0011-fact-taxonomy-and-upcasting.md) |
+| [0006](rfc/0006-explainability-as-a-return-type.md) | Explainability as a return type | [ADR-0012](adr/0012-explained-return-type.md) |
 
 ## ADR or RFC?
 

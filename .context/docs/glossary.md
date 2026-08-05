@@ -13,10 +13,10 @@ scaffoldVersion: "2.0.0"
 Each FDOS domain owns its own ubiquitous language, and no implementation detail
 leaks across domains. This file holds only the cross-cutting vocabulary.
 
-> **Domain terms below are provisional.** The M1.5 RFC set (RFC-0001 …
-> RFC-0006) now proposes definitions for most of them, but *Proposed is not
-> decided*: nothing binds until an RFC is accepted and an ADR records it. Terms
-> marked *(provisional)* describe intent. Do not implement against them.
+> **Domain terms below are decided.** The M1.5 RFC set (RFC-0001 … RFC-0006)
+> is Accepted, recorded by ADR-0007 … ADR-0012. Definitions carrying an RFC
+> reference are binding; the ADRs' Notes sections list what each decision
+> deliberately leaves open. Terms still marked *(provisional)* remain intent.
 
 ## Governance — binding
 

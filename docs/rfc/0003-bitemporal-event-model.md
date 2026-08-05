@@ -1,7 +1,7 @@
 ---
 id: RFC-0003
 title: Bitemporal event model — effective time, knowledge time and corrections
-status: Proposed
+status: Accepted
 date: 2026-08-05
 authors:
   - "@FabioCaffarello"
