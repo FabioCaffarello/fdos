@@ -223,16 +223,35 @@ Released as `contracts@v0.3.0`, additive: `kernel.v1.IdentifierClaim`,
 message changes shape. **`fdos-connectors` B-009, C2 and C4 are unblocked** — the
 hand-off shape exists.
 
-**Still open, and tracked here rather than closed with the decision:**
+**Built since, in four publish cycles** — the measured cost of ADR-0004, paid
+again and visible in the ordering:
 
-- Go domain types for claims and mints, and the resolution derivation itself.
-  Nothing in FDOS produces a `HoldingObserved` from a `HoldingClaimed` yet.
-- Codec and round-trip conformance for the three new payloads. Until they exist
-  `encodePayload` rejects them — loudly, by design, rather than emitting an
-  empty `Any`. This is exactly the residual risk `libs/ledger-wire/README.md`
-  names: a payload type added without a conformance test would drift.
+| | Released |
+|---|---|
+| `explained.FromDerivation`, so a trace cannot lose its parameters | `kernel@v0.5.0` |
+| `HoldingClaimed`, `EntityMinted`, `Resolve`, `DeriveHoldingObserved`, `MintFor` | `ledger@v0.2.0` |
+| Identity and claim codecs, moved to the module whose contract covers them | `kernel-wire@v0.2.0` |
+| Codec and round-trip conformance for both new payloads | `ledger-wire@v0.2.0` |
+
+**A defect found by building it.** `DeriveHoldingObserved` first built a
+derivation record with three parameters and handed only its inputs and
+confidence to `explained.FromObservation`, which rebuilt the record without
+them. `as_of` is not recoverable from the named facts, and resolving the same
+claim at a different coordinate can select a different mint — so two genuinely
+different derivations would have shared one content address, with both traces
+looking complete. The gap was in the kernel: every combinator took `parameters`
+and the entry point did not.
+
+**Still open:**
+
 - Nobody notices an unresolved claim. Claims accumulate and no `HoldingObserved`
   is derived; who is told, and how, is operational and undecided.
-- The claim vocabulary is an open string. A connector emitting `"Ticker"` where
-  another emits `"ticker"` produces two entities, and nothing in the contract
-  prevents it.
+- The claim vocabulary is an open string. `identity.NewClaim` now refuses a
+  non-canonical *scheme*, closing the `"Ticker"` / `"ticker"` half at rung 1.
+  The other half — `"ticker"` and `"symbol"` for the same concept — is
+  vocabulary governance and no type can solve it.
+- `HoldingObserved`'s provenance must be `Derived`. proto3 cannot express it and
+  the Go domain type does not yet enforce it, so it stays rung 6 exactly as
+  ADR-0022 recorded.
+- No `IdentifierAssertion` codec. Nothing produces one yet, and adding a codec
+  ahead of a producer would be a conformance test with no subject.
