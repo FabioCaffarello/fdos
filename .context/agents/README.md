@@ -21,6 +21,20 @@ today. The default scaffold roster was pruned at M1 — see
 subject: M2 produced tests, M3 produced a pipeline. They were removed at M1
 rather than left describing a repository that did not exist.
 
+## Relative links must resolve from both locations
+
+These files are symlinked into `.claude/agents/` (ADR-0017), and a relative link
+inside a symlinked file resolves from **the symlink's** directory, not the
+target's.
+
+`../../docs/...` and `../skills/...` work from both, because `.claude/` mirrors
+that structure. `../docs/...` does **not**: there is no `.claude/docs/`. A link
+written that way is dead for every agent reading through Claude Code — which is
+every agent.
+
+Reference `.context/docs/*` by backticked path rather than by link.
+`make context-check` catches the breakage, but only after it is written.
+
 ## Prompt contracts
 
 Every playbook declares, in front matter, what it reads before acting

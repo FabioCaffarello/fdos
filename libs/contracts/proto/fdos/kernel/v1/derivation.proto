@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package fdos.kernel.v1;
+
+import "fdos/kernel/v1/money.proto";
+import "fdos/kernel/v1/provenance.proto";
+
+// FactRef addresses a fact within a stream. `sequence` is the deterministic
+// tiebreaker for facts sharing both temporal coordinates — it is ordering
+// machinery, never semantics, and no business rule may read it (ADR-0009).
+message FactRef {
+  string stream = 1;
+  uint64 sequence = 2;
+}
+
+// DerivationRecord is the content-addressed record of one computation
+// (ADR-0010). It carries everything needed to answer "how was this number
+// produced" and to reproduce it: inputs, method, parameters, and the reference
+// dataset versions consumed.
+//
+// This is also the substrate explainability is built on (ADR-0012) — a
+// derivation record is most of a computation trace already, which is why
+// making calculations explain themselves costs almost nothing structurally.
+message DerivationRecord {
+  // Content address of this record. Identical derivations deduplicate.
+  string content_hash = 1;
+
+  MethodRef method = 2;
+
+  repeated FactRef inputs = 3;
+
+  // Includes the RoundingContext of every division. A rounding decision that
+  // does not appear here is a rounding decision nobody can audit.
+  repeated Parameter parameters = 4;
+
+  repeated ReferenceBinding references = 5;
+
+  // Propagated from inputs, never invented.
+  Confidence confidence = 6;
+}
+
+// ExplainedMoney is a monetary value paired with the trace that produced it.
+//
+// Go generics do not cross the wire, so the `Explained[T]` of ADR-0012 appears
+// here as one concrete message per explained type. The convention is the point:
+// a computed financial value on the FDOS contract surface always travels with
+// its derivation, so an explanation is generated data rather than a plausible
+// story told about a number afterwards.
+message ExplainedMoney {
+  Money value = 1;
+  DerivationRef trace = 2;
+}
+
+// ExplainedQuantity is the same convention for non-monetary amounts.
+message ExplainedQuantity {
+  Quantity value = 1;
+  DerivationRef trace = 2;
+}

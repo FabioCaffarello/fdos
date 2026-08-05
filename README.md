@@ -10,11 +10,11 @@ reference data.
 
 That constraint is the whole design. Everything else follows from it.
 
-> **Status: M3.5 complete — developer experience. Next: M4 (contracts).**
-> Clone, open in the devcontainer, `make verify` passes. Eighteen checks run on
-> every pull request and nothing is configured in two places. There is still no
-> domain code — the canonical model lands with the Ledger at M6, and M4 is where
-> provenance, bitemporality and explainability finally leave rung 6.
+> **Status: M4 complete — contract surface. Next: M5 (open core boundary).**
+> The protobuf schemas are published and `buf breaking` gates them, so an
+> incompatible contract change fails the build. Provenance and bitemporality
+> left rung 6; explainability did not, and §15 records why. Domain code still
+> lands with the Ledger at M6.
 
 ## Quick start
 
@@ -97,6 +97,7 @@ libs/ledger/domain/rule.go:14:37: nondet: time.Now in domain package;
 | `.context/` | Structured engineering knowledge for AI agents (ADR-0006). |
 | `.devcontainer/` | Reproducible dev environment. Declares no versions of its own. |
 | `.vscode/` | Editor settings that mirror what `make` enforces. Nothing personal. |
+| `.claude/` | Generated export of `.context/`. Agents are symlinks (ADR-0017). |
 
 Every directory declares its architectural contract in the front matter of its
 `README.md`: what it permits, what it forbids, and who owns it. `make
@@ -138,6 +139,8 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0014](docs/adr/0014-ci-runs-make-and-pins-everything.md) | CI invokes `make` and nothing else; every build input is pinned by digest |
 | [0015](docs/adr/0015-ai-engineering-policy.md) | AI-assisted work is bounded by enforced gates and a checkable knowledge base |
 | [0016](docs/adr/0016-developer-experience.md) | One entry point, one source of truth, and no second copy of the rules |
+| [0017](docs/adr/0017-claude-export-is-versioned.md) | The Claude Code export is versioned; `.context/` stays authoritative |
+| [0018](docs/adr/0018-contract-surface-is-protobuf.md) | The contract surface is protobuf, and wire types are never domain types |
 
 ### Requests for Comment
 
@@ -165,8 +168,8 @@ above it.
 | M3 | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing ✅ |
 | M2.5 | AI engineering — agent playbooks, prompt contracts, staleness checks ✅ |
 | M3.5 | Developer experience — devcontainer, IDE configuration, task ergonomics ✅ |
-| **M4** | Contracts and observability — proto → buf → OpenAPI → SDK → MCP → docs |
-| M5 | Open core boundary — published contract modules, plugin conformance suite |
+| M4 | Contracts — protobuf schemas, `buf breaking` gate, generated Go SDK ✅ |
+| **M5** | Open core boundary — published contract modules, plugin conformance suite |
 | M6 | First domain — the Ledger, as a vertical slice validating everything above |
 
 ## Open Core

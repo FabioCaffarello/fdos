@@ -70,9 +70,13 @@ No computation may lose provenance.
 
 > **Decided by [ADR-0010](adr/0010-provenance-envelope-reference-versioning.md)
 > (RFC-0004, Accepted).** The founding text qualified this with "whenever
-> applicable". Optional provenance becomes absent provenance. The envelope is
-> universal and structural — a fact without provenance is unrepresentable
-> rather than discouraged.
+> applicable". Optional provenance becomes absent provenance.
+>
+> M4 delivered the wire half: every ledger fact carries an `Envelope`, checked
+> by `make proto-check`. It could not deliver the rest — **proto3 has no
+> `required`**, so a schema cannot make an envelope-less fact unrepresentable.
+> That guarantee belongs to the Go kernel constructors at M6, and the table in
+> §15 says rung 3 rather than claiming otherwise.
 
 ## 7. Temporal Modeling
 
@@ -93,13 +97,16 @@ deterministic calculations, assumptions, provenance and confidence.
 
 AI improves communication. Never financial truth.
 
-> **Weakest principle in the system — now with a decided path up.** As of
-> version 1.0.0 this was the only principle with no enforcement mechanism above
-> "documentation". [ADR-0012](adr/0012-explained-return-type.md) (RFC-0006,
-> Accepted) makes the computation trace part of every calculation's return
-> type, so a calculation that does not explain does not compile. Once the M2
-> analyser lands, this is the largest single climb available in the table
-> below: rung 6 to rung 1.
+> **Still the weakest principle, and the gap is now precise.**
+> [ADR-0012](adr/0012-explained-return-type.md) (RFC-0006, Accepted) makes the
+> computation trace part of every calculation's return type, so a calculation
+> that does not explain does not compile.
+>
+> M4 put the derivation record on the wire (`ExplainedMoney`,
+> `DerivationRecord`), which is the substrate. `Explained[T]` itself is a Go
+> generic with combinators and arrives with the kernel at **M6** — until then
+> nothing enforces that a calculation returns one. Rung 6 → 1 remains the
+> largest single climb available, and it is still unmade.
 
 ## 9. Reproducibility
 
@@ -178,8 +185,9 @@ feasible, adopting it is not optional.
 
 ### Current position
 
-Recorded as of M2. This table is the repository's honest self-assessment and is
-expected to improve every milestone.
+Recorded as of M4. This table is the repository's honest self-assessment and is
+expected to improve every milestone — including downward, when a milestone shows
+an earlier target was not achievable.
 
 | # | Principle | Mechanism today | Rung | Target |
 |---|-----------|-----------------|------|--------|
@@ -188,12 +196,12 @@ expected to improve every milestone.
 | 3 | Canonical Model First | `impurity`, `layering` analysers (`make analyze`) | 2 | 2 ✅ |
 | 4 | Immutable Ledger | — | 6 | 1 (M6) |
 | 5 | Event Sourcing | — | 6 | 1 (M6) |
-| 6 | Provenance | — | 6 | 1 (M4) |
-| 7 | Temporal Modeling | — | 6 | 1 (M4) |
-| 8 | Explainability | — | 6 | 1 (M4, unproven) |
+| 6 | Provenance | envelope required on every ledger fact (`make proto-check`) | 3 | 1 (M6) |
+| 7 | Temporal Modeling | both axes in the fact envelope (`make proto-check`) | 3 | 1 (M6) |
+| 8 | Explainability | derivation carried on the wire; `Explained[T]` not yet built | 5 | 1 (M6, unproven) |
 | 9 | Reproducibility | double-build diff, tidy and toolchain pins, SHA-pinned build inputs (`make repro-check`, `tidy-check`, `toolchain-check`, `action-pinning-check`) | 3 | 3 ✅ |
 | 10 | Domain Before Infrastructure | `impurity`, `layering` analysers + directory contracts | 2 | 2 ✅ |
-| 11 | Contracts Over Implementations | `layering` forbids cross-context coupling; versioning not yet enforced | 2 | 2 + M4 |
+| 11 | Contracts Over Implementations | `layering` plus `buf breaking` against main (`make proto-check`) | 3 | 3 ✅ |
 | 12 | Knowledge Graph Strategy | — | 6 | 5 |
 | 13 | Open Core | `GOWORK=off` in every Go target and every workflow | 3 | 3 ✅ |
 | 14 | Engineering Culture | ADR and RFC logs, ADR immutability against git history, enforcement-table coverage, documentation references, agent prompt contracts, secret and vulnerability scans (`make adr-check`, `adr-immutability-check`, `rfc-check`, `constitution-check`, `context-check`, `agent-contract-check`, `secrets-check`, `vuln-check`) | 3 | 3 ✅ |
@@ -214,6 +222,14 @@ M2.5 added the same kind of mechanism to the knowledge base: documentation that
 names a `make` target, a script, an ADR or a link now has to be describing
 something that exists (`make context-check`), and agent playbooks declare
 obligations that can be checked as data (`make agent-contract-check`).
+
+M4 moved §11 to its target: `buf breaking` against `main` means an incompatible
+contract change fails the build. It also **corrected two targets downward**. §6
+and §7 were recorded as reaching rung 1 at M4; proto3 has no `required`, so a
+schema cannot make an omitted envelope unrepresentable. They reach rung 3 here
+and rung 1 with the Go kernel constructors at M6. Recording that honestly is
+the point of the table — a self-assessment that only ever improves is not an
+assessment.
 
 Two rules remain enforced by nothing:
 

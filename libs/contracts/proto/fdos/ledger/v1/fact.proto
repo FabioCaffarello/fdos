@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package fdos.ledger.v1;
+
+import "fdos/kernel/v1/derivation.proto";
+import "fdos/kernel/v1/provenance.proto";
+import "fdos/kernel/v1/temporal.proto";
+import "google/protobuf/any.proto";
+
+// Envelope is what makes something a fact. Every field is load-bearing and
+// none is optional in intent (RFC-0003, RFC-0004; ADR-0009, ADR-0010).
+//
+// proto3 cannot express "required", so the schema cannot make an envelope-less
+// fact unrepresentable. That guarantee belongs to the Go kernel types at M6,
+// whose constructors will not produce a fact without one. Here it is enforced
+// one rung lower: `make proto-check` fails if a fact message omits it.
+message Envelope {
+  fdos.kernel.v1.TemporalCoordinates temporal = 1;
+
+  fdos.kernel.v1.Provenance provenance = 2;
+
+  // Reference dataset versions this fact depended on. Pinning the ledger alone
+  // is the mistake that makes a 2031 regeneration silently differ.
+  repeated fdos.kernel.v1.ReferenceBinding references = 3;
+
+  fdos.kernel.v1.FactRef ref = 4;
+}
+
+// FactKind separates what happened from what FDOS was told (RFC-0005,
+// ADR-0011).
+//
+// A trade settling is an OCCURRENCE. A broker statement saying the position is
+// 100 shares is an OBSERVATION — the position is not an event, and recording a
+// statement line as though it were a transaction fabricates history that never
+// took place. Most connector output is observations; most domain reasoning
+// wants occurrences, and deriving one from the other is a computation with its
+// own provenance, never an ingestion shortcut.
+enum FactKind {
+  FACT_KIND_UNSPECIFIED = 0;
+  FACT_KIND_OCCURRENCE = 1;
+  FACT_KIND_OBSERVATION = 2;
+}
+
+// Fact is the unit the ledger appends. Append-only: there is no update and no
+// delete anywhere in this contract (Constitution §4).
+message Fact {
+  Envelope envelope = 1;
+
+  FactKind kind = 2;
+
+  // Domain-qualified, past tense for occurrences: "ledger.TradeSettled",
+  // "ledger.HoldingObserved". Never "Created", "Updated" or "Synced" — those
+  // describe what a database did, not what is true.
+  string type = 3;
+
+  // Per-type major version. There is deliberately no global schema version: a
+  // global one couples unrelated types and, in practice, freezes them.
+  uint32 type_version = 4;
+
+  google.protobuf.Any payload = 5;
+}
+
+// CorrectionKind distinguishes three answers an auditor would treat
+// differently (ADR-0011). Collapsing them loses the difference between "we
+// were wrong", "it did not happen" and "we now have a better source".
+enum CorrectionKind {
+  CORRECTION_KIND_UNSPECIFIED = 0;
+
+  // The fact occurred, but was recorded with a wrong value.
+  CORRECTION_KIND_CORRECTED = 1;
+
+  // The fact should never have been recorded.
+  CORRECTION_KIND_RETRACTED = 2;
+
+  // A better-sourced fact replaces this one; both were legitimate.
+  CORRECTION_KIND_SUPERSEDED = 3;
+}
+
+// Correction is itself a fact, never a mutation. The corrected fact stays
+// readable: asking the ledger as of a knowledge time before the correction
+// returns the original, which is exactly what "what did we believe on date D"
+// means and exactly what an audit requires.
+message Correction {
+  Envelope envelope = 1;
+
+  fdos.kernel.v1.FactRef corrects = 2;
+
+  CorrectionKind kind = 3;
+
+  string reason = 4;
+}

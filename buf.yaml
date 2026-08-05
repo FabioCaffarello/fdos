@@ -1,0 +1,30 @@
+# Protobuf configuration for FDOS.
+#
+# The proto schemas are the **published contract surface** (Constitution §11).
+# They are not the canonical domain model: generated Go carries `protobuf:` and
+# `json:` struct tags, imports `sync` and `unsafe`, and holds mutable state —
+# every one of which the `impurity` analyser correctly rejects in a domain
+# package. Wire types and domain types are separate by construction (ADR-0017).
+#
+# `buf breaking` is the mechanism that makes Constitution §11 real: a contract
+# that can change silently is not a contract.
+
+version: v2
+
+modules:
+  - path: libs/contracts/proto
+
+lint:
+  use:
+    - STANDARD
+  # Every file states the FDOS licence header. The core is Apache-2.0 (ADR-0002)
+  # and the contract surface is what private repositories consume.
+  disallow_comment_ignores: true
+
+breaking:
+  use:
+    # WIRE_JSON is stricter than WIRE: it also forbids changes that break JSON
+    # representation, which the OpenAPI surface depends on.
+    - WIRE_JSON
+    - FILE
+  ignore_unstable_packages: false

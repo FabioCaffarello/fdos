@@ -27,7 +27,7 @@ endef
 
 .PHONY: help bootstrap hooks doctor verify affected \
 	toolchain-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
-	context-check agent-contract-check \
+	context-check agent-contract-check proto-check proto-gen proto-lint proto-breaking \
 	fmt fmt-check vet lint test analyze repro-check tidy tidy-check build clean \
 	secrets-check secrets-check-staged vuln-check
 
@@ -56,7 +56,7 @@ hooks: ## Install the git hooks (lefthook)
 	fi
 
 verify: toolchain-check contracts-check adr-check adr-immutability-check rfc-check constitution-check \
-        action-pinning-check context-check agent-contract-check \
+        action-pinning-check context-check agent-contract-check proto-check \
         secrets-check tidy-check fmt-check vet lint test analyze vuln-check repro-check ## Run every enforcement mechanism available at this milestone
 	@printf '\nAll checks passed.\n'
 
@@ -93,6 +93,22 @@ context-check: ## Assert documentation describes the repository that exists
 
 agent-contract-check: ## Assert agent playbooks declare a valid prompt contract
 	@$(SCRIPTS_DIR)/verify-agent-contracts.sh
+
+# ---------------------------------------------------------------------------
+# Contracts
+# ---------------------------------------------------------------------------
+
+proto-check: ## Assert the contract surface is valid, compatible and unchanged
+	@$(SCRIPTS_DIR)/verify-proto.sh
+
+proto-gen: ## Regenerate Go from the proto schemas
+	@buf generate && printf 'Generated. Review the diff before committing.\n'
+
+proto-lint: ## Lint the proto schemas
+	@buf lint && printf 'Schemas lint clean.\n'
+
+proto-breaking: ## Check the contract surface for breaking changes against main
+	@buf breaking --against '.git#branch=main'
 
 # ---------------------------------------------------------------------------
 # Security and supply chain

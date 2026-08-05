@@ -18,6 +18,9 @@ scaffoldVersion: "2.0.0"
 |------|-----|---------------|
 | go | 1.26.2 | M0 |
 | golangci-lint | 2.12.2 | M2 |
+| lefthook | 2.1.8 | M3 |
+| gitleaks | 8.30.0 | M3 |
+| govulncheck | v1.6.0 | M3 (via `go run`) |
 | buf | 1.68.4 | M4 |
 
 **`mise` itself is not a prerequisite.** `scripts/toolchain-check.sh` parses
@@ -63,6 +66,8 @@ without pushing, and drifts from what developers actually execute.
 | `make hooks` | Install the git hooks (`lefthook`) |
 | `make affected` | Print the modules a change affects |
 | `make doctor` | Diagnose this working copy and name the fix for each problem |
+| `make proto-check` | Contract surface: lint, format, breaking, pinning, drift, FDOS schema rules |
+| `make proto-gen` | Regenerate Go from the proto schemas |
 | `make clean` | Remove build output |
 
 **`GOWORK=off` on every Go target.** This is the load-bearing half of ADR-0004:
@@ -93,6 +98,7 @@ unreviewed change to the dependency graph.
 | `verify-secrets.sh` | §13, §14 — no secret in history | 3 |
 | `verify-vulns.sh` | §14 — no reachable vulnerability | 3 |
 | `verify-commit-message.sh` | §14 — commit subject convention | 4 |
+| `verify-proto.sh` | §2, §6, §7, §11 — the contract surface cannot change silently | 3 |
 | `tool-version.sh` | shared helper — the single parser for `mise.toml` pins | — |
 | `affected-modules.sh` | shared helper — the Nx compensation (ADR-0004) | — |
 | `list-modules.sh` | shared helper (ADR-0004 makes commands per-module) | — |
@@ -167,4 +173,4 @@ gate.
 
 ## Not yet present
 
-`buf` is pinned but unused — there is no proto yet (M4).
+Everything pinned in `mise.toml` is now in use.

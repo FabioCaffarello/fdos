@@ -114,7 +114,6 @@ done < <(
     -not -path '*/node_modules/*' \
     -not -path './.context/cache/*' \
     -not -path './.context/runtime/*' \
-    -not -path './.claude/*' \
     2>/dev/null | sed 's|^\./||' | sort || true
 )
 

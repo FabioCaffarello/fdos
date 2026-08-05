@@ -53,6 +53,7 @@ jobs:
           echo "go=$(scripts/tool-version.sh go)" >> "$GITHUB_OUTPUT"
           echo "golangci-lint=$(scripts/tool-version.sh golangci-lint)" >> "$GITHUB_OUTPUT"
           echo "gitleaks=$(scripts/tool-version.sh gitleaks)" >> "$GITHUB_OUTPUT"
+          echo "buf=$(scripts/tool-version.sh buf)" >> "$GITHUB_OUTPUT"
 
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -79,6 +80,16 @@ jobs:
             "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
           tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
           gitleaks version
+
+      - name: Install buf
+        env:
+          VERSION: ${{ steps.pins.outputs.buf }}
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /usr/local/bin/buf \
+            "https://github.com/bufbuild/buf/releases/download/v${VERSION}/buf-Linux-x86_64"
+          chmod +x /usr/local/bin/buf
+          buf --version
 
       - name: make verify
         run: make verify

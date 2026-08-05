@@ -83,9 +83,14 @@ Exporting this directory for Claude Code produces `.claude/`, and the exporter
 re-adds its built-in skills — including `api-design`, `refactoring` and
 `bug-investigation`, which are absent here on purpose.
 
-`.claude/` is gitignored, excluded from every check, and **not authoritative**.
-If it disagrees with this directory, this directory wins. Versioning it would
-put a contradicting second roster in the repository (ADR-0016).
+`.claude/` is **versioned** (ADR-0017) but **not authoritative**. If it
+disagrees with this directory, this directory wins.
+
+It is versioned despite carrying that contradiction because Claude Code loads
+agents and skills from `.claude/` and nowhere else: ignoring it would leave a
+fresh clone with a complete `.context/` and not one active agent. The agents are
+symlinks into this directory and cannot drift; the skills are copies, and a
+skill here that disagrees with `.context/skills/` is a defect in the copy.
 
 Generating `.context/` from `docs/` outright was considered and rejected for now
 — the two have genuinely different audiences, and a generator would either

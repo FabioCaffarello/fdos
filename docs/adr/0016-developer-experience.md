@@ -189,6 +189,12 @@ than the passage of time. The exemption was negative-tested in both directions.
 This surfaced because this very ADR names `make quick`, the fast target it
 declines to create.
 
+> **This resolution was reversed the next day by
+> [ADR-0017](0017-claude-export-is-versioned.md).** Syncing the export showed
+> that Claude Code loads agents and skills from `.claude/` and nowhere else, so
+> ignoring it trades a visible contradiction for an invisible absence. The
+> analysis below stands; the conclusion does not.
+
 **Generated AI-tool exports contradict the pruned roster.** `.claude/` is
 produced by exporting `.context/` for Claude Code, and the exporter re-adds its
 built-in skills — including `api-design`, `refactoring` and `bug-investigation`,
@@ -198,6 +204,14 @@ It is gitignored and excluded from the checks: it is derived, regenerable, and
 not authoritative. Versioning it would put a contradicting second roster in the
 repository, which is exactly the failure ADR-0015 exists to prevent. `AGENTS.md`,
 `CLAUDE.md` and `.cursorrules` all point at `.context/` for this reason.
+
+> **Reversed the following day by [ADR-0017](0017-claude-export-is-versioned.md).**
+> `.claude/` is versioned. Syncing the export showed that Claude Code loads
+> agents and skills from `.claude/` and nowhere else, so ignoring it produces a
+> roster that never loads rather than one that is merely duplicated. The cost
+> named above is real and was accepted, not refuted. The paragraph stands as
+> written because the record is append-only (ADR-0000); ADR-0017 carries the
+> current decision.
 
 ### Open, deliberately
 

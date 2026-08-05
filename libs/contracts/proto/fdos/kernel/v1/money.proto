@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package fdos.kernel.v1;
+
+import "fdos/kernel/v1/decimal.proto";
+
+// Money is an amount in a currency. The currency is part of the value, never
+// ambient context: adding USD to EUR must be impossible to express, not merely
+// rejected at runtime (RFC-0002, ADR-0008).
+//
+// There is no conversion operation on the wire. Converting is a calculation
+// that consumes an FX rate identified by reference-dataset version, and its
+// result carries the derivation that produced it (ADR-0010).
+message Money {
+  Decimal amount = 1;
+
+  // ISO 4217 alphabetic code, uppercase. "USD", "BRL", "JPY".
+  string currency = 2;
+}
+
+// Quantity is an amount of something that is not money — shares, face value,
+// weight. Distinct from Money because the operations differ: Money × Quantity
+// is meaningful, Money × Money is not.
+//
+// Fractional quantities are permitted. Fractional shares exist, so a quantity
+// is never an integer.
+message Quantity {
+  Decimal amount = 1;
+
+  // Canonical unit code. Governed vocabulary, open field: closing it would
+  // force a contract release for every new instrument class.
+  string unit = 2;
+}
+
+// RoundingMode selects how an inexact result is resolved.
+//
+// No mode is privileged and there is deliberately no default. The correct
+// choice is jurisdiction- and instrument-specific, and encoding one as "the"
+// default would put a legal assumption in a library — which is exactly where
+// the majority of financial calculation bugs live (RFC-0002).
+enum RoundingMode {
+  ROUNDING_MODE_UNSPECIFIED = 0;
+  ROUNDING_MODE_HALF_EVEN = 1;
+  ROUNDING_MODE_HALF_UP = 2;
+  ROUNDING_MODE_DOWN = 3;
+  ROUNDING_MODE_UP = 4;
+  ROUNDING_MODE_CEILING = 5;
+  ROUNDING_MODE_FLOOR = 6;
+}
+
+// RoundingContext is required by every division. Addition, subtraction and
+// multiplication of decimals are exact; division is not closed, and the
+// decision about how to close it is the most consequential one in most
+// financial calculations.
+//
+// It appears in the derivation record of any value that was rounded, so "why
+// does this total differ from the sum of its parts by 0.01" always has an
+// answer (ADR-0010, ADR-0012).
+message RoundingContext {
+  uint32 precision = 1;
+  RoundingMode mode = 2;
+}

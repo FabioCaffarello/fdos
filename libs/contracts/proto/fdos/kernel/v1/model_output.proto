@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package fdos.kernel.v1;
+
+import "fdos/kernel/v1/provenance.proto";
+
+// ModelOutput is text produced by a language model.
+//
+// It exists to be structurally incapable of becoming financial truth
+// (Constitution §2). Note what it is not:
+//
+//   - It is not a Fact, and no Fact field has this type. `make proto-check`
+//     fails the build if one ever does.
+//   - It carries no Provenance of the kind a fact carries. It references the
+//     DerivationRef it was asked to render, so an explanation can be traced
+//     back to the deterministic computation that actually produced the number.
+//   - There is no operation anywhere in this contract that converts one into
+//     anything the ledger accepts.
+//
+// A model may render a trace into prose. A model may not produce a trace. The
+// difference is the whole of the boundary: the explanation describes something
+// that already exists and is independently verifiable, rather than being the
+// only account of how a number arose.
+message ModelOutput {
+  string text = 1;
+
+  // The deterministic computation this text describes. Present so a reader can
+  // verify the prose against the trace rather than trusting it.
+  DerivationRef explains = 2;
+
+  // Which model, and which version of it. Not provenance in the §6 sense —
+  // this identifies a renderer, not a source of truth.
+  InterpreterRef renderer = 3;
+}

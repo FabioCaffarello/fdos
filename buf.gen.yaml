@@ -1,0 +1,25 @@
+# Code generation for the FDOS contract surface.
+#
+# The plugin is pinned to an exact version, for the same reason every GitHub
+# Action is pinned to a commit SHA (ADR-0014): generated code is a build input,
+# and an input that can change without a commit here makes the output
+# irreproducible. `make proto-check` fails if this is ever loosened to a
+# floating tag.
+#
+# Generated code is committed. It is a published contract that private
+# repositories import (ADR-0004), so it must exist in the module the proxy
+# serves — and committing it makes a drift check possible: `make proto-check`
+# regenerates and fails on any diff.
+
+version: v2
+
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/FabioCaffarello/fdos/libs/contracts/gen
+
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.36.6
+    out: libs/contracts/gen
+    opt: paths=source_relative

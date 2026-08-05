@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package fdos.kernel.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Confidence is ordinal, not numeric (RFC-0004, ADR-0010).
+//
+// A numeric confidence implies a calibration FDOS does not have. Nobody can
+// defend the difference between 0.87 and 0.88, but everyone would compare
+// them, multiply them and threshold on them. An ordinal scale supports the
+// operation actually needed — is this more trustworthy than that — and refuses
+// the arithmetic that would be meaningless.
+enum Confidence {
+  CONFIDENCE_UNSPECIFIED = 0;
+  CONFIDENCE_ASSERTED = 1;
+  CONFIDENCE_DERIVED = 2;
+  CONFIDENCE_ESTIMATED = 3;
+  CONFIDENCE_INFERRED = 4;
+  CONFIDENCE_DISPUTED = 5;
+}
+
+// SourceRef identifies who asserted something. Opaque in the public contract:
+// sources are largely private connectors, and resolving one is a private
+// concern (Constitution §13).
+message SourceRef {
+  string value = 1;
+}
+
+// InterpreterRef names the versioned code that read or computed a value — a
+// parser or a calculation method. Pinned in a report's provenance so that
+// regenerating it uses the interpreter of the time, not of today.
+message InterpreterRef {
+  string name = 1;
+  string version = 2;
+}
+
+// ReferenceBinding pins a versioned reference dataset a calculation consumed:
+// FX rates, holiday calendars, day-count conventions, issuer classifications.
+//
+// The **version**, not the values. Values are recoverable from a version; the
+// reverse is not true. This is the part of the model that cannot be
+// retrofitted — regenerating a 2026 report in 2031 with 2031 FX rates produces
+// a different number, and nothing would indicate that it changed.
+message ReferenceBinding {
+  string dataset = 1;
+
+  // Immutable and content-addressed. A revised rate is a new version, never an
+  // edit: reference data obeys the same law as the ledger.
+  string version = 2;
+}
+
+// DerivationRef points at a content-addressed DerivationRecord.
+//
+// Referenced rather than inlined. A value derived from a thousand facts would
+// otherwise carry a thousand entries, making a fold quadratic. Content
+// addressing keeps lineage a DAG and deduplicates identical derivations.
+message DerivationRef {
+  string content_hash = 1;
+}
+
+// MethodRef names a versioned calculation.
+message MethodRef {
+  string name = 1;
+  string version = 2;
+}
+
+// Parameter is a named input to a calculation that is not itself a fact —
+// notably the RoundingContext of every division (ADR-0008).
+message Parameter {
+  string name = 1;
+  string value = 2;
+}
+
+// Provenance travels with every fact. There is no constructor in this contract
+// that produces a fact without one: optional provenance becomes absent
+// provenance, and a datum with no origin cannot be audited, re-verified, or
+// invalidated when its source is found to be wrong.
+message Provenance {
+  SourceRef source = 1;
+
+  // When FDOS fetched it.
+  google.protobuf.Timestamp collected_at = 2;
+
+  // When the source claims it published. Distinct from knowledge time, which
+  // FDOS assigns and a source cannot influence.
+  google.protobuf.Timestamp published_at = 3;
+
+  InterpreterRef interpreter = 4;
+
+  // Set when this fact was computed rather than observed.
+  DerivationRef derivation = 5;
+
+  Confidence confidence = 6;
+}

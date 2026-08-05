@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package fdos.kernel.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// EffectiveInterval is when a fact was true in the world (RFC-0003, ADR-0009).
+//
+// Half-open [from, to), so adjacent intervals compose without gaps or overlaps.
+// An instantaneous fact is the degenerate case where `to` equals `from`; a fact
+// still true has `to` unset. One representation for both avoids two shapes for
+// one concept.
+message EffectiveInterval {
+  google.protobuf.Timestamp from = 1;
+
+  // Unset means open — still true as far as the source asserted.
+  google.protobuf.Timestamp to = 2;
+}
+
+// TemporalCoordinates places a fact on both axes.
+//
+// `knowledge` is when FDOS could first have acted on the fact. It is assigned
+// by FDOS at append, is monotonic per stream, and is **never** supplied by a
+// caller: allowing that would reintroduce backdating, which is precisely the
+// contamination bitemporality exists to prevent.
+//
+// It is not "when the source published" — that is `Provenance.published_at`, a
+// claim by the source that may be wrong or absent. Conflating the two lets a
+// source's clock contaminate FDOS's ordering.
+message TemporalCoordinates {
+  EffectiveInterval effective = 1;
+  google.protobuf.Timestamp knowledge = 2;
+}

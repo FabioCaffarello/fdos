@@ -23,7 +23,7 @@ evidence:
 
 # Security Auditor
 
-Read [`.context/docs/security.md`](../docs/security.md) first — it holds the
+Read `.context/docs/security.md` first — it holds the
 threat model and the explicit list of what is not yet enforced.
 
 ## What matters here

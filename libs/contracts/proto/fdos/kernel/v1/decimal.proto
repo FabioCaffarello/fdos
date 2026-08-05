@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package fdos.kernel.v1;
+
+// Decimal is an arbitrary-precision decimal number in canonical text form.
+//
+// Text, not a binary encoding, and deliberately so (RFC-0002, ADR-0008):
+//
+//   - Binary floating point is not associative, so a fold in a different order
+//     yields a different total. That breaks Constitution §9 independently of
+//     precision, which is why `float`/`double` appear nowhere in this contract.
+//   - A scaled integer (units + scale) overflows for high-notional amounts in
+//     low-denomination currencies, and hides precision behind a second field
+//     that consumers routinely ignore.
+//   - Text round-trips exactly at any precision, and is legible in a ledger
+//     that a human may need to audit in 2031.
+//
+// Canonical form: an optional leading '-', one or more digits, an optional '.'
+// followed by one or more digits. No exponent, no leading '+', no grouping
+// separators, no leading zeros other than a single '0' before the point.
+// Trailing zeros are significant — they record the precision of the value.
+//
+//   "0"  "-1234.5678"  "0.00"  "100"
+message Decimal {
+  string value = 1;
+}

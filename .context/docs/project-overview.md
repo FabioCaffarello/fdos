@@ -22,11 +22,16 @@ is open, the answer is almost always whichever option preserves reproducibility.
 
 ## Current state
 
-**M3.5 complete — developer experience.** Next: M4 (contracts and observability).
+**M4 complete — contract surface.** Next: M5 (open core boundary).
 
-There is **no domain code and no application**. The only Go in the repository is
+There is **no domain code and no application**. The Go in the repository is
 `libs/analysis` — the four static analysers that turn Constitution principles
-into build errors — plus its `cmd/fdoslint`.
+into build errors — and `libs/contracts`, the generated protobuf wire types.
+
+Generated wire types are **not** canonical models: they carry `json:` tags,
+import `sync` and `unsafe`, and hold mutable state, all of which the `impurity`
+analyser correctly rejects in a domain package (ADR-0018). The Go kernel arrives
+at M6.
 
 This is deliberate, not incomplete. The canonical model is defined by ADR-0007 …
 ADR-0012 but lands as code with the Ledger at **M6**, so that the first domain
@@ -86,8 +91,8 @@ rather than assumed (ADR-0004).
 | M3 ✅ | CI/CD and supply chain — SHA-pinned inputs, SBOM, provenance, signing |
 | M2.5 ✅ | AI engineering — prompt contracts, knowledge-base staleness checks |
 | M3.5 ✅ | Developer experience — devcontainer, editor config, `make doctor` |
-| **M4** | Contracts and observability — proto → buf → OpenAPI → SDK → MCP → docs |
-| M5 | Open core boundary |
+| M4 ✅ | Contracts — protobuf schemas, `buf breaking` gate, generated Go SDK |
+| **M5** | Open core boundary |
 | M6 | First domain — the Ledger, as a vertical slice |
 
 M1.5 produces **no code**. That is its purpose.

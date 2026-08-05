@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package fdos.kernel.v1;
+
+import "fdos/kernel/v1/provenance.proto";
+import "fdos/kernel/v1/temporal.proto";
+
+// EntityId is an opaque internal identifier (RFC-0001, ADR-0007).
+//
+// Opaque means opaque: no consumer parses it, and no meaning may be recovered
+// from its structure. It is derived deterministically at first observation, so
+// replaying the same input yields the same identifier — and never re-derived,
+// so it survives the underlying facts changing.
+message EntityId {
+  string value = 1;
+}
+
+// IdentifierAssertion is a sourced, timestamped claim that an entity is
+// identified by some external scheme value.
+//
+// This is the shape that keeps history intact. An instrument does not *have*
+// an ISIN; a source *asserted*, over some interval, that this entity carries
+// that ISIN. Tickers are reused, ISINs are reassigned, account numbers migrate
+// — and if any of them were the primary key, the day the external world reused
+// one, two different things would silently merge with no recovery.
+message IdentifierAssertion {
+  EntityId entity = 1;
+
+  // Governed vocabulary, open field: "isin", "cusip", "figi", "ticker",
+  // "account_number". An enum would close it, forcing a public contract
+  // release for every new institution a private connector supports.
+  string scheme = 2;
+
+  string value = 3;
+
+  EffectiveInterval effective = 4;
+
+  Provenance provenance = 5;
+}
+
+// EntitiesIdentified records a belief that two entities are the same.
+//
+// Merging is recorded, never performed. A wrong merge is therefore reversible
+// by a new fact that retracts it — where a computed merge would be
+// unrecoverable, because the pre-merge state would no longer exist.
+//
+// This is also what graph projection needs (Constitution §12): stable nodes
+// with explicit, weighted `same_as` edges rather than silent unification.
+message EntitiesIdentified {
+  EntityId canonical = 1;
+  EntityId alias = 2;
+
+  // Rule identifier and the inputs it matched on, so the basis for the merge
+  // is auditable rather than asserted.
+  string basis = 3;
+
+  Confidence confidence = 4;
+
+  Provenance provenance = 5;
+}
