@@ -68,11 +68,11 @@ history, calculation method, confidence.
 
 No computation may lose provenance.
 
-> **Open question, to be closed by RFC in M1.5.** The founding text qualified
-> this with "whenever applicable". Optional provenance becomes absent
-> provenance. The RFC must decide whether the provenance envelope is universal
-> or explicitly scoped, and the answer must be structural — a required field,
-> not a convention.
+> **Addressed by [RFC-0004](rfc/0004-provenance-and-reference-data.md)
+> (Proposed).** The founding text qualified this with "whenever applicable".
+> Optional provenance becomes absent provenance. RFC-0004 proposes a universal,
+> structural envelope — a fact without provenance is unrepresentable rather than
+> discouraged. Pending acceptance and the ADRs recording it.
 
 ## 7. Temporal Modeling
 
@@ -80,10 +80,11 @@ FDOS adopts bitemporal modeling. Always distinguish when a fact became true from
 when FDOS learned about it. Historical analysis must never introduce look-ahead
 bias.
 
-> **Open question, to be closed by RFC in M1.5.** The founding text qualified
-> this with "whenever appropriate". Bitemporality must be either universal in the
-> canonical model or explicitly scoped per aggregate type — decided once, before
-> the first event schema exists.
+> **Addressed by [RFC-0003](rfc/0003-bitemporal-event-model.md) (Proposed).** The
+> founding text qualified this with "whenever appropriate". RFC-0003 proposes
+> universal bitemporality, with no default as-of on any query — the mechanism
+> that makes look-ahead bias structurally impossible rather than merely
+> discouraged. Pending acceptance and the ADRs recording it.
 
 ## 8. Explainability
 
@@ -93,19 +94,24 @@ deterministic calculations, assumptions, provenance and confidence.
 AI improves communication. Never financial truth.
 
 > **Weakest principle in the system.** As of version 1.0.0 this is the only
-> principle with no enforcement mechanism above "documentation". The candidate
-> remedy — making the computation trace part of every calculation's return type,
-> so that a calculation which does not explain does not compile — is an M1.5 RFC.
+> principle with no enforcement mechanism above "documentation".
+> [RFC-0006](rfc/0006-explainability-as-a-return-type.md) (Proposed) makes the
+> computation trace part of every calculation's return type, so a calculation
+> that does not explain does not compile. If accepted, this is the largest
+> single climb available in the table below: rung 6 to rung 1.
 
 ## 9. Reproducibility
 
 Every report is reproducible years later using the same ledger and reference
 datasets. Reproducibility takes precedence over convenience.
 
-> Reference datasets are versioned data. Reproducing a 2026 report in 2031
-> requires the 2026 reference data, not today's. This is not retrofittable: if
-> the canonical model does not carry a reference-dataset version from the first
-> event, historical reproducibility is permanently lost. M1.5 RFC.
+> **Addressed by [RFC-0004](rfc/0004-provenance-and-reference-data.md)
+> (Proposed).** Reference datasets are versioned data. Reproducing a 2026 report
+> in 2031 requires the 2026 reference data, not today's. This is not
+> retrofittable: if the canonical model does not carry a reference-dataset
+> version from the first event, historical reproducibility is permanently lost.
+> RFC-0004 adds a third leg most systems forget — the *code* must be pinned too,
+> alongside the ledger and the reference data.
 
 ## 10. Domain Before Infrastructure
 

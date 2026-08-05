@@ -13,9 +13,10 @@ scaffoldVersion: "2.0.0"
 Each FDOS domain owns its own ubiquitous language, and no implementation detail
 leaks across domains. This file holds only the cross-cutting vocabulary.
 
-> **Domain terms below are provisional.** The canonical financial model is an
-> M1.5 RFC output. Definitions marked *(provisional)* describe intent and are
-> not yet binding. Do not implement against them.
+> **Domain terms below are provisional.** The M1.5 RFC set (RFC-0001 …
+> RFC-0006) now proposes definitions for most of them, but *Proposed is not
+> decided*: nothing binds until an RFC is accepted and an ADR records it. Terms
+> marked *(provisional)* describe intent. Do not implement against them.
 
 ## Governance — binding
 
@@ -90,6 +91,52 @@ inputs, calculations, assumptions, provenance and confidence. Currently the
 weakest principle in FDOS, with no mechanism above documentation. The candidate
 remedy — making the computation trace part of every calculation's return type —
 is an M1.5 RFC.
+
+## Vocabulary proposed by the M1.5 RFCs
+
+All *(provisional)* until the relevant RFC is accepted.
+
+**EntityID** *(RFC-0001)* — opaque internal identifier, derived deterministically
+at first observation. Never parsed, never a natural key.
+
+**Identifier assertion** *(RFC-0001)* — a sourced, timestamped claim that an
+entity is identified by an external scheme value. An instrument does not *have*
+an ISIN; a source *asserted* one.
+
+**Aggregate** *(RFC-0001)* — a consistency boundary. FDOS proposes four:
+`Instrument`, `Party`, `Account`, `LedgerStream`. `Position`, `Balance` and
+`Performance` are explicitly **not** aggregates — they are projections.
+
+**Money** *(RFC-0002)* — `{decimal amount, currency}`. Cross-currency arithmetic
+is a type error, not a runtime check.
+
+**RoundingContext** *(RFC-0002)* — precision plus rounding mode, required by
+every division. There is deliberately **no default**: unexamined default
+rounding is where most financial calculation bugs live.
+
+**Occurrence** *(RFC-0005)* — a fact asserting something happened in the world.
+`TradeSettled`, `DividendPaid`.
+
+**Observation** *(RFC-0005)* — a fact asserting FDOS was *told* something is so.
+`HoldingObserved`. A broker statement is an Observation; recording it as an
+Occurrence fabricates history that never happened.
+
+**Upcaster** *(RFC-0005)* — a pure, versioned `vN → vN+1` function applied on
+read. Stored events are never migrated; the upcaster chain is pinned per report.
+
+**DerivationRecord** *(RFC-0004)* — content-addressed record of a computation:
+inputs, method, parameters, reference bindings. Referenced by hash rather than
+inlined, so lineage is a DAG and not a quadratic blowup.
+
+**ReferenceBinding** *(RFC-0004)* — `{dataset, version}`. What a calculation
+consumed, pinned by version rather than by value.
+
+**Confidence** *(RFC-0004)* — ordinal, not numeric: `Asserted | Derived |
+Estimated | Inferred | Disputed`. A number would invite arithmetic that has no
+defensible meaning.
+
+**`Explained[T]`** *(RFC-0006)* — a value paired with its computation trace. The
+proposed mechanism that moves explainability from rung 6 to rung 1.
 
 ## Open Core
 

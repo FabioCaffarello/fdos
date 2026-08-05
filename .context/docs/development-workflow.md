@@ -65,6 +65,7 @@ make help        # list targets
 | `toolchain-check` | Installed tools match the `mise.toml` pins |
 | `contracts-check` | Every directory declares a valid architectural contract |
 | `adr-check` | The decision log is well-formed and supersession is bidirectional |
+| `rfc-check` | The RFC set is well-formed, and an `Accepted` RFC produced the ADRs recording it |
 | `constitution-check` | Every Constitution principle appears in the §15 enforcement table |
 
 A clean clone must pass `make verify` with no tribal knowledge. If it does not,

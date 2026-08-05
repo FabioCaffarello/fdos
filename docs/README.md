@@ -28,6 +28,21 @@ and under what constraints.
 | `adr/` | Architecture Decision Records. Append-only, immutable (ADR-0000). |
 | `rfc/` | Requests for Comments — decisions requiring design exploration. |
 
+### Current RFC set — M1.5, all Proposed
+
+| RFC | Proposal |
+|-----|----------|
+| [0001](rfc/0001-identity-and-aggregate-boundaries.md) | Identity and aggregate boundaries |
+| [0002](rfc/0002-money-and-numeric-representation.md) | Money, quantity and numeric representation |
+| [0003](rfc/0003-bitemporal-event-model.md) | Bitemporal event model |
+| [0004](rfc/0004-provenance-and-reference-data.md) | Provenance envelope and reference data versioning |
+| [0005](rfc/0005-event-taxonomy-and-schema-evolution.md) | Event taxonomy and schema evolution |
+| [0006](rfc/0006-explainability-as-a-return-type.md) | Explainability as a return type |
+
+**Proposed is not decided.** None of these binds anything until it is accepted
+and an ADR records what it settled — a rule `make rfc-check` enforces: an RFC
+marked `Accepted` with no ADR referencing it fails the build.
+
 ## ADR or RFC?
 
 Write an **ADR** when the decision is clear and needs recording. Write an **RFC**

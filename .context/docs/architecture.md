@@ -16,12 +16,22 @@ scaffoldVersion: "2.0.0"
 path, licence, decision process, enforcement philosophy. See ADR-0000 through
 ADR-0006.
 
-**Not decided — M1.5 RFCs:** the canonical financial model, entity identifiers,
-aggregate boundaries, event taxonomy, bitemporal scope, reference-data
-versioning, and how explainability is represented.
+**Proposed, not decided — the M1.5 RFC set.** Each is written and awaiting
+review. **Proposed is not binding**: none takes effect until accepted and
+recorded in an ADR.
 
-Do not infer the second set from the first. Where this document describes
-layering, it records *intent*, marked as such.
+| RFC | Proposes |
+|-----|----------|
+| [RFC-0001](../../docs/rfc/0001-identity-and-aggregate-boundaries.md) | Internal deterministic identity; external identifiers as timestamped assertions; positions are projections, not aggregates |
+| [RFC-0002](../../docs/rfc/0002-money-and-numeric-representation.md) | Arbitrary-precision decimals, `Money` carrying currency, no default rounding context |
+| [RFC-0003](../../docs/rfc/0003-bitemporal-event-model.md) | Universal bitemporality; no default as-of on any query |
+| [RFC-0004](../../docs/rfc/0004-provenance-and-reference-data.md) | Structural provenance envelope; reference datasets and code pinned by version |
+| [RFC-0005](../../docs/rfc/0005-event-taxonomy-and-schema-evolution.md) | Occurrences vs Observations; upcast on read, never migrate |
+| [RFC-0006](../../docs/rfc/0006-explainability-as-a-return-type.md) | `Explained[T]` — a calculation that cannot explain itself does not compile |
+
+Do not implement against a Proposed RFC. Doing so converts a proposal into a
+decision without an ADR. Where this document describes layering, it records
+*intent*, marked as such.
 
 ## Repository structure
 

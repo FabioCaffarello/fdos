@@ -10,11 +10,11 @@ reference data.
 
 That constraint is the whole design. Everything else follows from it.
 
-> **Status: M1 complete — Governance Substrate. Next: M1.5.**
-> There is no domain code, and that is deliberate: the canonical model is an
-> output of the M1.5 RFCs, and building before that design lands would pre-judge
-> it. What exists today is the governance and enforcement substrate everything
-> else will be held to.
+> **Status: M1.5 — Canonical Domain Architecture. Six RFCs proposed, awaiting
+> review.**
+> There is still no domain code, and that is deliberate. M1.5 produces design
+> and nothing else; implementation begins only once these RFCs are accepted and
+> the ADRs recording them exist.
 
 ## Quick start
 
@@ -102,13 +102,27 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0005](docs/adr/0005-enforcement-ladder.md) | Principles are enforced at the highest feasible mechanism |
 | [0006](docs/adr/0006-context-directory-naming.md) | `.context` is the canonical AI knowledge directory |
 
+### Requests for Comment
+
+The M1.5 canonical-architecture set. All **Proposed** — none is a decision until
+accepted and recorded in an ADR. Read in order; each depends on the ones above.
+
+| RFC | Proposal |
+|-----|----------|
+| [0001](docs/rfc/0001-identity-and-aggregate-boundaries.md) | External identifiers are claims about entities, never keys. Positions are projections, not aggregates. |
+| [0002](docs/rfc/0002-money-and-numeric-representation.md) | Arbitrary-precision decimals; no binary float; no default rounding context. |
+| [0003](docs/rfc/0003-bitemporal-event-model.md) | Universal bitemporality; no default as-of, making look-ahead bias impossible. |
+| [0004](docs/rfc/0004-provenance-and-reference-data.md) | Provenance is structural, not optional. Reference datasets pinned by version — and so is the code. |
+| [0005](docs/rfc/0005-event-taxonomy-and-schema-evolution.md) | Occurrences vs Observations. Events are never migrated; upcasting happens on read and is pinned. |
+| [0006](docs/rfc/0006-explainability-as-a-return-type.md) | Calculations return their computation trace, so one that cannot explain itself does not compile. |
+
 ## Roadmap
 
 | Milestone | Objective |
 |-----------|-----------|
 | M0 | Repository genesis — governance and enforcement substrate ✅ |
 | M1 | Governance substrate — `.context`, contribution and release process ✅ |
-| **M1.5** | Canonical domain architecture — RFCs only: model, identifiers, aggregates, event taxonomy, bitemporality, reference data, explainability |
+| **M1.5** | Canonical domain architecture — RFCs only: identity, numerics, bitemporality, provenance, event taxonomy, explainability 🔍 |
 | M2 | Determinism toolchain — layer boundaries, custom analysers, reproducible builds |
 | M3 | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing |
 | M2.5 | AI engineering — agent playbooks, prompt contracts, staleness checks |

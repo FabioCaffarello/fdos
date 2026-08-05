@@ -12,8 +12,17 @@ scaffoldVersion: "2.0.0"
 
 > **Nothing described here is implemented.** There is no connector, parser,
 > ledger, projection or API in this repository. This documents the flow the
-> architecture is designed to permit, so that work at M1.5 and beyond is
-> evaluated against it. The binding version is the M1.5 RFC set.
+> architecture is designed to permit. The detailed proposals now live in the
+> M1.5 RFC set — [RFC-0003](../../docs/rfc/0003-bitemporal-event-model.md),
+> [RFC-0004](../../docs/rfc/0004-provenance-and-reference-data.md) and
+> [RFC-0005](../../docs/rfc/0005-event-taxonomy-and-schema-evolution.md) are the
+> relevant ones — and all are *Proposed*, not decided.
+>
+> One correction this document predates: what enters from a provider is usually
+> an **Observation** ("the statement says the holding is 100 shares"), not an
+> **Occurrence** ("a trade settled"). RFC-0005 makes that distinction
+> load-bearing. Deriving occurrences from observations is a domain computation
+> with its own provenance, never an ingestion shortcut.
 
 ## The intended pipeline
 

@@ -22,7 +22,7 @@ is open, the answer is almost always whichever option preserves reproducibility.
 
 ## Current state
 
-**M1 — Governance Substrate.** Two commits old.
+**M1.5 — Canonical Domain Architecture.** Six RFCs proposed, awaiting review.
 
 There is **no Go code**, no `go.mod`, no application, no test suite and no CI
 pipeline. This is deliberate, not incomplete: the canonical financial model is
@@ -65,8 +65,8 @@ rather than assumed (ADR-0004).
 | Milestone | Objective |
 |-----------|-----------|
 | M0 ✅ | Repository genesis — governance and enforcement substrate |
-| **M1** | Governance substrate — `.context`, contribution and release process |
-| M1.5 | Canonical domain architecture — **RFCs only**: model, identifiers, aggregates, event taxonomy, bitemporality, reference data, explainability |
+| M1 ✅ | Governance substrate — `.context`, contribution and release process |
+| **M1.5** | Canonical domain architecture — **RFCs only**. Six proposed (RFC-0001 … RFC-0006), none accepted |
 | M2 | Determinism toolchain — layer boundaries, custom analysers, reproducible builds |
 | M3 | CI/CD and supply chain |
 | M2.5 | AI engineering — agent playbooks, prompt contracts, staleness checks |
@@ -76,6 +76,11 @@ rather than assumed (ADR-0004).
 | M6 | First domain — the Ledger, as a vertical slice |
 
 M1.5 produces **no code**. That is its purpose.
+
+The six RFCs are listed in [architecture.md](./architecture.md). They are
+*Proposed*: none binds anything until accepted and recorded in an ADR.
+Implementing against a Proposed RFC converts a proposal into a decision without
+one, which is the specific failure the RFC stage exists to prevent.
 
 ## Authority
 

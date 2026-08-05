@@ -49,6 +49,7 @@ without pushing, and drifts from what developers actually execute.
 | `make toolchain-check` | Installed tools match the pins |
 | `make contracts-check` | Every directory declares a valid contract |
 | `make adr-check` | Decision log well-formed; supersession bidirectional |
+| `make rfc-check` | RFC set well-formed; an Accepted RFC produced ADRs |
 | `make constitution-check` | Every principle appears in the §15 enforcement table |
 | `make clean` | Remove build output |
 
@@ -63,6 +64,7 @@ one, because it reports work that did not happen.
 | `toolchain-check.sh` | §9 — pinned, reproducible toolchain | 3 |
 | `verify-directory-contracts.sh` | §10 — declared architectural boundaries | 2–3 |
 | `verify-adr.sh` | §14 — append-only decision log | 3 |
+| `verify-rfc.sh` | §14 — design is decided before it is built | 3 |
 | `verify-constitution-coverage.sh` | ADR-0005 — the ladder table stays honest | 3 |
 | `lib/frontmatter.sh` | shared helper | — |
 
