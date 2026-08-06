@@ -22,7 +22,7 @@ justifying, and one that blocks someone needs to be visible to them (E3).
 | M5 | Open core boundary — published contract module, consumer proof | ✅ |
 | M6 | First domain — the Ledger as a vertical slice | ✅ |
 | M7 | Wire conformance — codecs and round-trip suites | ✅ |
-| M8 | **Ingestion** — how a fact produced outside FDOS enters the ledger | next |
+| M8 | **Ingestion** — how a fact produced outside FDOS enters the ledger | ✅ |
 
 ### The `content_hash` rename, and why it has no deadline
 

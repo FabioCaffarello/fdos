@@ -17,15 +17,36 @@ forbidden:
 
 Executable demonstrations of the FDOS public surface.
 
-## Status: empty, and now overdue
+## `ingest/` — the conformance kit
 
-`examples/` contains nothing. The original reason — no public contract surface
-to demonstrate until M4 — expired when M4 shipped, and three milestones passed
-without anyone noticing that the reason had gone.
+The first occupant, and the deliverable `E9` was waiting for: a producer outside
+FDOS now has a worked example, a way to check its own output, and fixtures to
+compare bytes against.
 
-`libs/contracts` has been published and externally consumed since. The first
-occupant is the conformance kit in [RFC-0010](../docs/rfc/0010-the-public-surface-receives-a-claim.md):
-synthetic fixtures and a suite a third party runs against its own producer.
+| File | What it is |
+|---|---|
+| `producer.go` | A worked producer. Imports **only** `libs/contracts` — a producer that imports `libs/kernel` or `libs/ledger` is depending on internals that carry no compatibility promise (ADR-0025) |
+| `conform.go` | `Check` — reports whether a serialized submission would be admitted |
+| `conform_test.go` | Every way a submission is refused, with the reason |
+| `testdata/` | The conforming submission, serialized and as text, so a producer in another language can compare bytes |
+
+### The kit restates no rules
+
+`Check` does not describe admission — it **runs** it, against a throwaway
+in-memory ledger. A kit that re-implemented the rules would drift from them, and
+the drift has a direction: the kit passes what admission rejects, and a producer
+learns the truth from a rejection in production.
+
+Because the rules are shared rather than copied, they cannot disagree. Disabling
+the source grammar in `libs/kernel` turns the kit's refusal tests red, which is
+the test that the sharing is real.
+
+### It is not permission
+
+The ledger revalidates every submission it receives, assuming nothing about what
+the caller ran — a producer can link a modified build of anything published here
+(ADR-0029). **Passing the kit is evidence about your submission, never a
+commitment from the ledger.**
 
 ## Examples are tests
 

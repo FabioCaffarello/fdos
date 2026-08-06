@@ -1,0 +1,31 @@
+stream: "example-account"
+account: {
+  scheme: "account"
+  value: "EXAMPLE-0001"
+}
+instrument: {
+  scheme: "ticker"
+  value: "EXMPL4"
+}
+quantity: {
+  amount: {
+    value: "100"
+  }
+  unit: "share"
+}
+effective: {
+  from: {
+    seconds: 1772366400
+  }
+}
+source: {
+  value: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+}
+collected_at: {
+  seconds: 1772366400
+}
+interpreter: {
+  name: "unmediated"
+  version: "1"
+}
+confidence: CONFIDENCE_ASSERTED

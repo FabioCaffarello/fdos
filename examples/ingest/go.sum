@@ -1,0 +1,14 @@
+github.com/FabioCaffarello/fdos/libs/contracts v0.5.0 h1:WNEEadqIPy+bLlSb1wNLjsWItESkk80s+5dVCir4rTs=
+github.com/FabioCaffarello/fdos/libs/contracts v0.5.0/go.mod h1:zGK1Lyoke6ytPuDTQkCXzHkNLlLYpx1hqo3mQSy5NZA=
+github.com/FabioCaffarello/fdos/libs/kernel v0.6.0 h1:SLnpKfQ573uGQW87qQBVR5c/PH2YH5P5KcN5GD4DjbU=
+github.com/FabioCaffarello/fdos/libs/kernel v0.6.0/go.mod h1:hM9SmGyiNMlaofqVcXPjIma1pSPOu7IWI5I06vEbr5Y=
+github.com/FabioCaffarello/fdos/libs/kernel-wire v0.2.0 h1:2pugR6UWX16AFBTD0Pji5HxSc4RziwdIuytkzEXktRI=
+github.com/FabioCaffarello/fdos/libs/kernel-wire v0.2.0/go.mod h1:PMuxyT313CVb/cfy3C2IwwAE3Y+Rpxu8lC7dXjQGDpM=
+github.com/FabioCaffarello/fdos/libs/ledger v0.3.0 h1:mHC6fn2Rl8dtrmEZW3ZqgwW4zgdU7KG0RZebzFw8nWc=
+github.com/FabioCaffarello/fdos/libs/ledger v0.3.0/go.mod h1:vCC/AZkb6pf7XKq2UIfhlKsTEgQ8wDzR4Y87FQB+gxI=
+github.com/FabioCaffarello/fdos/libs/ledger-wire v0.3.0 h1:JTxzT2KINCRJcrVAT1b78SbiebkdHfGRxvO1Mdy1Bsg=
+github.com/FabioCaffarello/fdos/libs/ledger-wire v0.3.0/go.mod h1:2mQEulvKwfq+qQFx7jqibwRkPAV9UfiaWtoliwe+NKA=
+github.com/cockroachdb/apd/v3 v3.2.3 h1:4Zx+I3R35bFXMnltzmjP79i2cravE4jTRL6ps9Aux80=
+github.com/cockroachdb/apd/v3 v3.2.3/go.mod h1:klXJcjp+FffLTHlhIG69tezTDvdP065naDsHzKhYSqc=
+google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=
+google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
