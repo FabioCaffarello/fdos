@@ -414,10 +414,15 @@ func (l *Ledger) MintIdentity(ctx context.Context, cmd MintIdentityCommand) (dom
 	if err != nil {
 		return domain.Ref{}, fmt.Errorf("mint: %w", err)
 	}
-	if existing, err := domain.Resolve(stream, cmd.Claim, l.rules, asOf); err == nil {
+	existing, resolveErr := domain.Resolve(stream, cmd.Claim, l.rules, asOf)
+	switch {
+	case resolveErr == nil:
 		return domain.Ref{}, fmt.Errorf("%w: %s is already %s", ErrAlreadyMinted, cmd.Claim, existing)
-	} else if !errors.Is(err, domain.ErrUnresolved) {
-		return domain.Ref{}, fmt.Errorf("mint: %w", err)
+	case !errors.Is(resolveErr, domain.ErrUnresolved):
+		// Any other failure is a genuine error and must not be read as "not
+		// minted yet" — that reading would mint on top of a stream it could not
+		// examine.
+		return domain.Ref{}, fmt.Errorf("mint: %w", resolveErr)
 	}
 
 	var answers []string

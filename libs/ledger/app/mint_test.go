@@ -47,14 +47,15 @@ func TestAClaimBecomesAnObservation(t *testing.T) {
 		{identity.KindAccount, cmd.Account},
 		{identity.KindInstrument, cmd.Instrument},
 	} {
-		if _, err := ledger.MintIdentity(ctx, mintCommand(t, m.kind, m.claim, claimRef)); err != nil {
-			t.Fatalf("mint %s: %v", m.claim, err)
+		if _, mintErr := ledger.MintIdentity(ctx, mintCommand(t, m.kind, m.claim, claimRef)); mintErr != nil {
+			t.Fatalf("mint %s: %v", m.claim, mintErr)
 		}
 	}
 
-	if remaining, err := ledger.UnresolvedClaims(ctx, app.UnresolvedClaimsQuery{
+	remaining, err := ledger.UnresolvedClaims(ctx, app.UnresolvedClaimsQuery{
 		Stream: "acct-1", AsOf: lateAsOf(t),
-	}); err != nil || len(remaining) != 0 {
+	})
+	if err != nil || len(remaining) != 0 {
 		t.Fatalf("claims still waiting after minting: %v (%v)", remaining, err)
 	}
 
