@@ -28,8 +28,10 @@ locally, and its files must not cite ADR or RFC numbers that do not exist.
 ## The loop
 
 1. The human opens a fresh session and pastes `_prompts/<milestone>.md`.
-2. The session checks the gate PR is **ready** (never marks it so), runs the
-   harness bootstrap below, and works the gate slice by slice through PREVC.
+2. The session checks the gate PR is **ready** — it never *decides* that it is,
+   and performs the transition only under the keystroke rule in
+   [`CONTRIBUTING.md`](../../CONTRIBUTING.md) — then runs the harness bootstrap
+   below and works the gate slice by slice through PREVC.
 3. `make verify` runs per slice and is recorded as the `verify` sensor on the
    session; the session ends with a checkpoint and `completeSession`.
 4. The session drafts a calibration log entry; the human's edit of that entry
@@ -67,7 +69,7 @@ so phase gates may need an explicit, trace-recorded `force`. Never call
 Every prompt file carries, in order: **Mission** (one sentence, milestone and
 gate PR links) · **Gate check** (if the PR is draft, refine the plan only) ·
 **must_read** (the `AGENTS.md` order, then milestone-specific decisions) ·
-**must_not** (no `sync export*`; never mark a PR ready; supersede, never edit;
+**must_not** (no `sync export*`; never *decide* a PR is ready; supersede, never edit;
 nothing LLM-ward of the ledger; respect policy) · **Harness bootstrap** (the
 sequence above) · **Slices** (the gate's list with definitions of done) ·
 **Evidence required** (`make verify` stated plainly, sensors recorded, the PR
