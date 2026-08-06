@@ -341,14 +341,13 @@ a decision about what an attestation means — not a repair.
 
 ## B-009 — The governance corpus is vendored, pinned to nothing
 
-**Blocked on:** the corpus existing at a published version. It exists as of
-[ADR-0023](adr/0023-ecosystem-boundary-and-one-way-contract-flow.md); it has
-never been tagged.
+**Blocked on:** `fdos-connectors` vendoring the published version. Nothing on
+this side remains.
 
 **Why it matters.** `fdos-connectors` vendors the Constitution byte-for-byte and
 keeps a manifest of inherited enforcement scripts, with its own drift check
 against them. That is more discipline than this repository asked for. But it
-vendors from `main`, at no version, because there has never been a version to
+vendored from `main`, at no version, because there had never been a version to
 vendor.
 
 An unpinned vendor cannot distinguish "upstream changed deliberately" from
@@ -356,8 +355,25 @@ An unpinned vendor cannot distinguish "upstream changed deliberately" from
 available response is to re-copy — which makes an accidental change downstream's
 problem to absorb rather than upstream's to justify.
 
-**What unblocks it:** publishing the corpus at a tag, and the mirror issue in
-`fdos-connectors` announcing it with vendoring instructions. That issue cannot
-be opened before the tag exists, which is the only reason it is not already
-open — until it is, the other repository is working from a snapshot of a prompt,
-which is exactly the hidden-context failure I3 forbids.
+**The publishing half is done.**
+
+| | |
+|---|---|
+| Corpus tag | `ecosystem/v0.1.0` |
+| Announced | [fdos-connectors#2](https://github.com/FabioCaffarello/fdos-connectors/issues/2) — vendoring instructions, Tier-0 obligations, the five open disputes |
+| Mirror | [fdos#20](https://github.com/FabioCaffarello/fdos/issues/20) |
+
+The tag deliberately does not match `libs/*/v*`, so it does not trigger
+`release.yml`. The corpus is documentation, not a module: there is nothing to
+build, sign or attest, and firing a release pipeline at it would produce an
+artifact nobody consumes.
+
+**Why this entry stays open.** The vendoring is `fdos-connectors`' to do, and
+this repository must not record it as done on their behalf — the same reasoning
+[ADR-0024](adr/0024-contract-lifecycle-and-versioning.md) applies to consumer
+migrations at step 6. It is also unobservable from here in the way that matters:
+FDOS can see that files were copied, but not that the drift check covers them.
+
+**What closes it:** `fdos-connectors` vendoring `invariants.md` and
+`boundary.md` at the pinned tag, recording the tag in its `docs/upstream.md`,
+extending its platform drift check to both files, and closing its own issue.
