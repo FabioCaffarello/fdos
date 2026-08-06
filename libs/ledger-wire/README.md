@@ -1,9 +1,10 @@
 ---
 directory: ledger-wire
-purpose: Maps the FDOS ledger types to and from protobuf, with the conformance suite that keeps the two definitions honest.
+purpose: Maps the FDOS ledger and ingest types to and from protobuf, with the conformance suite that keeps the two definitions honest.
 owner: "@FabioCaffarello"
 allowed:
   - Encode and Decode functions for ledger facts, envelopes and payloads
+  - Encode and Decode for ingest submissions, which are pre-admission shapes
   - Round-trip conformance tests
   - The protobuf runtime, the published contracts, kernel and kernel-wire modules
 forbidden:
