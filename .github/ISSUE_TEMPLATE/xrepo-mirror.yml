@@ -1,0 +1,39 @@
+name: Cross-repository mirror
+description: >-
+  The mirror half of a cross-repository edge. Every edge gets an issue on the
+  acting side and a mirror on the other, so it is visible from both ends.
+labels: ["xrepo/mirror"]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Coordination happens through versioned artifacts and GitHub (E3) —
+        never conversational context. Add `xrepo/blocks` or `xrepo/blocked-by`
+        if this edge gates work, and record durable edges in
+        `docs/ecosystem/dependencies.yaml`.
+  - type: input
+    id: source
+    attributes:
+      label: Source issue
+      placeholder: e.g. https://github.com/FabioCaffarello/fdos-connectors/issues/NN
+    validations:
+      required: true
+  - type: dropdown
+    id: direction
+    attributes:
+      label: Direction of the edge
+      options:
+        - This repository acts; the other waits (xrepo/blocks there)
+        - The other repository acts; this one waits (xrepo/blocked-by here)
+        - Announcement only (no work gated)
+    validations:
+      required: true
+  - type: textarea
+    id: artifact
+    attributes:
+      label: The versioned artifact carrying the change
+      description: >-
+        Tag, release, or pinned document version. An edge with no artifact is
+        conversational context.
+    validations:
+      required: true

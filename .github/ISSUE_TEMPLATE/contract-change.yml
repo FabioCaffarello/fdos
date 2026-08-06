@@ -1,0 +1,46 @@
+name: Contract change
+description: >-
+  A change to the published contract surface. It is consumed outside this
+  repository at a pinned version, so this is a change to somebody else's build.
+labels: ["contract/change", "status/triage"]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Additive changes follow ADR-0024's additive path. **A breaking change
+        is a process, never a label swap:** an RFC, a consumer issue opened
+        *before* the change merges, both versions valid, and an N-1 window of
+        at least one milestone. `contract/breaking` requires a human decision
+        and is never self-approved — replace the `contract/change` label only
+        when that decision exists.
+  - type: input
+    id: surface
+    attributes:
+      label: Message or module affected
+      placeholder: e.g. fdos.ingest.v1.HoldingClaimSubmission
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Additive (new message/field; nothing existing changes shape)
+        - Breaking (requires the ADR-0024 process and a human decision)
+        - Deprecation (marks for removal, with a milestone)
+    validations:
+      required: true
+  - type: textarea
+    id: need
+    attributes:
+      label: The need, and where it originated
+      description: >-
+        If the need originates in fdos-connectors it becomes an RFC here, never
+        a type defined there (E2). Name the consumer issue if one exists.
+    validations:
+      required: true
+  - type: textarea
+    id: consumers
+    attributes:
+      label: Known consumers and pinned versions
+      description: From docs/ecosystem/contracts.md at time of filing.

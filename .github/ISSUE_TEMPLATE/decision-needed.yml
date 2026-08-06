@@ -1,0 +1,35 @@
+name: Decision needed
+description: >-
+  Waiting on a human decision, not on work. Two label rules route here
+  unconditionally — contract/breaking and risk/truth-path are never
+  self-approved.
+labels: ["status/awaiting-decision"]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        If the decision needs design exploration first, it wants an RFC
+        (`type/rfc`); if it is already clear, the outcome is an ADR
+        (`type/adr`). The artifact carries the whole argument, including the
+        options that lost — never a pointer to a conversation.
+  - type: textarea
+    id: decision
+    attributes:
+      label: The decision to make
+      description: One question, stated so that "yes" and "no" both mean something.
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options, each with the argument for it
+      description: An option dismissed without a reason is a formality, not an option.
+    validations:
+      required: true
+  - type: textarea
+    id: gates
+    attributes:
+      label: What this decision gates
+      description: Work, milestones, or the other repository. Name issues where they exist.
+    validations:
+      required: true
