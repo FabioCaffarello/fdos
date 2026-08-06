@@ -9,6 +9,19 @@ authors:
 
 # RFC-0010 — The public surface receives a claim, not a resolved identity
 
+> **Reframed by review.** An earlier version of this RFC took *packaging* as its
+> subject — library or service — and treated the identity problem as a detail
+> underneath it. Review established that packaging is a delivery question and
+> that the decision is §2: **the public surface receives a claim, not a resolved
+> identity.** A library with the same signature as `ObserveHolding` has exactly
+> the problem this RFC exists to fix, now linked into somebody else's process.
+>
+> The delivery argument changed with it. It rested on cost — no transport, D2
+> open, no persistence — which is true and loses to anyone willing to pay. It now
+> rests on §5: a service FDOS operates recreates the dependency `E9` exists to
+> eliminate. Both versions of the argument are stated there in full, so this
+> record needs no other source.
+>
 > **Draft.** It has a named precondition — see §6. It is written now so that
 > acceptance is mechanical on the day that precondition lands, and it is not
 > accepted before, because accepting against unsettled content is how a
