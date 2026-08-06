@@ -262,3 +262,102 @@ func loadFact(t *testing.T, ctx context.Context, store app.Store, ref domain.Ref
 	}
 	return fact
 }
+
+// The race ADR-0034 exists to close, and the reason `Expectation` is not
+// decoration.
+//
+// `MintIdentity` resolves, finds nothing, and then appends. Between those two
+// steps another writer can mint for the same claim. Appending anyway would
+// produce two mints for one claim — the duplication ADR-0033 refuses, arriving
+// as a race rather than as a caller error, and therefore invisible to the
+// `ErrAlreadyMinted` check that runs before it.
+//
+// The store is wrapped so that exactly one competing append lands in that
+// window. Without the precondition this test records a second mint; with it,
+// the caller is told to resolve again.
+func TestMintingRefusesWhenTheStreamMovedUnderIt(t *testing.T) {
+	ctx := context.Background()
+	inner := memory.NewStore()
+	claim := identity.MustClaim("isin", "BRPETRACNPR0")
+
+	racing := &racingStore{inner: inner, intrude: func(s *memory.Store) {
+		// Another writer mints for the same claim, a minute before ours.
+		minted, err := domain.MintFor(
+			identity.KindInstrument, claim, identity.Canonicalisation(), nil, provenance.ConfidenceAsserted)
+		if err != nil {
+			t.Fatal(err)
+		}
+		env := mintEnvelope(t, fixtureAt().Time().Add(-time.Minute), minted.Trace())
+		if _, err := s.Append(ctx, "acct-1", app.Any(), env, domain.KindOccurrence, minted.Value()); err != nil {
+			t.Fatalf("the competing writer could not append: %v", err)
+		}
+	}}
+
+	ledger, err := app.NewLedger(racing, clock.NewSequence(fixtureAt(), time.Hour), identity.Canonicalisation())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = ledger.MintIdentity(ctx, mintCommand(t, identity.KindInstrument, claim, domain.Ref{}))
+	if !errors.Is(err, app.ErrStaleRead) {
+		t.Fatalf("want ErrStaleRead, got %v", err)
+	}
+
+	stream, err := inner.Load(ctx, "acct-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stream.Len() != 1 {
+		t.Errorf("stream holds %d facts; the refused mint was appended anyway", stream.Len())
+	}
+}
+
+// racingStore lets exactly one competing write land between a caller's read and
+// its append — the window a precondition exists to protect.
+type racingStore struct {
+	inner   *memory.Store
+	intrude func(*memory.Store)
+	done    bool
+}
+
+func (r *racingStore) Load(ctx context.Context, name string) (domain.Stream, error) {
+	return r.inner.Load(ctx, name)
+}
+
+func (r *racingStore) Append(
+	ctx context.Context,
+	name string,
+	expect app.Expectation,
+	envelope domain.Envelope,
+	kind domain.Kind,
+	payload domain.Payload,
+) (domain.Ref, error) {
+	if !r.done {
+		r.done = true
+		r.intrude(r.inner)
+	}
+	return r.inner.Append(ctx, name, expect, envelope, kind, payload)
+}
+
+func mintEnvelope(t *testing.T, at time.Time, trace provenance.Ref) domain.Envelope {
+	t.Helper()
+	instant := temporal.MustAt(at)
+	interval, err := temporal.OpenFrom(instant)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coordinates, err := temporal.Assign(interval, instant)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prov, err := provenance.Derived(
+		mustSource(validDigest), instant, provenance.Unmediated(), trace, provenance.ConfidenceAsserted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	envelope, err := domain.NewEnvelope(coordinates, prov, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return envelope
+}

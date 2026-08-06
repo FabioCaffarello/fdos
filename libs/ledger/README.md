@@ -26,6 +26,12 @@ is derived from them, with the trace that produced it.
 | `domain/` | Facts, streams, claims, resolution, the position projection | `kernel` |
 | `app/` | Use cases and the ports they depend on | `kernel`, own `domain` |
 | `adapters/` | In-memory store, injected clock | `kernel`, own `domain`, own `app` |
+| `storetest/` | The conformance suite every `app.Store` must pass | `kernel`, own `domain`, own `app` |
+
+`storetest/` is exported rather than internal because `app.Store` is: an
+out-of-tree adapter that cannot run the suite is one nobody can hold to the
+contract. It lives here rather than in an adapter so that a second engine does
+not have to depend on the first merely to be tested (ADR-0034).
 
 The dependency rule is ADR-0013's and is enforced by the `layering` analyser,
 not by review.

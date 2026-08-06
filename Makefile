@@ -10,6 +10,16 @@ SCRIPTS_DIR := scripts
 # the same; this makes it true whether or not mise is installed).
 export GOFLAGS := -mod=readonly
 
+# cgo is off, and that is a supply-chain decision rather than a preference
+# (ADR-0035). A cgo dependency makes the build depend on the host C toolchain,
+# which puts the byte-reproducibility `make repro-check` asserts at the mercy of
+# a system compiler nobody pinned.
+#
+# The tree was measured as cgo-free before this was pinned, so this preserves a
+# property rather than imposing one — and turns a future dependency that quietly
+# needs cgo into a build failure instead of a silent loss of reproducibility.
+export CGO_ENABLED := 0
+
 # ADR-0004 makes each libs/* an independent module, so Go commands run per
 # module rather than once at the root.
 #
