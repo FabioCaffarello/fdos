@@ -74,10 +74,11 @@ it, say so rather than implying you did.
 `apps/`, `deploy/` and `examples/` are empty **by design**, not by omission, and
 each says in its `README.md` what may live there.
 
-`make contracts-check` enforces that declaration for every **top-level**
-directory. It does not descend into `libs/`, so the per-module contracts there
-are convention rather than enforcement — and `libs/kernel` and `libs/ledger`,
-the two modules holding the domain core, currently have none.
+`make contracts-check` enforces that declaration for every top-level directory
+**and every module under `libs/`** — 16 contracts. It stops there: layers below
+a module are packages rather than boundaries (ADR-0013), and a README per
+package would produce contracts nobody reads to satisfy a check nobody
+believes.
 
 ## Rules that will get a change rejected
 

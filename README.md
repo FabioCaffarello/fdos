@@ -105,9 +105,11 @@ libs/ledger/domain/rule.go:14:37: nondet: time.Now in domain package;
 | `.devcontainer/` | Reproducible dev environment. Declares no versions of its own. |
 | `.vscode/` | Editor settings that mirror what `make` enforces. Nothing personal. |
 
-Every directory declares its architectural contract in the front matter of its
-`README.md`: what it permits, what it forbids, and who owns it. `make
-contracts-check` enforces this from commit #1.
+Every top-level directory and every module under `libs/` declares its
+architectural contract in the front matter of its `README.md`: what it permits,
+what it forbids, and who owns it. `make contracts-check` enforces this from
+commit #1 — though it only reached `libs/` at M7, having reported ten valid
+contracts while the two modules holding the domain core had none.
 
 The M0 plan was for those declarations to *generate* the import-boundary
 configuration. M2 found a better answer: the layer rule turned out to be
