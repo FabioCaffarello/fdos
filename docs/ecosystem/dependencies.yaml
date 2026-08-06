@@ -62,11 +62,13 @@ edges:
     kind: vendored-corpus
     packages: []
     module: null
-    version: ecosystem/v0.1.0 offered; the consumer is still on an unpinned copy
+    version: ecosystem/v0.3.0 offered; the consumer last pinned v0.1.0
     blocking: false
-    issue: FabioCaffarello/fdos-connectors#2
-    mirror: FabioCaffarello/fdos#20
-    verified: 2026-08-05 the consumer vendors the Constitution byte-for-byte and
-      a manifest of enforcement scripts, with its own drift check, but pinned to
-      nothing. The corpus is now published at a tag and announced; vendoring it
-      is the consumer's step and is not done — see B-009 in ../blocked.md
+    issue: FabioCaffarello/fdos-connectors#18
+    mirror: FabioCaffarello/fdos#32
+    verified: 2026-08-05 the consumer pinned ecosystem/v0.1.0 and byte-compares
+      it. Two amendments have shipped since — v0.2.0 narrowed two matrix rows,
+      v0.3.0 redacted provider names and renumbered the invariants — so the
+      vendored copy is two versions behind and still carries the redacted text.
+      Re-syncing is the consumer's step. Recorded here rather than in the
+      register because it is a dependency state, not a disclosure.
