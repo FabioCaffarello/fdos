@@ -192,9 +192,20 @@ Practice has answered: `fdos-connectors` owns its own, in its own namespace,
 importing nothing from `fdos.*`, and the four tests agree with it. The matrix
 does not.
 
-Separately and unrecorded: `libs/kernel`, `libs/ledger`, `libs/kernel-wire` and
-`libs/ledger-wire` are published Go modules under the same Apache-2.0 licence as
-`libs/contracts`, and nothing states whether a consumer may import them. Today
-none does. See [`contracts.md`](contracts.md).
+**The second half is settled.**
+[ADR-0025](../adr/0025-consumer-facing-surface-is-the-contracts-module.md)
+decides that `libs/contracts` is the consumer-facing surface and that
+`libs/kernel`, `libs/ledger`, `libs/kernel-wire` and `libs/ledger-wire` are
+published as a consequence of ADR-0004 rather than as an offer — no
+compatibility promise, and importing one couples a consumer to FDOS's internal
+structure instead of its contract.
 
-**Status:** open. Raised by this document; no ADR yet.
+That half was entirely within FDOS's ownership of its own module topology, so it
+did not need both repositories. Settling it while no external code imports those
+modules was the cheap moment; afterwards it would have involved somebody else's
+migration.
+
+**Status: the first half stays open** — whether a proto contract that is *not*
+canonical may be defined outside `fdos`. Practice has answered it and the four
+tests agree with practice; the matrix does not. That one needs an ADR in both
+repositories.

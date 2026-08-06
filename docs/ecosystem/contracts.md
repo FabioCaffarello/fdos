@@ -65,23 +65,30 @@ A version bump is a migration for everyone who vendors it, which is what the
 tag is for — an unpinned vendor cannot tell a deliberate upstream change from an
 accidental one.
 
-## Published, but not the contract surface
+## Published, and not offered
 
 These are Go modules under the same licence, published because
 [ADR-0004](../adr/0004-module-granularity.md) makes every `libs/*` an
-independent module. They are **not** part of what a consumer is invited to
-depend on: [ADR-0018](../adr/0018-contract-surface-is-protobuf.md) says the
-contract surface is protobuf, and these are domain code and codecs.
+independent module and every release tags one. Publication is a consequence of
+that decision, **not an offer**.
 
-| Module | Version | Consumed externally |
-|---|---|---|
-| `libs/kernel` | `v0.5.0` | no |
-| `libs/ledger` | `v0.2.0` | no |
-| `libs/kernel-wire` | `v0.2.0` | no |
-| `libs/ledger-wire` | `v0.2.0` | no |
+| Module | Version | Offered | Consumed externally |
+|---|---|---|---|
+| `libs/kernel` | `v0.5.0` | no | no |
+| `libs/ledger` | `v0.2.0` | no | no |
+| `libs/kernel-wire` | `v0.2.0` | no | no |
+| `libs/ledger-wire` | `v0.2.0` | no | no |
 
-Whether a consumer *may* import them is not written down anywhere — it is only
-true that none does. Recorded as D5 in [`boundary.md`](boundary.md).
+**They carry no compatibility promise across versions.** A consumer importing
+one is depending on FDOS's internal structure rather than on its contract: a
+rename or a changed constructor signature breaks that consumer while breaking no
+contract, and `buf breaking` cannot see it because there is nothing protobuf
+about it.
+
+Decided by [ADR-0025](../adr/0025-consumer-facing-surface-is-the-contracts-module.md).
+It is **rung 6** — Go cannot express "published but not offered", so nothing
+reports an import that ignores this. If you are reading this registry to decide
+what to depend on, that decision is here rather than in a compiler error.
 
 `libs/analysis` is not published at all: it is tooling, and nothing outside this
 repository has reason to link it.
