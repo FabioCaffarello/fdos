@@ -26,6 +26,7 @@ lives in a repository FDOS may not read.
 | [Architecture](./architecture.md) | Repository structure, intended layering, determinism constraints |
 | [Data Flow](./data-flow.md) | Intended source → ledger → view pipeline. **Design intent, not implementation** |
 | [Development Workflow](./development-workflow.md) | RFC → ADR → implementation, supersession, definition of done |
+| [Calibration](./calibration.md) | The milestone calibration program: session prompts, harness bootstrap, feedback loop |
 | [Glossary](./glossary.md) | Governance terms (binding) and domain terms (provisional) |
 | [Testing Strategy](./testing-strategy.md) | Negative testing today; property-based and golden-file testing from M2 |
 | [Security](./security.md) | Threat model, secret policy, supply chain plan, current gaps |

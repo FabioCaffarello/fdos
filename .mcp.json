@@ -2,7 +2,7 @@
   "mcpServers": {
     "dotcontext": {
       "command": "npx",
-      "args": ["-y", "@dotcontext/mcp@latest"],
+      "args": ["-y", "@dotcontext/mcp@1.1.1"],
       "env": {
         "npm_config_registry": "https://registry.npmjs.org/"
       }

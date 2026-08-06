@@ -59,7 +59,7 @@ publishes and another vendors, so it is discovered the same way.
 
 | Artifact | Version | Status | Consumers |
 |---|---|---|---|
-| `docs/ecosystem/` | `ecosystem/v0.1.0` | published | `fdos-connectors` — announced, not yet pinned (B-009) |
+| `docs/ecosystem/` | `ecosystem/v0.3.0` | published | `fdos-connectors` — last pinned `v0.1.0`, two versions behind ([fdos-connectors#18](https://github.com/FabioCaffarello/fdos-connectors/issues/18), mirror [fdos#32](https://github.com/FabioCaffarello/fdos/issues/32)) |
 
 The tag does not match `libs/*/v*` and so does not trigger `release.yml`. There
 is nothing to build, sign or attest: the artifact is the tree at the tag.

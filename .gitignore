@@ -26,6 +26,15 @@ vendor/
 .context/**/archive/
 
 # ---------------------------------------------------------------------------
+# _prompts — local session prompts and the calibration log, deliberately
+# unversioned (M9.5). The canonical template and protocol live in
+# .context/docs/calibration.md; the instances stay on the machine that runs
+# them. The directory still needs a front-matter README contract locally,
+# because verify-directory-contracts.sh walks the filesystem, not the index.
+# ---------------------------------------------------------------------------
+_prompts/
+
+# ---------------------------------------------------------------------------
 # Generated AI-tool exports
 # ---------------------------------------------------------------------------
 # .claude/ is a generated export of .context/ for Claude Code, and is NOT
