@@ -89,21 +89,38 @@ while IFS= read -r doc; do
   fi
 
   # --- ADR / RFC identifiers resolve ------------------------------------------
-  while IFS= read -r id; do
-    [ -n "$id" ] || continue
-    num="${id#ADR-}"
-    if ! ls "docs/adr/${num}"-*.md >/dev/null 2>&1; then
-      fail "${doc}: cites ${id}, which does not exist"
-    fi
-  done < <(grep -oE 'ADR-[0-9]{4}' "$doc" 2>/dev/null | sort -u || true)
+  #
+  # A decision in another repository is cited qualified — `fdos-connectors:ADR-0026`
+  # — because each repository keeps its own sequence and a bare `ADR-0026` in a
+  # document spanning both is ambiguous. Those are skipped: resolving them here
+  # would demand that this repository contain the other one's decision log.
+  #
+  # `fdos:ADR-0014` is qualified *and* local, so it is still checked. Dropping
+  # every qualified reference would let a typo in this repository's own name
+  # silence the check.
+  for kind in ADR RFC; do
+    case "$kind" in
+      ADR) subdir="adr" ;;
+      RFC) subdir="rfc" ;;
+    esac
 
-  while IFS= read -r id; do
-    [ -n "$id" ] || continue
-    num="${id#RFC-}"
-    if ! ls "docs/rfc/${num}"-*.md >/dev/null 2>&1; then
-      fail "${doc}: cites ${id}, which does not exist"
-    fi
-  done < <(grep -oE 'RFC-[0-9]{4}' "$doc" 2>/dev/null | sort -u || true)
+    while IFS= read -r ref; do
+      [ -n "$ref" ] || continue
+
+      case "$ref" in
+        *:*)
+          # Qualified. Only this repository's own prefix is resolvable here.
+          [ "${ref%%:*}" = "fdos" ] || continue
+          ;;
+      esac
+
+      id="${ref##*:}"
+      num="${id#${kind}-}"
+      if ! ls "docs/${subdir}/${num}"-*.md >/dev/null 2>&1; then
+        fail "${doc}: cites ${id}, which does not exist"
+      fi
+    done < <(grep -oE "[A-Za-z0-9._-]*:?${kind}-[0-9]{4}" "$doc" 2>/dev/null | sort -u || true)
+  done
 
 done < <(
   # Filesystem, not the git index: a new document is untracked, and a stale

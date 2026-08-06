@@ -105,20 +105,38 @@ contract that `fdos-connectors` owns. Whether `fdos` should also define an
 acquisition envelope is D4 and D5 in [`boundary.md`](boundary.md), not a
 scheduled deliverable.
 
-## What a release does *not* currently carry
+## Verifying a release
 
-Stated because the alternative is a consumer assuming otherwise.
+**Every version published so far — `v0.1.0` through `v0.3.0` — has no
+supply-chain evidence.** The release workflow failed on all fourteen tags and
+produced no releases (B-008). Those tags remain resolvable through the Go module
+proxy, which is what makes a build work, and that is all they offer. They are
+not back-filled: attaching provenance to a version after the fact is a decision
+about what an attestation means, not a repair.
 
-Every tag is resolvable through the Go module proxy — that is what makes
-`fdos-connectors` build, and it works. Nothing else does. **All fourteen release
-workflow runs have failed, and zero GitHub releases exist**, so no published
-version carries an SBOM, a build-provenance attestation, a cosign signature, or
-release notes.
+**The pipeline now works, proven end to end** by a disposable tag rather than
+asserted. From the next tag onwards a release carries:
 
-The cause was a defect in `.github/workflows/release.yml`, not a design
-limitation, and it is fixed. But no release has run since, so this section stays
-true of **every version published so far** and will stay true until a tag proves
-otherwise. Recorded as B-008 in [`../blocked.md`](../blocked.md).
+| Artifact | What it answers |
+|---|---|
+| `SHA256SUMS` | what the released bytes are |
+| `SHA256SUMS.bundle` | who signed them — cosign keyless bundle: signature, certificate and transparency-log entry together |
+| build-provenance attestation | which workflow run, from which commit, built them |
+| `*.spdx.json` | what went into the binary |
 
-A consumer that needs to verify the provenance of the module it pins cannot do
-so today, whatever the workflow now looks like.
+Verifying the manifest, which is what
+[fdos#26](https://github.com/FabioCaffarello/fdos/issues/26) asked for:
+
+```sh
+cosign verify-blob \
+  --bundle SHA256SUMS.bundle \
+  --certificate-identity-regexp '^https://github\.com/FabioCaffarello/fdos/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  SHA256SUMS
+```
+
+The identity is the workflow itself, bound by an OIDC token. There is no private
+key to leak and no key custody to get wrong — but note what it proves: that
+*this workflow in this repository* produced those bytes. It says nothing about
+whether the commit it built was authored by anyone in particular. Commit signing
+is separate and still blocked (B-006).

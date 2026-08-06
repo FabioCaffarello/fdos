@@ -15,7 +15,7 @@ justifying, and one that blocks someone needs to be visible to them (I3).
 | M1 | Governance substrate — `.context`, contribution and release process | ✅ |
 | M1.5 | Canonical domain architecture — RFCs only | ✅ |
 | M2 | Determinism toolchain — layer boundaries, analysers, reproducible builds | ✅ |
-| M3 | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing | ✅ built, ⚠️ has never produced a release; cause fixed, unproven until a tag runs (B-008) |
+| M3 | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing | ✅ built, and now proven end to end (B-008). Versions v0.1.0–v0.3.0 carry no evidence and are not back-filled |
 | M2.5 | AI engineering — agent playbooks, prompt contracts, staleness checks | ✅ |
 | M3.5 | Developer experience — devcontainer, IDE configuration, task ergonomics | ✅ |
 | M4 | Contracts — protobuf schemas, `buf breaking` gate, generated Go SDK | ✅ |
@@ -110,16 +110,16 @@ exists rather than two independent roadmaps.
   implementation experience is there. Until it exists, M8 cannot honestly start
   — so the milestone that unblocks C4 is itself waiting on the repository C4
   belongs to. That is not a deadlock: it is one RFC, and both sides know it.
-- **No release carries what M3 promised.** Every tag resolves through the Go
-  proxy, so builds work; but no SBOM, attestation or signature has ever been
-  published, because the release workflow failed on all fourteen tags (B-008).
-  The cause is fixed and the next tag is the proof; until then a consumer that
-  wants to verify the provenance of the contract module it pins still cannot.
-- **The governance corpus is published, and not yet vendored.** `ecosystem/v0.1.0`
-  exists and is announced at
-  [fdos-connectors#2](https://github.com/FabioCaffarello/fdos-connectors/issues/2).
-  Until the consumer pins it, it is still vendoring the Constitution and script
-  manifest from `main` at no version (B-009).
+- **No *already-published* release carries what M3 promised.** `v0.1.0` through
+  `v0.3.0` resolve through the Go proxy and offer nothing else, because the
+  release workflow failed on all fourteen tags (B-008). That is now fixed and
+  proven by a disposable tag, so the next version published will carry a signed
+  manifest, an attestation and an SBOM. The versions `fdos-connectors` pins
+  today still carry none, and are not back-filled.
+- ~~The governance corpus is published, and not yet vendored.~~ **Done.**
+  `fdos-connectors` vendors `invariants.md` and `boundary.md` pinned to
+  `ecosystem/v0.1.0` and byte-compared, under `fdos-connectors:ADR-0026`, with a second
+  pin tracked separately from the platform pin. B-009 is closed.
 
 ## The acquisition-contract promotion, and why it is not on this roadmap
 
