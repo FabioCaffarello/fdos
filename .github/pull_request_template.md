@@ -83,5 +83,6 @@ until M3.5 audited them by hand.
 
 <!--
 Anything this change leaves incomplete, and why. Silence reads as coverage.
-See docs/blocked.md for work blocked on something outside this repository.
+Blocked work is registered as GitHub issues under the `status/blocked` label
+(ADR-0032); docs/blocked.md is the frozen index of B-001 … B-009.
 -->

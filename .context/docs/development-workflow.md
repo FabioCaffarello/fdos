@@ -81,8 +81,10 @@ moved, and whether documentation was updated in the same change.
 Required approvals is 0 because a solo repository with one required approval
 cannot merge anything. It rises to 1 with a second maintainer.
 
-Work that cannot be finished is registered in `docs/blocked.md` rather than
-silently omitted: an unrecorded block becomes an unexplained gap.
+Work that cannot be finished is registered as a GitHub issue carrying the
+`status/blocked` label (ADR-0032) rather than silently omitted: an unrecorded
+block becomes an unexplained gap. `docs/blocked.md` is the frozen index of the
+pre-M9.5 entries, B-001 … B-009, and their identifiers stay citable.
 
 ## Verification
 
