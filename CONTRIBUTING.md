@@ -59,6 +59,67 @@ decision (ADR-0013). The contract surface is the sharp edge — it is consumed
 outside this repository at a pinned version, so adding to it is a change to
 somebody else's build, and it starts with an issue and an RFC.
 
+## The plan-gate, and who closes it
+
+A slice starts as a **draft pull request carrying the plan**: the objective
+restated, what was read, what could not be found, the slice itself, the boundary
+tests applied, and the costs accepted. No work happens while it is a draft.
+
+**Marking it ready is the approval, and only a human marks it ready.** A session
+never marks its own — an approver and an author who are the same actor make the
+gate theatre on its first use.
+
+This rule exists because the gate was designed with an approver who had no
+hands. The brief said approval was the ready transition, and the reviewer
+issuing that instruction could not perform it: the approval lived in a
+conversation while the artifact still said draft. Two slices ran on an approval
+that had no referent before anyone noticed.
+
+### A review that changes a decision is recorded in the decision
+
+Approval alone does not make a decision non-conversational. If the reasoning
+that shaped it stays in a review thread, the decision is still conversational —
+now with a green artifact on top, which is worse.
+
+So: **when review changes the shape of a decision, the artifact records that
+review changed it, and carries the whole argument in its own text.** Never a
+pointer to a conversation, an issue thread, or a chat log.
+
+That includes the argument that lost, and the argument the author themselves
+withdrew. A decision log holding only the winner loses exactly the information
+that makes it worth keeping — the next person cannot tell a considered rejection
+from an option nobody thought of, nor a position abandoned on its merits from
+one that was never held.
+[RFC-0010](docs/rfc/0010-the-public-surface-receives-a-claim.md) opens by
+recording that review inverted its subject, and states both the argument it
+dropped and the one that replaced it. That is the pattern.
+
+**The test:** a reader who has seen none of the review must be able to
+reconstruct why the decision has the shape it has, from the artifact alone. If
+they cannot, the artifact is incomplete regardless of how green it is.
+
+## Git mechanics that have cost rework
+
+Three now, which is a pattern rather than bad luck. Each is written here because
+a note in a pull request dies with the pull request, and the next person to hit
+it is you in November.
+
+**A squash-merge with `--delete-branch` closes every pull request based on that
+branch.** GitHub auto-closes them, and a closed pull request can be neither
+reopened nor retargeted — it must be rebuilt as a new one, losing its review
+history. **Retarget the child to `main` before merging the parent**, or merge
+without deleting. Verified both ways: one stacked PR was lost, the next survived
+because it was retargeted first.
+
+**A tag captures the tree at a commit, not your working directory.** Tag after
+the change is merged and `main` is pulled, never before.
+
+**Correcting an ADR that has not merged requires amending, not a follow-up
+commit.** `make adr-immutability-check` compares each ADR against the commit
+that introduced it, including a commit on your own branch — so a fix in a second
+commit reads as rewriting the record. Amend the introducing commit; the check is
+right, and the ADR was never published.
+
 ## When you need an ADR
 
 Any change to:
