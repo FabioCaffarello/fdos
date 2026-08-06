@@ -148,6 +148,17 @@ will keep stating it until the admission path exists.
 > That is a data-plane change wearing validation's clothes. It needs its own
 > decision, with migration of existing references as the central question rather
 > than a footnote.
+>
+> **Resolved as predicted, and the sequence is the point.** The clause above
+> named the missing execution site; the admission path arrived and the check
+> went in there — `app.Ledger.AcceptHoldingClaim`, rejecting a malformed source
+> at submission without touching a byte of anyone's stored data. Admissible
+> provenance moved from rung 6 to rung 3 by the route this clause pointed at.
+>
+> This is the first time in this repository that an ADR clause named the
+> mechanism it lacked and the mechanism arrived through that door rather than
+> another. It is the pattern worth repeating: state the missing site, state its
+> rung honestly, and let the slice that creates the site close it.
 
 ### The dependency, named so it is not rediscovered
 

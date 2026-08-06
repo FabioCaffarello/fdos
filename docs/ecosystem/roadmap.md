@@ -24,27 +24,37 @@ justifying, and one that blocks someone needs to be visible to them (E3).
 | M7 | Wire conformance — codecs and round-trip suites | ✅ |
 | M8 | **Ingestion** — how a fact produced outside FDOS enters the ledger | next |
 
-### Hard dependency — the public ingress cannot ship before `fdos.kernel.v2`
+### The `content_hash` rename, and why it has no deadline
 
-**`E9`'s public ingestion path must not publish while `SourceRef` is still named
-`value`.**
-
-[ADR-0028](../adr/0028-provenance-admissibility.md) decided the field should be
-`content_hash`, and the rename could not ship with it: a field rename is
-breaking under this repository's `buf breaking` configuration, and
+[ADR-0028](../adr/0028-provenance-admissibility.md) decided `SourceRef.value`
+should be `content_hash`. It could not ship with that decision: a field rename
+is breaking under this repository's `buf breaking` configuration, and
 [ADR-0024](../adr/0024-contract-lifecycle-and-versioning.md) puts a breaking
-change in a new package path. So the rename belongs to `fdos.kernel.v2`.
+change in a new package path. **The rename is a blocking obligation on whatever
+eventually warrants `fdos.kernel.v2`**, and nothing warrants one today.
 
-The ordering is not a preference. Once a public ingestion path publishes on
-`fdos.kernel.v1`, third-party producers depend on `GetValue()`, and renaming
-stops being a migration this programme can run — it becomes renaming a method in
-other people's code. **`E9` is the point of no return, not the opportunity.**
+An earlier version of this section declared a hard dependency: the public
+ingress must not publish before the rename, because third-party adoption would
+render the rename unaffordable. **That was wrong, and the error is worth
+keeping.**
 
-**Rung 6.** Nothing checks this. A check written today would pass because the
-ingress does not exist, which is the failure class this repository keeps
-finding — a green check with no subject. Either a future check distinguishes
-"not applicable yet" from "verified", or it should not exist and this dependency
-carries the obligation alone. It carries it alone today, and says so.
+A rename can only ride a major boundary, and a major boundary migrates every
+consumer by construction — anyone moving from `kernel/v1` to `kernel/v2`
+reimports regardless. So third-party adoption of `v1` does not make the rename
+more expensive by a single unit. It makes the *`v1`→`v2` migration* more
+expensive, which is a separate and already-known cost that exists with or
+without the rename. **There is no point of no return for a change that can only
+travel on a major.**
+
+What made the deadline look real was the argument that the identifier was
+carrying the enforcement — that `value` invites a URL or an account id. That
+held while admissible provenance sat at rung 6. It no longer does: the grammar
+is checked at admission, and `value` now refuses a URL because the *grammar*
+refuses it, not because of what the field is called. The rename is a call-site
+readability improvement, which is real and does not pay for a major version.
+
+So the ingress and the conformance kit publish on `v1`. The obligation stays
+recorded; the invented deadline is gone.
 
 ### M8 — Ingestion
 
