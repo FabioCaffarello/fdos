@@ -8,10 +8,13 @@ points at — this file is a signpost, not a substitute.
 1. [`docs/constitution.md`](docs/constitution.md) — fourteen principles and the
    enforcement ladder. **Highest authority in the repository.**
 2. [`docs/adr/`](docs/adr/) — accepted decisions. Append-only and immutable.
-3. The `README.md` front matter of any directory you change — that front matter
+3. [`docs/ecosystem/boundary.md`](docs/ecosystem/boundary.md) — who owns what
+   across the two repositories, the four boundary tests, and the disputed items
+   that are **not** settled by whoever writes code first (ADR-0023).
+4. The `README.md` front matter of any directory you change — that front matter
    is the binding contract for the directory.
-4. [`CONTRIBUTING.md`](CONTRIBUTING.md) — workflow and definition of done.
-5. [`.context/`](.context/README.md) — structured knowledge derived from `docs/`.
+5. [`CONTRIBUTING.md`](CONTRIBUTING.md) — workflow and definition of done.
+6. [`.context/`](.context/README.md) — structured knowledge derived from `docs/`.
 
 ## What exists
 

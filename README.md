@@ -151,6 +151,8 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0020](docs/adr/0020-open-core-boundary-and-pull-request-workflow.md) | The repository is named `fdos`; the boundary is proven; work moves to pull requests |
 | [0021](docs/adr/0021-purity-rules-scope.md) | The purity rules cover the kernel and exempt test and generated files |
 | [0022](docs/adr/0022-minting-an-identity-is-a-fact.md) | Minting an identity is a fact, and a connector emits a claim |
+| [0023](docs/adr/0023-ecosystem-boundary-and-one-way-contract-flow.md) | The ecosystem boundary is written down, and contracts flow one way |
+| [0024](docs/adr/0024-contract-lifecycle-and-versioning.md) | Contracts are versioned per module, and a breaking change is a process |
 
 ### Requests for Comment
 
@@ -195,6 +197,10 @@ Authenticated providers, browser connectors and institution-specific plugins
 live in separate private repositories. They depend on this one exclusively
 through published, versioned contract modules — a boundary proven by every CI
 run rather than assumed (ADR-0004).
+
+Which repository owns which concern, what is published, and what is still
+disputed live in [`docs/ecosystem/`](docs/ecosystem/boundary.md) — authoritative
+for both sides of the boundary, not just this one (ADR-0023).
 
 ## License
 

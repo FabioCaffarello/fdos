@@ -27,6 +27,19 @@ and under what constraints.
 | `constitution.md` | The principles that govern FDOS. Highest authority in the repository. |
 | `adr/` | Architecture Decision Records. Append-only, immutable (ADR-0000). |
 | `rfc/` | Requests for Comments — decisions requiring design exploration. |
+| `ecosystem/` | The boundary between FDOS and its consuming repositories (ADR-0023). |
+| `blocked.md` | Work decided and not finished, with what it is waiting on. |
+
+### `ecosystem/`
+
+Authoritative for **both** repositories, not just this one. `invariants.md` and
+the responsibility matrix in `boundary.md` are Tier 0: authored here, vendored
+verbatim downstream, amended only by an RFC here plus an ADR in both. The
+delimiting markers in those files are what make "verbatim" checkable.
+
+`contracts.md` is the published-contract registry and is part of the interface —
+a version missing from it is undiscoverable by the only channel the other
+repository may use.
 
 ### Current RFC set — M1.5, all Accepted
 

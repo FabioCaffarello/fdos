@@ -266,3 +266,75 @@ and the entry point did not.
   ADR-0022 recorded.
 - No `IdentifierAssertion` codec. Nothing produces one yet, and adding a codec
   ahead of a producer would be a conformance test with no subject.
+
+---
+
+## B-008 — No release has ever been published
+
+**Blocked on:** nothing. This is a defect, recorded here because the register is
+where "decided, not achieved" lives and nowhere else would be read.
+
+**Milestone:** M3 delivered the pipeline, SBOM, provenance attestation and
+signing, and the roadmap marks it complete. The machinery exists and is correct.
+It has never run to completion.
+
+**The finding.** Fourteen tags are published. The release workflow has run
+fourteen times and **failed fourteen times**. Zero GitHub releases exist.
+
+Consequently no published version carries an SBOM, a build-provenance
+attestation, a cosign signature, or release notes. `make consumer-check` is a
+step *inside* that workflow, so the published module has never been proven
+consumable on a tagged commit — only on pull requests, against `main`.
+
+**Why nobody noticed.** A tag push blocks nothing. `verify.yml` gates pull
+requests and is green; `release.yml` fires afterwards, fails in about twenty
+seconds, and tells no one. The gap between "CI is green" and "the release
+happened" was never instrumented.
+
+**What is not affected.** Module resolution. The Go proxy serves a module from
+its tag and does not care whether a GitHub Release exists, which is why
+`fdos-connectors` builds against `libs/contracts v0.3.0` today. The supply-chain
+evidence is missing; the artifact is not.
+
+**The cause,** from the run log of `libs/ledger-wire/v0.2.0`:
+
+```
+golangci-lint: not installed (pinned 2.12.2) — required by the current milestone
+gitleaks: not installed (pinned 8.30.0) — required by the current milestone
+FAIL: 2 toolchain violation(s).
+make: *** [Makefile:71: toolchain-check] Error 1
+```
+
+The release job sets up Go and then calls `make verify`, but never installs the
+rest of the pinned toolchain — unlike `verify.yml`, which does. So every release
+dies at the first check.
+
+**What unblocks it:** installing the pinned toolchain in `release.yml` the way
+`verify.yml` does, then re-tagging or back-filling the releases. Worth pairing
+with something that makes a failed release visible, since the silence is the
+part that let this run for fourteen tags.
+
+---
+
+## B-009 — The governance corpus is vendored, pinned to nothing
+
+**Blocked on:** the corpus existing at a published version. It exists as of
+[ADR-0023](adr/0023-ecosystem-boundary-and-one-way-contract-flow.md); it has
+never been tagged.
+
+**Why it matters.** `fdos-connectors` vendors the Constitution byte-for-byte and
+keeps a manifest of inherited enforcement scripts, with its own drift check
+against them. That is more discipline than this repository asked for. But it
+vendors from `main`, at no version, because there has never been a version to
+vendor.
+
+An unpinned vendor cannot distinguish "upstream changed deliberately" from
+"upstream changed by accident". The drift check fires either way, and the only
+available response is to re-copy — which makes an accidental change downstream's
+problem to absorb rather than upstream's to justify.
+
+**What unblocks it:** publishing the corpus at a tag, and the mirror issue in
+`fdos-connectors` announcing it with vendoring instructions. That issue cannot
+be opened before the tag exists, which is the only reason it is not already
+open — until it is, the other repository is working from a snapshot of a prompt,
+which is exactly the hidden-context failure I3 forbids.
