@@ -34,6 +34,7 @@ never legally disagree.
 | `fdos.kernel.v1` | `github.com/FabioCaffarello/fdos/libs/contracts` | `v0.3.0` | published | `fdos-connectors` @ `v0.3.0` | — |
 | `fdos.ledger.v1` | `github.com/FabioCaffarello/fdos/libs/contracts` | `v0.3.0` | published | `fdos-connectors` @ `v0.3.0` | — |
 | `fdos.ledger.payload.v1` | `github.com/FabioCaffarello/fdos/libs/contracts` | `v0.3.0` | published | `fdos-connectors` @ `v0.3.0` | — |
+| `fdos.ingest.v1` | `github.com/FabioCaffarello/fdos/libs/contracts` | `v0.5.0` | published | none yet | — |
 
 Tag form is `libs/contracts/vX.Y.Z` — Go requires a submodule tag to carry the
 module's directory prefix, so the tag names the path, not the concept.
@@ -45,6 +46,8 @@ module's directory prefix, so the tag names the path, not the concept.
 | `v0.1.0` | The initial kernel and ledger surface | — |
 | `v0.2.0` | Schema and kernel additions for the ledger codec | no |
 | `v0.3.0` | `kernel.v1.IdentifierClaim`, `ledger.payload.v1.HoldingClaimed`, `ledger.payload.v1.EntityMinted` — the shape a connector can populate without minting an identity ([ADR-0022](../adr/0022-minting-an-identity-is-a-fact.md)) | no |
+| `v0.4.0` | The `SourceRef` grammar, the `collected_at` correction, and the reserved `unmediated` interpreter — documentation only ([ADR-0028](../adr/0028-provenance-admissibility.md)) | no |
+| `v0.5.0` | `ingest.v1.HoldingClaimSubmission` — the first shape a producer outside FDOS can fill ([ADR-0030](../adr/0030-the-submission-shape.md)) | no |
 
 No breaking change has been published. `buf breaking` gates every pull request
 (`make proto-check`), so the first one will be deliberate.
