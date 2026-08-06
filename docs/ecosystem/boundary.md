@@ -143,46 +143,25 @@ be trusted becomes a published *rejection* rather than a corrected value. That i
 "reports faithfully, never corrects" built into a type. What is missing is the
 ADR, not the behaviour.
 
-### D4 — What a `SourceRef` must resolve to
+### D4 — What a `SourceRef` must resolve to — CLOSED
 
-`fdos.kernel.v1.SourceRef` is `{ string value }`, and `fdos` enforces nothing
-about it. [ADR-0010](../adr/0010-provenance-envelope-reference-versioning.md)
-left this open in as many words: *"Open, deliberately: whether `SourceRef` is an
-opaque reference resolved privately (Open Core, Constitution §13)."*
+**Settled by [ADR-0028](../adr/0028-provenance-admissibility.md)**, via
+[RFC-0011](../rfc/0011-provenance-admissibility.md).
 
-It is no longer only open — it has been **answered downstream by construction**.
-`fdos-connectors` populates it with the content address of its own acquisition
-record, and requires an origin to be complete before a fact can be assembled.
-Nothing in `fdos` asks for that, checks it, or knows it happened.
+A `SourceRef` is an algorithm-prefixed content hash with an **unspecified
+referent**. FDOS never dereferences it, so Constitution §13 and the offline test
+hold exactly as before; what changed is that the *form* is known, which opacity
+never required it not to be.
 
-Why this matters more than it looks: E4 makes provenance an *admission
-criterion* for the ledger — source, method, fetch time, content hash. If what the
-hash addresses is specified only downstream, then the ledger's admission rule is
-authored by its consumer. That is a reverse edge in substance even though there
-is no reverse edge in imports, and it is invisible precisely because the Go
-compiler is content.
+The distinction that resolves it: **opaque is about resolution, unconstrained is
+about form.** ADR-0010 conflated them because at the time there was no producer
+to constrain.
 
-Two defensible answers, and this document deliberately picks neither:
+The field is renamed `value` → `content_hash` in the same migration window, on
+the reasoning that a form check catches accident rather than intent — which
+leaves the *identifier* carrying most of the enforcement weight.
 
-- **Stay opaque.** Constitution §13 says resolving a source is a private
-  concern. FDOS records what it was told and audits the chain by content hash
-  without knowing what the hash addresses.
-- **Specify the referent.** FDOS states what a `SourceRef` must resolve to and
-  what an acquisition record must contain, without knowing how it is stored.
-  Consumers satisfy it; FDOS can then say what "admissible provenance" means
-  rather than assuming it.
-
-**Status:** open, and now on the critical path. It is the **gating deliverable
-of M8** ([`roadmap.md`](roadmap.md)) — the milestone whose subject is accepting
-an externally-produced fact, which is the exact moment this stops being free.
-
-M8 cannot honestly start before it. Building the intake path first would
-hard-code an answer to a question two repositories are supposed to ratify, and
-the Go compiler would report nothing.
-
-An RFC is asked for from `fdos-connectors`
-([issue #2](https://github.com/FabioCaffarello/fdos-connectors/issues/2)),
-because the implementation experience is there rather than here.
+**Status: closed.** D1, D2 and D3 remain open.
 
 ### D5 — Which contracts are "the contract surface" — CLOSED
 
