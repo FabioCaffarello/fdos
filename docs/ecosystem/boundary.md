@@ -19,7 +19,7 @@ plus an ADR in both. Ratified by
 | Canonical financial model | `fdos` | Semantics of money must have exactly one definition |
 | Ledger, posting rules, double-entry | `fdos` | Truth path (Constitution §2) |
 | Kernel and bounded contexts | `fdos` | Domain core |
-| Contracts (proto, schemas, generated SDKs) | `fdos` | Single source, one-way flow (I2) |
+| **Canonical** contracts (proto, schemas, generated SDKs) | `fdos` | Single source, one-way flow (I2). Canonical means it defines or constrains the meaning of a financial fact; transporting one does not (ADR-0026) |
 | Instrument identity resolution | `fdos` | Cross-provider concern; no single provider can decide it |
 | Corporate actions | `fdos` | Domain rules, not provider quirks |
 | Risk | `fdos` | Reads the canonical model |
@@ -35,7 +35,7 @@ plus an ADR in both. Ratified by
 | Extractors, parsers, normalizers | `fdos-connectors` | Bounded by §"Where normalisation stops" — they normalise *shape*, never *meaning* |
 | Acquisition pipeline, scheduling, retries, backoff | `fdos-connectors` | Provider-facing operational concern |
 | Raw artifact storage and replay | `fdos-connectors` | Provenance producer (I4) |
-| Python toolchain and workspace | `fdos-connectors` | Python exists only there |
+| Language toolchains beyond Go | the repository that uses one | A toolchain present in one repository only is owned there. Today both repositories are Go (ADR-0026) |
 
 ## The four boundary tests
 
@@ -85,23 +85,26 @@ limits, provider quirks, retry policy against a provider, or the name of any
 specific provider anywhere in the domain layer. Provider identity enters `fdos`
 only as opaque provenance metadata — today, `fdos.kernel.v1.SourceRef`.
 
-## Corrections pending against the charter
+## Amendments to the charter
 
-Recorded rather than silently absorbed, because the Tier-0 block above must stay
-byte-identical to the brief it came from. Each needs the human to reconcile both
-copies.
+The matrix above diverges from the founding charter in two rows, deliberately
+and by the Tier-0 procedure —
+[RFC-0008](../rfc/0008-narrowing-two-responsibility-matrix-rows.md) then
+[ADR-0026](../adr/0026-canonical-contracts-and-language-toolchains.md).
 
-- **The "Python toolchain and workspace" row is counterfactual.** `fdos-connectors`
-  is a Go workspace: a `go.work` with four Go modules and no Python anywhere. The
-  row's *rule* is sound — a language toolchain that exists in only one repository
-  is owned by that repository — but its stated fact is not true of the ecosystem
-  that exists. Amend to name the principle rather than a language, or delete it.
-- **"Contracts (proto, schemas, generated SDKs) — `fdos`" is broader than
-  practice, and practice looks right.** `fdos-connectors` defines a host↔plugin
-  wire contract in its own namespace, importing nothing from `fdos.*`. Read
-  literally the row forbids that; read against the four tests it is plainly the
-  consumer's, because a plugin runtime is theirs and `fdos` never sees those
-  messages. The row should be narrowed to *canonical* contracts. See D5.
+- **"Contracts" → "Canonical contracts."** Read literally the original forbade
+  `fdos-connectors` from publishing the wire contract between its own plugin
+  host and its plugins, which the four tests plainly assign to it. Both
+  repositories identified this independently before either had seen the other's
+  reasoning.
+- **"Python toolchain and workspace" → "Language toolchains beyond Go."** The
+  original asserted that Python exists in `fdos-connectors`. It does not; that
+  repository is a Go workspace with four Go modules. The rule underneath was
+  sound and is kept without naming a language.
+
+Both rows shipped knowingly wrong at `ecosystem/v0.1.0` and were listed as
+defects rather than fixed in place, because Tier 0 forbids fixing a vendored row
+by editing it. They were corrected because they were written down as errors.
 
 ## Disputed items
 
@@ -181,31 +184,23 @@ An RFC is asked for from `fdos-connectors`
 ([issue #2](https://github.com/FabioCaffarello/fdos-connectors/issues/2)),
 because the implementation experience is there rather than here.
 
-### D5 — Which contracts are "the contract surface"
+### D5 — Which contracts are "the contract surface" — CLOSED
 
-[ADR-0018](../adr/0018-contract-surface-is-protobuf.md) says the contract
-surface is protobuf. The matrix says `fdos` owns "contracts (proto, schemas,
-generated SDKs)". Neither says whether a proto contract that is *not* canonical —
-a host↔plugin boundary internal to acquisition — is covered.
+**Both halves are now settled.**
 
-Practice has answered: `fdos-connectors` owns its own, in its own namespace,
-importing nothing from `fdos.*`, and the four tests agree with it. The matrix
-does not.
+The FDOS-owned half — whether `libs/kernel`, `libs/ledger` and the `-wire`
+modules are offered to consumers — is decided by
+[ADR-0025](../adr/0025-consumer-facing-surface-is-the-contracts-module.md): they
+are published as a consequence of ADR-0004, carry no compatibility promise, and
+`libs/contracts` is the only offered surface.
 
-**The second half is settled.**
-[ADR-0025](../adr/0025-consumer-facing-surface-is-the-contracts-module.md)
-decides that `libs/contracts` is the consumer-facing surface and that
-`libs/kernel`, `libs/ledger`, `libs/kernel-wire` and `libs/ledger-wire` are
-published as a consequence of ADR-0004 rather than as an offer — no
-compatibility promise, and importing one couples a consumer to FDOS's internal
-structure instead of its contract.
+The disputed half — whether a proto contract that is *not* canonical may be
+defined outside `fdos` — is decided by
+[ADR-0026](../adr/0026-canonical-contracts-and-language-toolchains.md) via
+[RFC-0008](../rfc/0008-narrowing-two-responsibility-matrix-rows.md). It may, and
+the matrix row above now says so. Evidence and the four tests applied to
+`fdosconn.plugin.v1` are in
+[fdos#25](https://github.com/FabioCaffarello/fdos/issues/25).
 
-That half was entirely within FDOS's ownership of its own module topology, so it
-did not need both repositories. Settling it while no external code imports those
-modules was the cheap moment; afterwards it would have involved somebody else's
-migration.
-
-**Status: the first half stays open** — whether a proto contract that is *not*
-canonical may be defined outside `fdos`. Practice has answered it and the four
-tests agree with practice; the matrix does not. That one needs an ADR in both
-repositories.
+**Status: closed at `ecosystem/v0.2.0`.** D1, D2 and D3 remain open; D4 remains
+M8's gating deliverable.
