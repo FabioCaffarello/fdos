@@ -87,9 +87,43 @@ func (Confidence) EnumDescriptor() ([]byte, []int) {
 	return file_fdos_kernel_v1_provenance_proto_rawDescGZIP(), []int{0}
 }
 
-// SourceRef identifies who asserted something. Opaque in the public contract:
-// sources are largely private connectors, and resolving one is a private
-// concern (Constitution §13).
+// SourceRef identifies the acquisition a datum came from, by content address
+// (ADR-0028).
+//
+// **Opaque and unconstrained are different properties.** FDOS never
+// dereferences a SourceRef, never learns what it addresses, and gains no
+// dependency on any store — resolving one stays a private concern
+// (Constitution §13). That is opacity, and it is unchanged. What is specified
+// here is the *form*, which opacity never required to stay unknown.
+//
+// The form is an algorithm-prefixed content hash: `sha256:` followed by 64
+// lowercase hexadecimal characters.
+//
+// Three assertions travel with it, made by the producer and checkable by
+// nobody:
+//
+//  1. the addressed record is immutable;
+//  2. the producer asserts it is replayable;
+//  3. it identifies the ACQUISITION, not any single artifact within it — one
+//     acquisition may yield a capture and a snapshot, and "the artifact
+//     digest" would be ambiguous.
+//
+// This is the same construct as DerivationRef: an immutable record too large to
+// inline, addressed by hash so lineage stays a DAG and identical records
+// deduplicate. The only difference is who stores it, which is why FDOS does not
+// resolve it and never needed not to know its shape.
+//
+// A well-formed digest of nothing satisfies every rule above. The form catches
+// accident, not intent.
+//
+// **The field is still named `value`, and ADR-0028 decided it should be
+// `content_hash`.** A field rename is breaking under this repository's
+// `buf breaking` configuration, and ADR-0024 puts a breaking change in a new
+// package path, so the rename belongs to `fdos.kernel.v2`.
+//
+// The obligation is recorded as a hard milestone dependency in
+// docs/ecosystem/roadmap.md, not here: a comment is a reminder, and a reminder
+// is a deadline already lost.
 type SourceRef struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Value         string                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
@@ -137,6 +171,23 @@ func (x *SourceRef) GetValue() string {
 // InterpreterRef names the versioned code that read or computed a value — a
 // parser or a calculation method. Pinned in a report's provenance so that
 // regenerating it uses the interpreter of the time, not of today.
+//
+// **Always present.** Making it optional would weaken replay for every producer
+// in order to accommodate one class of producer (ADR-0028).
+//
+// A producer that interpreted nothing programmatically — a person submitting an
+// exported statement — uses the reserved name `unmediated`, asserting that no
+// code read the value and that it was transcribed as the source stated it. Its
+// `version` is the version of that convention, not of code that does not exist,
+// so a later change to what `unmediated` means stays distinguishable on replay.
+//
+// There is deliberately **no value meaning "I do not know"**. A producer that
+// cannot assert `unmediated` names its pipeline or cannot submit. A sentinel
+// absorbing both "no code read this" and "nobody filled this in" would make the
+// field optional in practice while claiming to be required.
+//
+// Nothing detects a producer using `unmediated` while having interpreted
+// programmatically. It is an affordance for honesty, not a control.
 type InterpreterRef struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -413,7 +464,12 @@ func (x *Parameter) GetValue() string {
 type Provenance struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Source *SourceRef             `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
-	// When FDOS fetched it.
+	// When the datum was acquired from its source, by whoever acquired it.
+	//
+	// Previously documented as "when FDOS fetched it", which was wrong: FDOS
+	// fetches nothing, and for an externally-produced fact never will. The moment
+	// a queue sits between acquisition and admission the two times diverge, and
+	// this is the acquisition one (ADR-0028).
 	CollectedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=collected_at,json=collectedAt,proto3" json:"collected_at,omitempty"`
 	// When the source claims it published. Distinct from knowledge time, which
 	// FDOS assigns and a source cannot influence.

@@ -98,12 +98,22 @@ func Weakest(levels ...Confidence) Confidence {
 	return worst
 }
 
-// Source identifies who asserted something. Opaque in the public core: sources
-// are largely private connectors, and resolving one is a private concern
-// (Constitution §13).
+// Source identifies the acquisition a datum came from, by content address
+// (ADR-0028).
+//
+// Opaque and unconstrained are different properties. FDOS never dereferences a
+// Source, never learns what it addresses, and gains no dependency on any store
+// — resolving one stays a private concern (Constitution §13). That is opacity.
+// The form is specified; opacity never required it not to be.
 type Source struct{ value string }
 
-// NewSource builds a source reference.
+// NewSource builds a source reference from an algorithm-prefixed content hash.
+//
+// The grammar is documented on fdos.kernel.v1.SourceRef and is NOT enforced
+// here. ADR-0028 places admissibility at the admission path, which does not
+// exist yet — validating in this constructor would move the rule to rung 1 for
+// every value crossing the wire codec, which is a wider change than the ADR
+// decided and is recorded as a finding rather than taken silently.
 func NewSource(value string) (Source, error) {
 	if strings.TrimSpace(value) == "" {
 		return Source{}, fmt.Errorf("%w: source is empty", ErrIncomplete)
@@ -111,7 +121,7 @@ func NewSource(value string) (Source, error) {
 	return Source{value: value}, nil
 }
 
-// String returns the opaque source reference.
+// String returns the content address, unresolved.
 func (s Source) String() string { return s.value }
 
 // Interpreter names the versioned code that read or computed a value — a
@@ -130,6 +140,34 @@ func NewInterpreter(name, version string) (Interpreter, error) {
 	}
 	return Interpreter{name: name, version: version}, nil
 }
+
+// UnmediatedName is the reserved interpreter name asserting that no code read a
+// value — it was transcribed as the source stated it (ADR-0028).
+const UnmediatedName = "unmediated"
+
+// UnmediatedVersion versions the convention, not code that does not exist. A
+// later change to what "unmediated" means stays distinguishable on replay.
+const UnmediatedVersion = "1"
+
+// Unmediated is the interpreter of a producer that interpreted nothing
+// programmatically — a person submitting an exported statement.
+//
+// It asserts a positive fact. There is deliberately no value meaning "I do not
+// know": a producer that cannot make this assertion names its pipeline or
+// cannot submit. A sentinel absorbing both "no code read this" and "nobody
+// filled this in" would make the field optional in practice while claiming to
+// be required.
+//
+// Nothing detects a producer using it while having interpreted
+// programmatically. It is an affordance for honesty, not a control — rung 6,
+// and ADR-0028 says so.
+func Unmediated() Interpreter {
+	return Interpreter{name: UnmediatedName, version: UnmediatedVersion}
+}
+
+// IsUnmediated reports whether this interpreter asserts that no code read the
+// value.
+func (i Interpreter) IsUnmediated() bool { return i.name == UnmediatedName }
 
 // Name returns the interpreter name.
 func (i Interpreter) Name() string { return i.name }

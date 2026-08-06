@@ -105,6 +105,23 @@ contract that `fdos-connectors` owns. Whether `fdos` should also define an
 acquisition envelope is D4 and D5 in [`boundary.md`](boundary.md), not a
 scheduled deliverable.
 
+## Pricing a contract change
+
+**Price it in the units of the contract, never in the units of the consumer's
+generated code.** The generated code is where a change *appears*; it is not
+where it *costs*.
+
+A field rename reads as one mechanical edit per call site — `GetValue()` becomes
+`GetContentHash()`, and `go build` finds every one. Priced that way it looks
+almost free. Priced in contract units it is a wire break, a wire break is a new
+package path (ADR-0024), and a new package path is the most expensive thing this
+programme knows how to do: two published packages, both maintained through N-1,
+two imports in every consumer, and the major-version slot spent.
+
+That mispricing has happened once, in the open, and `buf breaking` caught what
+the argument did not — the third time a gate has caught something reasoning
+missed.
+
 ## Verifying a release
 
 **Every version published so far — `v0.1.0` through `v0.3.0` — has no
