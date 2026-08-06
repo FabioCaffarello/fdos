@@ -1,0 +1,75 @@
+# Installs every tool `make verify` needs, at the versions pinned in mise.toml.
+#
+# This exists because the alternative failed silently for fourteen releases.
+# `release.yml` carried a pruned copy of `verify.yml`'s setup — Go only — so
+# `make verify` died at `toolchain-check` on every tag, and a tag push gates
+# nothing, so nobody was told (docs/blocked.md — B-008).
+#
+# Copying the missing steps back would have restored the same trap for whoever
+# adds the next tool. One definition, used by both workflows, cannot drift out
+# of step with itself.
+#
+# Versions are never declared here. `scripts/tool-version.sh` reads mise.toml,
+# so the pins developers use and the pins CI uses are the same pins (ADR-0014).
+
+name: Set up the FDOS toolchain
+description: Install Go, golangci-lint, gitleaks and buf at the versions pinned in mise.toml
+
+outputs:
+  go-version:
+    description: The Go version resolved from mise.toml
+    value: ${{ steps.pins.outputs.go }}
+
+runs:
+  using: composite
+
+  steps:
+    - name: Resolve pinned tool versions
+      id: pins
+      shell: bash
+      run: |
+        set -euo pipefail
+        {
+          echo "go=$(scripts/tool-version.sh go)"
+          echo "golangci-lint=$(scripts/tool-version.sh golangci-lint)"
+          echo "gitleaks=$(scripts/tool-version.sh gitleaks)"
+          echo "buf=$(scripts/tool-version.sh buf)"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Set up Go
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version: ${{ steps.pins.outputs.go }}
+        check-latest: false
+        cache-dependency-path: "**/go.sum"
+
+    - name: Install golangci-lint
+      uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+      with:
+        version: v${{ steps.pins.outputs.golangci-lint }}
+        install-mode: binary
+        # The Makefile runs it per module; this step only installs it.
+        args: --help
+        only-new-issues: false
+
+    - name: Install gitleaks
+      shell: bash
+      env:
+        VERSION: ${{ steps.pins.outputs.gitleaks }}
+      run: |
+        set -euo pipefail
+        curl -fsSL -o /tmp/gitleaks.tar.gz \
+          "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+        tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
+        gitleaks version
+
+    - name: Install buf
+      shell: bash
+      env:
+        VERSION: ${{ steps.pins.outputs.buf }}
+      run: |
+        set -euo pipefail
+        curl -fsSL -o /usr/local/bin/buf \
+          "https://github.com/bufbuild/buf/releases/download/v${VERSION}/buf-Linux-x86_64"
+        chmod +x /usr/local/bin/buf
+        buf --version

@@ -39,15 +39,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Resolve pinned Go version
-        id: pins
-        run: echo "go=$(scripts/tool-version.sh go)" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version: ${{ steps.pins.outputs.go }}
-          check-latest: false
+      # The same toolchain the gate uses. This step previously installed Go
+      # alone, which is why `make verify` below failed on all fourteen tags and
+      # no release was ever published (B-008).
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup-toolchain
 
       # The gate runs again on the exact tagged commit. A release built from
       # source that has not passed verification is a release of unknown code.

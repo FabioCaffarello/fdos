@@ -39,13 +39,13 @@ itself has no ADR yet.
 
 | Directory | Role |
 |-----------|------|
-| `libs/` | Reusable libraries. One independent Go module per subdirectory. Empty until M2. |
-| `apps/` | Deployable applications. Composition roots only. Empty until after M2. |
-| `docs/` | Constitution, ADRs, RFCs. Authoritative record. |
+| `libs/` | Reusable libraries. One independent Go module per subdirectory. Six today. |
+| `apps/` | Deployable applications. Composition roots only. Empty. |
+| `docs/` | Constitution, ADRs, RFCs, and the register of blocked work. Authoritative record. |
 | `deploy/` | Deployment topology. Empty until there is something to deploy. |
-| `examples/` | Executable demonstrations of the public contract surface. Empty until M4. |
+| `examples/` | Executable demonstrations of the public contract surface. Empty. |
 | `scripts/` | Enforcement mechanisms, invoked through `make`. |
-| `.github/` | CI workflows. Empty until M3. |
+| `.github/` | CI workflows — `verify`, `release`, `supply-chain`. They invoke `make` and hold no logic (ADR-0014). |
 | `.context/` | This directory — knowledge for agents. |
 
 Every directory declares its contract in the front matter of its `README.md`:

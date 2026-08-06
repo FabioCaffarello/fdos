@@ -10,14 +10,17 @@ reference data.
 
 That constraint is the whole design. Everything else follows from it.
 
-> **Status: M6 complete — the Ledger vertical slice. Next: M7.**
+> **Status: M6 and M7 complete.** M6 built the Ledger as a vertical slice; M7
+> added the codecs and round-trip conformance suites that keep each canonical
+> type's domain and wire definitions from diverging.
 > Six principles reached **rung 1** — the type system. A position cannot be
 > stored, a stream cannot be shortened, a fact cannot omit provenance, a query
 > cannot omit its as-of, and a projection returns `Explained[Position]` or
 > nothing at all.
 >
-> One acceptance criterion is **blocked**: no *private* repository has consumed
-> the contract yet, because `financial-connectors` is empty. See
+> M5's outstanding acceptance criterion is now **met**: `fdos-connectors` builds
+> against `libs/contracts` at a pinned version with no filesystem path
+> dependency. What remains untested is the *private*-module resolution path. See
 > [`docs/blocked.md`](docs/blocked.md) — B-001.
 
 ## Quick start
@@ -148,6 +151,8 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0020](docs/adr/0020-open-core-boundary-and-pull-request-workflow.md) | The repository is named `fdos`; the boundary is proven; work moves to pull requests |
 | [0021](docs/adr/0021-purity-rules-scope.md) | The purity rules cover the kernel and exempt test and generated files |
 | [0022](docs/adr/0022-minting-an-identity-is-a-fact.md) | Minting an identity is a fact, and a connector emits a claim |
+| [0023](docs/adr/0023-ecosystem-boundary-and-one-way-contract-flow.md) | The ecosystem boundary is written down, and contracts flow one way |
+| [0024](docs/adr/0024-contract-lifecycle-and-versioning.md) | Contracts are versioned per module, and a breaking change is a process |
 
 ### Requests for Comment
 
@@ -180,6 +185,7 @@ above it.
 | M4 | Contracts — protobuf schemas, `buf breaking` gate, generated Go SDK ✅ |
 | M5 | Open core boundary — published contract module, consumer proof, branch protection ✅ |
 | M6 | First domain — the Ledger, as a vertical slice validating everything above ✅ |
+| M7 | Wire conformance — codecs and round-trip suites proving the domain and wire definitions of every canonical type agree ✅ |
 
 ## Open Core
 
@@ -191,6 +197,10 @@ Authenticated providers, browser connectors and institution-specific plugins
 live in separate private repositories. They depend on this one exclusively
 through published, versioned contract modules — a boundary proven by every CI
 run rather than assumed (ADR-0004).
+
+Which repository owns which concern, what is published, and what is still
+disputed live in [`docs/ecosystem/`](docs/ecosystem/boundary.md) — authoritative
+for both sides of the boundary, not just this one (ADR-0023).
 
 ## License
 

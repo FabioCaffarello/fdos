@@ -1,0 +1,68 @@
+# Cross-repository dependency edges in the FDOS ecosystem.
+#
+# STATUS: hand-maintained. Rung 6 — human discipline (ADR-0005).
+#
+# The governance design has this file GENERATED from `xrepo:v1` trailers in
+# GitHub issue bodies and validated in CI. It is not generated today, because no
+# issue carries such a trailer, and a generator with no input is not a generator
+# — it is a script that would produce an empty file and imply coverage (I6).
+#
+# So this is the honest intermediate: the edges that are known to exist,
+# recorded by hand, marked as such. An edge here is evidence someone looked. Its
+# absence is not evidence that nothing else exists.
+#
+# What would climb the rung: issues carrying `xrepo:v1` trailers, a generator
+# that derives this file from them, and a CI check that fails on drift — with a
+# negative test, per the enforcement ladder.
+
+version: 1
+
+# --- schema -------------------------------------------------------------------
+#
+# edges[]:
+#   id              stable slug, kebab-case
+#   from            repository that depends
+#   to              repository depended upon
+#   kind            contract-module | vendored-corpus | issue-blocks
+#   packages        protobuf packages involved, when kind is contract-module
+#   module          Go import path, when applicable
+#   version         the pinned version on the `from` side
+#   blocking        does `from` stop making progress without it
+#   issue           declaring issue in `from`, or null
+#   mirror          mirror issue in `to`, or null
+#   verified        ISO-8601 date, and how it was checked
+#
+# ------------------------------------------------------------------------------
+
+edges:
+  - id: connectors-consumes-canonical-contracts
+    from: FabioCaffarello/fdos-connectors
+    to: FabioCaffarello/fdos
+    kind: contract-module
+    packages:
+      - fdos.kernel.v1
+      - fdos.ledger.v1
+      - fdos.ledger.payload.v1
+    module: github.com/FabioCaffarello/fdos/libs/contracts
+    version: v0.3.0
+    blocking: true
+    issue: null
+    mirror: null
+    verified: 2026-08-05 read from the consumer's committed go.mod files; two
+      modules require it and neither they nor its go.work carries a replace
+      directive
+
+  - id: connectors-vendors-governance-corpus
+    from: FabioCaffarello/fdos-connectors
+    to: FabioCaffarello/fdos
+    kind: vendored-corpus
+    packages: []
+    module: null
+    version: unpinned
+    blocking: false
+    issue: null
+    mirror: null
+    verified: 2026-08-05 the consumer vendors the Constitution byte-for-byte and
+      a manifest of enforcement scripts, with its own drift check. It vendors no
+      version or tag, because this repository has never published the corpus as
+      one — see B-009 in ../blocked.md

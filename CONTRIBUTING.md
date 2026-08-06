@@ -45,15 +45,19 @@ Question → RFC (if design exploration is needed) → ADR (decision) → implem
 This ordering is not negotiable (Constitution §14). Code that ships becomes the
 decision, and the reasoning is never recorded afterwards.
 
-**FDOS currently has no domain code, deliberately.** The canonical model is
-decided — RFC-0001 … RFC-0006 are accepted and recorded in ADR-0007 … ADR-0012 —
-but it lands as code with the Ledger at **M6**, so the first bounded context is
-built under the constraints rather than retrofitted to them.
+The canonical model is decided — RFC-0001 … RFC-0007, recorded in ADR-0007 …
+ADR-0012 and ADR-0022 — and it has landed as code. M6 built `libs/kernel` and
+`libs/ledger` under those constraints rather than retrofitting them, and M7
+added the conformance suites that keep each type's domain and wire definitions
+in agreement.
 
-The only Go in the repository is `libs/analysis`, the analysers that turn those
-constraints into build errors. A contribution creating `libs/kernel` or a
-bounded context ahead of M6 will be declined: not because it is bad work, but
-because sequencing is itself a decision (ADR-0013).
+The sequencing rule outlives the empty repository it was written for. A
+contribution adding a **second** bounded context, a canonical type, or a message
+to the published contract surface ahead of the ADR that sequences it will be
+declined: not because it is bad work, but because sequencing is itself a
+decision (ADR-0013). The contract surface is the sharp edge — it is consumed
+outside this repository at a pinned version, so adding to it is a change to
+somebody else's build, and it starts with an issue and an RFC.
 
 ## When you need an ADR
 

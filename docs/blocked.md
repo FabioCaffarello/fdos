@@ -12,49 +12,60 @@ only the register of what that decision could not reach.
 
 ## B-001 — Private connector consumes the published contract module
 
-**Blocked on:** `financial-connectors` is an empty repository.
+**Milestone:** M5. This was M5's stated acceptance criterion:
 
-**Milestone:** M5. This is M5's stated acceptance criterion:
+> the private connector repository compiles against a published contract version
+> with no filesystem path dependency on this repository.
 
-> `financial-connectors` compiles against a published contract version with no
-> filesystem path dependency on this repository.
+**RESOLVED.** The consumer is no longer empty. Two of its modules —
+`libs/connector-sdk` and `libs/upstream` — require
+`github.com/FabioCaffarello/fdos/libs/contracts v0.3.0`, and neither those
+`go.mod` files nor its `go.work` carries a `replace` directive. That is the
+criterion, met.
 
-**Why it is blocked, precisely.** The repository exists but has no commits, no
-`go.mod`, and no plugin. It will be built from this reference architecture
-rather than the other way round, so it cannot consume anything until it exists.
+**Verified how, and how far.** By reading the consumer's committed `go.mod`,
+`go.sum` and `go.work` through the GitHub API — the artifact channel, which is
+the only coordination channel between the two repositories. FDOS has not built
+that repository and cannot: it is private, and depending on anything inside it
+would be the reverse edge the open-core boundary exists to prevent.
 
-**Delivered instead, and why it is not a substitute.** M5 proves the *publishing*
-half end to end: the contracts module is tagged, resolvable through the Go
-proxy, and `make consumer-check` builds a throwaway module against the published
-version with `GOWORK=off` — no workspace, no `replace`, no local path.
+**What is still untested, and is now the whole of what remains.** Resolution
+through a *private* module path — credentials, `GOPRIVATE`, a private proxy.
+That is exercised by the consumer's own CI, and whether it passes there is not
+observable from here. This repository's half stays proven by `make
+consumer-check`, which builds a throwaway module against the published version
+with `GOWORK=off` — no workspace, no `replace`, no local path.
 
-That proves the module is consumable. It does not prove a *private* repository
-can consume it, which is the part that involves credentials, a private module
-proxy path, and `GOPRIVATE`. Those are untested.
-
-**What unblocks it:** `financial-connectors` gaining a `go.mod` and one plugin
-that imports `github.com/FabioCaffarello/fdos/libs/contracts`. At that point the
-conformance suite (also B-002) can run against it.
-
-**Not impeding:** M5 completed without it. The open-core boundary is verified in
-the direction this repository controls.
+**A naming correction.** This entry, `README.md` and ADR-0020 called the consumer
+`financial-connectors`. It has since been renamed `fdos-connectors`; GitHub
+redirects the old name, which is why nothing broke and nobody noticed. ADR-0020
+is immutable and keeps the old name — that is the decision log working as
+designed, not a defect in it.
 
 ---
 
 ## B-002 — Plugin conformance suite
 
-**Blocked on:** B-001, and on there being a plugin interface to conform to.
+**Blocked on:** an undecided ownership question. No longer on absence.
 
 **Milestone:** M5 listed "plugin SDK skeleton + a conformance test suite private
 connectors must pass".
 
-**Why it is blocked.** A conformance suite tests that an implementation honours
-an interface. There is no plugin interface: the domain ports it would express
-are an M6 output (ADR-0013 puts ports in the `app` layer, which does not exist).
-Writing the suite now would define the interface by accident — the same
-pre-judgement M1.5 exists to prevent.
+**Why the original reasoning no longer holds.** It said there was no interface to
+conform to, because the ports would be an M6 output and the `app` layer did not
+exist (ADR-0013). M6 shipped and `libs/ledger/app` exists. Separately, the
+consumer has defined a host↔plugin wire contract of its own, in its own
+namespace, importing nothing from `fdos.*`.
 
-**What unblocks it:** the M6 ledger context defining its ports, plus B-001.
+**What is actually undecided.** Whether a plugin conformance suite is an FDOS
+deliverable at all. A plugin conforms to a *plugin runtime*, and the runtime is
+the consumer's; what a plugin owes FDOS is a well-formed fact, whose shape
+`libs/ledger-wire` already checks. Both readings are defensible and there is no
+written ecosystem boundary to settle them against — which is the real blocker,
+and a more useful thing to record than the absence that used to be.
+
+**What unblocks it:** the ecosystem boundary written down and ratified, giving
+this question an owner instead of an assumption.
 
 ---
 
@@ -255,3 +266,98 @@ and the entry point did not.
   ADR-0022 recorded.
 - No `IdentifierAssertion` codec. Nothing produces one yet, and adding a codec
   ahead of a producer would be a conformance test with no subject.
+
+---
+
+## B-008 — No release has ever been published
+
+**Blocked on:** nothing. This is a defect, recorded here because the register is
+where "decided, not achieved" lives and nowhere else would be read.
+
+**Milestone:** M3 delivered the pipeline, SBOM, provenance attestation and
+signing, and the roadmap marks it complete. The machinery exists and is correct.
+It has never run to completion.
+
+**The finding.** Fourteen tags are published. The release workflow has run
+fourteen times and **failed fourteen times**. Zero GitHub releases exist.
+
+Consequently no published version carries an SBOM, a build-provenance
+attestation, a cosign signature, or release notes. `make consumer-check` is a
+step *inside* that workflow, so the published module has never been proven
+consumable on a tagged commit — only on pull requests, against `main`.
+
+**Why nobody noticed.** A tag push blocks nothing. `verify.yml` gates pull
+requests and is green; `release.yml` fires afterwards, fails in about twenty
+seconds, and tells no one. The gap between "CI is green" and "the release
+happened" was never instrumented.
+
+**What is not affected.** Module resolution. The Go proxy serves a module from
+its tag and does not care whether a GitHub Release exists, which is why
+`fdos-connectors` builds against `libs/contracts v0.3.0` today. The supply-chain
+evidence is missing; the artifact is not.
+
+**The cause,** from the run log of `libs/ledger-wire/v0.2.0`:
+
+```
+golangci-lint: not installed (pinned 2.12.2) — required by the current milestone
+gitleaks: not installed (pinned 8.30.0) — required by the current milestone
+FAIL: 2 toolchain violation(s).
+make: *** [Makefile:71: toolchain-check] Error 1
+```
+
+The release job sets up Go and then calls `make verify`, but never installs the
+rest of the pinned toolchain — unlike `verify.yml`, which does. So every release
+dies at the first check.
+
+**The cause is fixed; the mechanism is still unproven.** Both workflows now use
+one composite action, `.github/actions/setup-toolchain`, which installs
+everything `make verify` needs. Copying the missing steps into `release.yml`
+would have worked too and was rejected: a pruned copy of the setup is precisely
+how this happened, and it would have left the same trap for whoever adds the
+next tool.
+
+`verify.yml` exercises that action on every pull request, so the shared half is
+proven immediately. **`release.yml` is not.** It fires only on a tag, so every
+step after `make verify` — the SBOM, the attestation, the cosign signature,
+`make consumer-check` against a freshly published version, and `gh release
+create` — has still never executed. Fixing the first failing step does not
+demonstrate that the ninth works.
+
+**What closes this:** one tag, and a run that goes green. Until then the
+correct reading is that a twenty-second failure has been replaced by an
+untested pipeline, which is better but is not the same as working.
+
+**Still worth doing, and not done here:** making a failed release *visible*.
+The silence is what let this run for fourteen tags; a tag push gates nothing,
+and nothing announced the failure. That is a separate change from the one that
+fixed the toolchain.
+
+**Not back-filled.** The fourteen existing tags remain without releases. They
+are resolvable through the Go proxy, which is what consumers actually need, and
+re-tagging published versions to attach supply-chain evidence after the fact is
+a decision about what an attestation means — not a repair.
+
+---
+
+## B-009 — The governance corpus is vendored, pinned to nothing
+
+**Blocked on:** the corpus existing at a published version. It exists as of
+[ADR-0023](adr/0023-ecosystem-boundary-and-one-way-contract-flow.md); it has
+never been tagged.
+
+**Why it matters.** `fdos-connectors` vendors the Constitution byte-for-byte and
+keeps a manifest of inherited enforcement scripts, with its own drift check
+against them. That is more discipline than this repository asked for. But it
+vendors from `main`, at no version, because there has never been a version to
+vendor.
+
+An unpinned vendor cannot distinguish "upstream changed deliberately" from
+"upstream changed by accident". The drift check fires either way, and the only
+available response is to re-copy — which makes an accidental change downstream's
+problem to absorb rather than upstream's to justify.
+
+**What unblocks it:** publishing the corpus at a tag, and the mirror issue in
+`fdos-connectors` announcing it with vendoring instructions. That issue cannot
+be opened before the tag exists, which is the only reason it is not already
+open — until it is, the other repository is working from a snapshot of a prompt,
+which is exactly the hidden-context failure I3 forbids.

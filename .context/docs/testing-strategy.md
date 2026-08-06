@@ -89,12 +89,18 @@ thinner than the JVM equivalent. That trade-off is unresolved.
 ### Deferred from M2, deliberately
 
 The M2 plan listed a property-based testing harness and mutation testing. Both
-were **deferred to M6** rather than built: there is no domain code to exercise,
+were **deferred** rather than built: at M2 there was no domain code to exercise,
 and a shared test harness written against no caller is scaffold — exactly the
 "playbook with no subject" problem that pruned `.context/` at M1.
 
 `make analyze` was the acceptance criterion for M2, and it is met. Stating the
 deferral here rather than quietly dropping it is the point.
+
+The deferral has since been half-answered by being needed. The wire conformance
+suites in `libs/kernel-wire` and `libs/ledger-wire` assert their round-trip
+properties over generated values, which is property-based testing arriving with
+the caller that justifies it rather than ahead of one. **Mutation testing is
+still neither built nor scheduled**, and no ADR sequences it.
 
 ### Examples are tests
 
