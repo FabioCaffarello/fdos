@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package fdos.ingest.v1;
+
+import "fdos/kernel/v1/identity.proto";
+import "fdos/kernel/v1/money.proto";
+import "fdos/kernel/v1/provenance.proto";
+import "fdos/kernel/v1/temporal.proto";
+import "google/protobuf/timestamp.proto";
+
+// HoldingClaimSubmission is what a producer outside FDOS sends (ADR-0030).
+//
+// # Why this is not in fdos.ledger.v1
+//
+// It was, until `make proto-check` refused it: every message in the ledger
+// package must carry an Envelope, because every ledger fact does. A submission
+// is not a fact — it is what arrives BEFORE admission, and the Envelope is what
+// the ledger wraps it in AFTER. The check caught a category error rather than a
+// missing field.
+//
+// So the package boundary now carries the distinction ADR-0030 drew: fdos.ledger
+// is what the ledger holds, fdos.ingest is what reaches it. A reader who sees a
+// submission cannot mistake it for something already admitted.
+//
+// It exists because nothing else could be sent. AcceptHoldingClaimCommand is a
+// Go struct in a module ADR-0025 publishes without offering, and the obvious
+// substitutes do not work: Fact requires an Envelope carrying knowledge time,
+// which a producer must never supply, and HoldingClaimed is the payload alone —
+// no effective interval, no provenance. A producer writing anything but Go had
+// nothing to send.
+//
+// # What is absent, and why the absence is the design
+//
+// **Knowledge time.** When FDOS learned a fact is assigned by the ledger's
+// clock at admission. A submission that COULD carry it is a submission a
+// producer can backdate with, and no amount of documentation makes an available
+// field unused. That single absent field is also why Fact cannot be reused:
+// Fact is what the ledger holds after admission, this is what arrives before,
+// and they differ by exactly the field a producer must not set.
+//
+// **Derivation.** A derivation reference says FDOS computed this value. A
+// producer did not, so there is nowhere here to claim it did.
+//
+// # What is present and unguarded
+//
+// `stream` is the producer's choice of where this belongs. Nothing here says
+// who may write to a named stream — that is D2, and it is open. Do not read
+// this message as answering it.
+message HoldingClaimSubmission {
+  // Which stream this belongs to. A name, not an identity: naming a stream is
+  // not asserting who owns it.
+  string stream = 1;
+
+  // The identifiers as the producer read them, verbatim.
+  //
+  // Not an EntityId, and never one: deriving identity from an external
+  // identifier makes that identifier the primary key, and the day the world
+  // reuses one, two instruments merge silently inside an append-only ledger
+  // (ADR-0007). FDOS resolves these; a producer asserts them.
+  fdos.kernel.v1.IdentifierClaim account = 2;
+  fdos.kernel.v1.IdentifierClaim instrument = 3;
+
+  fdos.kernel.v1.Quantity quantity = 4;
+
+  // When the holding was true in the world, as the SOURCE stated it.
+  //
+  // Required. There is no default: a defaulted effective time fabricates a
+  // temporal claim into an append-only ledger, where nothing distinguishes it
+  // from a real one.
+  fdos.kernel.v1.EffectiveInterval effective = 5;
+
+  // The provenance fields a producer can honestly supply, spelled out rather
+  // than carried as a whole Provenance message — that message also holds a
+  // derivation reference, and offering it here would offer a producer a way to
+  // claim FDOS computed something it did not.
+  fdos.kernel.v1.SourceRef source = 6;
+
+  // When the producer acquired it. Not when FDOS did; FDOS acquires nothing.
+  google.protobuf.Timestamp collected_at = 7;
+
+  // The versioned code that read the value. Always present — a producer that
+  // interpreted nothing programmatically uses the reserved `unmediated` name
+  // (ADR-0028). There is deliberately no value meaning "I do not know".
+  fdos.kernel.v1.InterpreterRef interpreter = 8;
+
+  fdos.kernel.v1.Confidence confidence = 9;
+
+  // Versioned reference datasets the producer consumed, if any.
+  repeated fdos.kernel.v1.ReferenceBinding references = 10;
+}
