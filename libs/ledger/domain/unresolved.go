@@ -34,7 +34,7 @@ type UnresolvedClaim struct {
 //
 // Order follows the stream's, so the answer is deterministic and two calls at
 // the same coordinate agree.
-func Unresolved(stream Stream, asOf temporal.AsOf) []UnresolvedClaim {
+func Unresolved(stream Stream, rules identity.Ruleset, asOf temporal.AsOf) []UnresolvedClaim {
 	var out []UnresolvedClaim
 
 	for _, f := range stream.VisibleAt(asOf) {
@@ -43,7 +43,7 @@ func Unresolved(stream Stream, asOf temporal.AsOf) []UnresolvedClaim {
 			continue
 		}
 		for _, c := range []identity.Claim{claimed.Account, claimed.Instrument} {
-			if _, err := Resolve(stream, c, asOf); errors.Is(err, ErrUnresolved) {
+			if _, err := Resolve(stream, c, rules, asOf); errors.Is(err, ErrUnresolved) {
 				out = append(out, UnresolvedClaim{Fact: f.Ref(), Claim: c})
 			}
 		}

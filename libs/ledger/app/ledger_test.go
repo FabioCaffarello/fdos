@@ -220,7 +220,7 @@ func newFixture(t *rapid.T) *fixture {
 	// Knowledge time starts well after any effective time used here, so
 	// "learned later than it was true" is the normal case rather than an edge.
 	seq := clock.NewSequence(temporal.MustAt(time.Unix(1_000_000, 0).UTC()), time.Hour)
-	ledger, err := app.NewLedger(memory.NewStore(), seq)
+	ledger, err := app.NewLedger(memory.NewStore(), seq, identity.Canonicalisation())
 	if err != nil {
 		if t != nil {
 			t.Fatalf("new ledger: %v", err)
