@@ -17,10 +17,15 @@ forbidden:
 
 Executable demonstrations of the FDOS public surface.
 
-## Status: empty by design
+## Status: empty, and now overdue
 
-`examples/` contains nothing at M0. There is no public contract surface to
-demonstrate until M4.
+`examples/` contains nothing. The original reason — no public contract surface
+to demonstrate until M4 — expired when M4 shipped, and three milestones passed
+without anyone noticing that the reason had gone.
+
+`libs/contracts` has been published and externally consumed since. The first
+occupant is the conformance kit in [RFC-0010](../docs/rfc/0010-the-public-surface-receives-a-claim.md):
+synthetic fixtures and a suite a third party runs against its own producer.
 
 ## Examples are tests
 

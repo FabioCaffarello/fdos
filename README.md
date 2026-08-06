@@ -182,6 +182,7 @@ above it.
 | [0007](docs/rfc/0007-identity-resolution-and-the-acquisition-boundary.md) | Minting an identity is a fact; a connector emits a claim and resolution is a recorded derivation. | ADR-0022 |
 | [0008](docs/rfc/0008-narrowing-two-responsibility-matrix-rows.md) | Only *canonical* contracts are FDOS's; toolchain ownership is not named by language. | ADR-0026 |
 | [0009](docs/rfc/0009-renumbering-invariants-and-redacting-the-matrix.md) | Invariants renumbered to E1-E9; the matrix names no provider; the open core must stand alone. | ADR-0027 |
+| [0010](docs/rfc/0010-the-public-surface-receives-a-claim.md) | The public surface receives a claim, not a resolved identity. **Draft** — precondition D4. | — |
 
 ## Roadmap
 
