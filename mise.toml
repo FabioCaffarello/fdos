@@ -29,6 +29,13 @@ golangci-lint = "2.12.2"
 lefthook = "2.1.8"
 gitleaks = "8.30.0"
 
+# Signs the release checksum manifest. Pinned after an unpinned installer took
+# whichever version was newest at the moment a tag was pushed, and that version
+# had changed the signing flags — so the release failed with no commit here and
+# nothing to point at. A floating tool in the signing step is an unreviewed
+# third party deciding what "signed" means.
+cosign = "3.1.3"
+
 # Required from M4 (contract substrate). Checked if present, not yet mandatory.
 buf = "1.68.4"
 
