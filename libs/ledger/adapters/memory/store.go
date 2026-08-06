@@ -42,20 +42,51 @@ func (s *Store) Load(_ context.Context, name string) (domain.Stream, error) {
 	return stream, nil
 }
 
-// Save records a stream.
+// Save records a stream, refusing any write that does not extend the one held.
 //
-// Rejects a stream shorter than the one held. The ledger is append-only
-// (Constitution §4), and a shorter stream arriving as a save is a rewrite of
-// history wearing the costume of a write — the one thing an append-only store
-// must refuse rather than accept quietly.
+// The ledger is append-only (Constitution §4). A **shorter** stream arriving as
+// a save is a rewrite of history wearing the costume of a write. An
+// **equal-length** one is worse, and is the defect the M10 gate measured: two
+// callers load the same stream, each append a different fact, each save at the
+// same length, and the second silently overwrote the first. Both saves returned
+// nil and nothing recorded that a fact had ever existed.
+//
+// Both appends are also assigned the *same* Ref, so the losing caller holds a
+// reference that now addresses a different fact — including a Ref already
+// recorded as a derivation input. A store may refuse a write; it may not accept
+// one and drop another.
+//
+// # What this check is, and what it is not
+//
+// It is a length precondition, and it is deliberately the weakest thing that
+// closes the measured defect. It catches the case where two callers append from
+// the same base, which is what the load-append-save use cases actually do.
+//
+// It does **not** catch a caller that appends two facts while another appends
+// one: the longer write is accepted and the shorter one's fact is still lost.
+// Closing that needs a precondition the *caller* supplies — an expected length
+// or an expected ref — which is a change to the `app.Store` port, and the shape
+// of that port is the open question the M10 RFC exists to answer. Fixing it
+// here would pre-empt that decision from an adapter.
+//
+// So: the silent loss is gone, the residual is named, and the port stays the
+// RFC's to decide.
 func (s *Store) Save(_ context.Context, stream domain.Stream) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if existing, ok := s.streams[stream.Name()]; ok && stream.Len() < existing.Len() {
+	existing, ok := s.streams[stream.Name()]
+	if ok && stream.Len() < existing.Len() {
 		return fmt.Errorf(
 			"memory: refusing to shorten stream %s from %d to %d facts; history is never rewritten",
 			stream.Name(), existing.Len(), stream.Len(),
+		)
+	}
+	if ok && stream.Len() == existing.Len() {
+		return fmt.Errorf(
+			"memory: refusing to overwrite stream %s at %d facts; a write that does not extend the stream "+
+				"would drop a fact appended concurrently, and both would carry the same ref",
+			stream.Name(), existing.Len(),
 		)
 	}
 	s.streams[stream.Name()] = stream
