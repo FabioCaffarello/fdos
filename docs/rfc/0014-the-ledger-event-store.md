@@ -1,13 +1,19 @@
 ---
 id: RFC-0014
 title: The ledger event store
-status: Draft
+status: Accepted
 date: 2026-08-06
 authors:
   - "@FabioCaffarello"
 ---
 
 # RFC-0014 — The ledger event store
+
+> **Accepted**, recorded by
+> [ADR-0034](../adr/0034-the-ledger-event-store.md). SQLite through a pure-Go
+> driver was accepted explicitly; the knowledge-time trade in §2 and leaving
+> `Load` whole-stream were accepted as proposed. The open questions below
+> survive the decision and are listed again in that ADR.
 
 ## Summary
 
