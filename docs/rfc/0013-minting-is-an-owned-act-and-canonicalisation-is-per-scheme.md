@@ -306,15 +306,25 @@ This is the part that changes recorded behaviour, so it is stated on its own.
 Under this proposal it matches on `rules.Fold(minted.BornFrom)` against
 `rules.Fold(claim)`.
 
-The invariant this buys, and the reason it is not optional:
+The invariant this buys:
 
 > **Two claims resolve to the same identity if and only if minting them would
 > derive the same identity.**
 
-Without it the design is incoherent: minting `"PETR4 "` would be refused as a
-duplicate (it derives an existing identity) while resolving `"PETR4 "` would
-fail — a claim that can never be minted and can never resolve. That is a
-deadlock, not a conservative default.
+The refusal in §1 is what forces the choice, and it is worth being exact about
+why, because an earlier draft of this section overstated it. `MintIdentity`
+could refuse on either of two predicates:
+
+| Refuse when… | With byte-exact resolution | With folding resolution |
+|---|---|---|
+| …the claim **resolves** | coherent. `"PETR4 "` does not resolve, so it mints again: two facts, one identity, and afterwards it resolves. Today's behaviour, plus folded seeds. | coherent, and one fact per identity |
+| …minting would derive an **already-minted identity** | **incoherent** — `"PETR4 "` can never be minted and can never resolve | coherent |
+
+So byte-exact resolution is *not* a deadlock; it is the recorded-duplication
+behaviour that already exists, carried forward. What it cannot do is combine
+with the stronger refusal. The argument for folding is therefore about cost
+rather than about correctness: without it, every vendor rendering variant needs
+its own `EntityMinted` fact and its own human minting act, forever.
 
 Two things that do **not** change:
 
@@ -393,11 +403,13 @@ without making it.
 ## Alternatives
 
 **Leave resolution byte-exact and let variants mint duplicates.** This is
-today's behaviour and it is not broken — two `EntityMinted` facts, one identity,
-deterministic reads. Rejected because every vendor rendering variant then needs
-its own human minting act, and the operator's workload scales with vendor
-sloppiness while the truth gained is zero. It also leaves ISIN spacing
-unfixable, which is the case with a real standard behind it.
+today's behaviour and it is **not broken** — two `EntityMinted` facts, one
+identity, deterministic reads — so it is the strongest alternative here and is
+a genuine option rather than a formality. It pairs only with the weaker refusal
+(see §5). Rejected because every vendor rendering variant then needs its own
+human minting act, so the operator's workload scales with vendor sloppiness
+while the truth gained is zero, and because the ledger accumulates mint facts
+that record nothing except that a provider typed a space.
 
 **Make `canonicaliseSeed` scheme-aware.** One function, no new type. Rejected:
 it puts the identifier vocabulary inside the generic identity primitive, so
