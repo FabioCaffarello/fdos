@@ -346,15 +346,27 @@ and the entry point did not.
   non-canonical *scheme*, closing the `"Ticker"` / `"ticker"` half at rung 1.
   The other half — `"ticker"` and `"symbol"` for the same concept — is
   vocabulary governance and no type can solve it.
-- **Canonicalising a claim's *value* is FDOS's, and is not done.** A producer
-  that renders `"PETR4"` one day and `"PETR4 "` the next mints two entities for
-  one instrument, silently, corrupting every position and exposure downstream —
-  visible only when someone compares two numbers that should agree. `NewClaim`
-  refuses a non-canonical scheme and takes the value verbatim, which leaves half
-  the problem on the producer's side of the line. **Canonicalising rendering per
-  scheme is semantics, not shape**, and the boundary puts meaning here. Needs an
-  RFC; it is a correctness question about the canonical model, not a robustness
-  one about inputs.
+- **Per-scheme canonicalisation is FDOS's, and is not done.** Corrected here
+  from a stronger and false version of this entry, which claimed a producer
+  rendering `"PETR4"` then `"PETR4 "` mints two entities silently.
+
+  It does not. `MintFor` derives through `identity.Derive`, whose
+  `canonicaliseSeed` collapses whitespace runs and folds case, so those two
+  produce **one identity**. Measured, after asserting the opposite twice from
+  reading `Resolve` and `NewClaim` without following `MintFor` through.
+
+  What actually happens is milder and already named in `resolve.go`: `Claim.Equal`
+  is byte equality by design, so the spaced claim does not *resolve* against the
+  existing mint and minting again yields **two `EntityMinted` facts carrying one
+  identity** — *a defect the ledger records rather than hides*, with `Resolve`
+  deterministic on the first visible mint.
+
+  **The real gap is narrower.** `canonicaliseSeed` is generic and knows nothing
+  about schemes, so variation it cannot fold — suffixes, punctuation, internal
+  spacing, `"ticker"` versus `"symbol"` — derives genuinely different identities.
+  A per-scheme rule is semantics rather than shape, which puts it here rather
+  than on producer discipline. Needs an RFC, and it is a correctness question
+  about the canonical model rather than a robustness one about inputs.
 - **Minting is deliberately not reachable from admission.**
   `app.Ledger.AcceptHoldingClaim` appends a claim and resolves nothing, so an
   identity never comes into existence because a stranger submitted something.
