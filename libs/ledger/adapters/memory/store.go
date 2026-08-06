@@ -42,53 +42,57 @@ func (s *Store) Load(_ context.Context, name string) (domain.Stream, error) {
 	return stream, nil
 }
 
-// Save records a stream, refusing any write that does not extend the one held.
+// Append records one fact against the authoritative stream and returns the ref
+// the store assigned (ADR-0034).
 //
-// The ledger is append-only (Constitution §4). A **shorter** stream arriving as
-// a save is a rewrite of history wearing the costume of a write. An
-// **equal-length** one is worse, and is the defect the M10 gate measured: two
-// callers load the same stream, each append a different fact, each save at the
-// same length, and the second silently overwrote the first. Both saves returned
-// nil and nothing recorded that a fact had ever existed.
+// This is the whole point of the port change. The sequence comes from the length
+// of the stream *held here*, under the lock, rather than from whatever length a
+// caller happened to read — so two concurrent appends receive consecutive refs
+// instead of the same one.
 //
-// Both appends are also assigned the *same* Ref, so the losing caller holds a
-// reference that now addresses a different fact — including a Ref already
-// recorded as a derivation input. A store may refuse a write; it may not accept
-// one and drop another.
-//
-// # What this check is, and what it is not
-//
-// It is a length precondition, and it is deliberately the weakest thing that
-// closes the measured defect. It catches the case where two callers append from
-// the same base, which is what the load-append-save use cases actually do.
-//
-// It does **not** catch a caller that appends two facts while another appends
-// one: the longer write is accepted and the shorter one's fact is still lost.
-// Closing that needs a precondition the *caller* supplies — an expected length
-// or an expected ref — which is a change to the `app.Store` port, and the shape
-// of that port is the open question the M10 RFC exists to answer. Fixing it
-// here would pre-empt that decision from an adapter.
-//
-// So: the silent loss is gone, the residual is named, and the port stays the
-// RFC's to decide.
-func (s *Store) Save(_ context.Context, stream domain.Stream) error {
+// The stream is created on first append: a stream is the facts in it, and there
+// is nothing to declare in advance.
+func (s *Store) Append(
+	_ context.Context,
+	name string,
+	expect app.Expectation,
+	envelope domain.Envelope,
+	kind domain.Kind,
+	payload domain.Payload,
+) (domain.Ref, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	existing, ok := s.streams[stream.Name()]
-	if ok && stream.Len() < existing.Len() {
-		return fmt.Errorf(
-			"memory: refusing to shorten stream %s from %d to %d facts; history is never rewritten",
-			stream.Name(), existing.Len(), stream.Len(),
-		)
+	stream, ok := s.streams[name]
+	if !ok {
+		created, err := domain.NewStream(name)
+		if err != nil {
+			return domain.Ref{}, fmt.Errorf("memory: %w", err)
+		}
+		stream = created
 	}
-	if ok && stream.Len() == existing.Len() {
-		return fmt.Errorf(
-			"memory: refusing to overwrite stream %s at %d facts; a write that does not extend the stream "+
-				"would drop a fact appended concurrently, and both would carry the same ref",
-			stream.Name(), existing.Len(),
-		)
+
+	if want, checked := expect.Length(); checked && stream.Len() != want {
+		return domain.Ref{}, fmt.Errorf(
+			"%w: %s held %d facts when read, holds %d now", app.ErrStaleRead, name, want, stream.Len())
 	}
-	s.streams[stream.Name()] = stream
-	return nil
+
+	// Knowledge time is monotonic per stream (ADR-0009). One writer satisfies
+	// that by construction; two satisfy it only because of this.
+	if stream.Len() > 0 {
+		facts := stream.Facts()
+		last := facts[len(facts)-1].Envelope().Coordinates().Knowledge()
+		if incoming := envelope.Coordinates().Knowledge(); !incoming.After(last) {
+			return domain.Ref{}, fmt.Errorf(
+				"%w: %s last knew at %s, this append carries %s",
+				app.ErrNonMonotonicKnowledge, name, last, incoming)
+		}
+	}
+
+	extended, ref, err := stream.Append(envelope, kind, payload)
+	if err != nil {
+		return domain.Ref{}, fmt.Errorf("memory: %w", err)
+	}
+	s.streams[name] = extended
+	return ref, nil
 }
