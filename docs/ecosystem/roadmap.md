@@ -69,9 +69,11 @@ exists rather than two independent roadmaps.
   published, because the release workflow failed on all fourteen tags (B-008).
   The cause is fixed and the next tag is the proof; until then a consumer that
   wants to verify the provenance of the contract module it pins still cannot.
-- **The governance corpus has never been published as a version.** The consumer
-  vendors the Constitution and script manifest byte-for-byte, pinned to nothing
-  (B-009).
+- **The governance corpus is published, and not yet vendored.** `ecosystem/v0.1.0`
+  exists and is announced at
+  [fdos-connectors#2](https://github.com/FabioCaffarello/fdos-connectors/issues/2).
+  Until the consumer pins it, it is still vendoring the Constitution and script
+  manifest from `main` at no version (B-009).
 
 ## The acquisition-contract promotion, and why it is not on this roadmap
 

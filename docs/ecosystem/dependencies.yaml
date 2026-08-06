@@ -58,11 +58,11 @@ edges:
     kind: vendored-corpus
     packages: []
     module: null
-    version: unpinned
+    version: ecosystem/v0.1.0 offered; the consumer is still on an unpinned copy
     blocking: false
-    issue: null
-    mirror: null
+    issue: FabioCaffarello/fdos-connectors#2
+    mirror: FabioCaffarello/fdos#20
     verified: 2026-08-05 the consumer vendors the Constitution byte-for-byte and
-      a manifest of enforcement scripts, with its own drift check. It vendors no
-      version or tag, because this repository has never published the corpus as
-      one — see B-009 in ../blocked.md
+      a manifest of enforcement scripts, with its own drift check, but pinned to
+      nothing. The corpus is now published at a tag and announced; vendoring it
+      is the consumer's step and is not done — see B-009 in ../blocked.md

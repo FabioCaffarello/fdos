@@ -49,6 +49,22 @@ module's directory prefix, so the tag names the path, not the concept.
 No breaking change has been published. `buf breaking` gates every pull request
 (`make proto-check`), so the first one will be deliberate.
 
+## The governance corpus
+
+Not a contract — nothing imports it — but a versioned artifact this repository
+publishes and another vendors, so it is discovered the same way.
+
+| Artifact | Version | Status | Consumers |
+|---|---|---|---|
+| `docs/ecosystem/` | `ecosystem/v0.1.0` | published | `fdos-connectors` — announced, not yet pinned (B-009) |
+
+The tag does not match `libs/*/v*` and so does not trigger `release.yml`. There
+is nothing to build, sign or attest: the artifact is the tree at the tag.
+
+A version bump is a migration for everyone who vendors it, which is what the
+tag is for — an unpinned vendor cannot tell a deliberate upstream change from an
+accidental one.
+
 ## Published, but not the contract surface
 
 These are Go modules under the same licence, published because
