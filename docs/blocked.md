@@ -265,6 +265,21 @@ and the entry point did not.
   non-canonical *scheme*, closing the `"Ticker"` / `"ticker"` half at rung 1.
   The other half — `"ticker"` and `"symbol"` for the same concept — is
   vocabulary governance and no type can solve it.
+- **Canonicalising a claim's *value* is FDOS's, and is not done.** A producer
+  that renders `"PETR4"` one day and `"PETR4 "` the next mints two entities for
+  one instrument, silently, corrupting every position and exposure downstream —
+  visible only when someone compares two numbers that should agree. `NewClaim`
+  refuses a non-canonical scheme and takes the value verbatim, which leaves half
+  the problem on the producer's side of the line. **Canonicalising rendering per
+  scheme is semantics, not shape**, and the boundary puts meaning here. Needs an
+  RFC; it is a correctness question about the canonical model, not a robustness
+  one about inputs.
+- **Minting is deliberately not reachable from admission.**
+  `app.Ledger.AcceptHoldingClaim` appends a claim and resolves nothing, so an
+  identity never comes into existence because a stranger submitted something.
+  Recorded because the alternative is cheap now and expensive later: once a
+  producer depends on automatic minting, removing it is a change to what the
+  ledger does. Who mints, when, and on whose authority is undecided.
 - `HoldingObserved`'s provenance must be `Derived`. proto3 cannot express it and
   the Go domain type does not yet enforce it, so it stays rung 6 exactly as
   ADR-0022 recorded.

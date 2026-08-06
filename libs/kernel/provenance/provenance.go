@@ -124,6 +124,47 @@ func NewSource(value string) (Source, error) {
 // String returns the content address, unresolved.
 func (s Source) String() string { return s.value }
 
+// ErrMalformedSource is returned when a source is not a well-formed
+// algorithm-prefixed content address.
+var ErrMalformedSource = fmt.Errorf("provenance: malformed source")
+
+// sourceAlgorithm is the only digest algorithm the grammar admits today. It is
+// a prefix rather than an assumption so that a second algorithm is a new
+// prefix, never a silent reinterpretation of the same 64 characters.
+const sourceAlgorithm = "sha256:"
+
+// CheckContentAddress reports whether the source matches the grammar ADR-0028
+// specified: `sha256:` followed by 64 lowercase hexadecimal characters.
+//
+// **Not called by NewSource, deliberately.** The wire codec constructs sources
+// on decode, so enforcing there would be enforcement at *decode* rather than at
+// admission — and those differ in what they destroy. Admission rejects bad new
+// data; decode makes existing data unreadable. A producer whose stored
+// references predate this grammar would find facts it already holds
+// unrecoverable through the normal path.
+//
+// So the rule lives here and is called at admission, where the cost of being
+// wrong is a rejected submission.
+//
+// It catches accident, not intent. A well-formed digest of nothing passes.
+func (s Source) CheckContentAddress() error {
+	if !strings.HasPrefix(s.value, sourceAlgorithm) {
+		return fmt.Errorf("%w: %q has no recognised algorithm prefix, expected %q",
+			ErrMalformedSource, s.value, sourceAlgorithm)
+	}
+	digest := strings.TrimPrefix(s.value, sourceAlgorithm)
+	if len(digest) != 64 {
+		return fmt.Errorf("%w: digest is %d characters, sha256 is 64",
+			ErrMalformedSource, len(digest))
+	}
+	for _, r := range digest {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
+			return fmt.Errorf("%w: %q is not lowercase hexadecimal", ErrMalformedSource, digest)
+		}
+	}
+	return nil
+}
+
 // Interpreter names the versioned code that read or computed a value — a
 // parser or a calculation method. Pinned in a report so that regenerating it
 // uses the interpreter of the time, not of today (ADR-0010).
