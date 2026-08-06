@@ -19,7 +19,7 @@ plus an ADR in both. Ratified by
 | Canonical financial model | `fdos` | Semantics of money must have exactly one definition |
 | Ledger, posting rules, double-entry | `fdos` | Truth path (Constitution §2) |
 | Kernel and bounded contexts | `fdos` | Domain core |
-| **Canonical** contracts (proto, schemas, generated SDKs) | `fdos` | Single source, one-way flow (I2). Canonical means it defines or constrains the meaning of a financial fact; transporting one does not (ADR-0026) |
+| **Canonical** contracts (proto, schemas, generated SDKs) | `fdos` | Single source, one-way flow (E2). Canonical means it defines or constrains the meaning of a financial fact; transporting one does not (ADR-0026) |
 | Instrument identity resolution | `fdos` | Cross-provider concern; no single provider can decide it |
 | Corporate actions | `fdos` | Domain rules, not provider quirks |
 | Risk | `fdos` | Reads the canonical model |
@@ -27,14 +27,14 @@ plus an ADR in both. Ratified by
 | MCP surface | `fdos` | Exposes canonical model, not raw acquisitions |
 | Engineering platform (make, mise, CI, supply chain) | `fdos` | Origin of the shared standard |
 | Currency, rounding, precision policy | `fdos` | Ledger correctness |
-| Provider plugins (`btg-bot`, `b3-bot`, …) | `fdos-connectors` | Provider-shaped, provider-lifetime |
+| Provider plugins, one per provider | private repositories | Provider-shaped, provider-lifetime |
 | Provider SDK | `fdos-connectors` | Serves plugin authors only |
 | Plugin runtime | `fdos-connectors` | Execution of acquisition, not of domain logic |
 | Browser runtime and browser sessions | `fdos-connectors` | Acquisition mechanics |
 | Provider authentication, credentials, MFA, session lifetime | `fdos-connectors` | Credentials are provider-scoped (see D2) |
 | Extractors, parsers, normalizers | `fdos-connectors` | Bounded by §"Where normalisation stops" — they normalise *shape*, never *meaning* |
 | Acquisition pipeline, scheduling, retries, backoff | `fdos-connectors` | Provider-facing operational concern |
-| Raw artifact storage and replay | `fdos-connectors` | Provenance producer (I4) |
+| Raw artifact storage and replay | `fdos-connectors` | Provenance producer (E4) |
 | Language toolchains beyond Go | the repository that uses one | A toolchain present in one repository only is owned there. Today both repositories are Go (ADR-0026) |
 
 ## The four boundary tests
@@ -122,9 +122,9 @@ ecosystem boundary or outside it.
 
 ### D2 — "Authentication" is two concerns wearing one word
 
-Provider authentication — credentials against BTG, B3, Bacen — is
-`fdos-connectors`. Platform identity — who may query the ledger, who may call
-the MCP surface — is `fdos`. Split explicitly before either is built.
+Provider authentication — credentials against any external provider — is the
+private side's. Platform identity — who may query the ledger, who may call the
+MCP surface — is `fdos`. Split explicitly before either is built.
 
 **Status:** open, and not yet urgent: `fdos` has no query surface and no MCP
 server, so the `fdos` half has no subject yet.
@@ -132,7 +132,7 @@ server, so the `fdos` half has no subject yet.
 ### D3 — Where normalisation stops
 
 The charter grants "normalizers" to `fdos-connectors`; the section above is the
-reading that keeps I1 intact. Ratify or revise it by ADR, but do not leave it
+reading that keeps E1 intact. Ratify or revise it by ADR, but do not leave it
 implicit.
 
 **Status:** open, and closer to ratifiable than the others. `fdos-connectors`
@@ -155,7 +155,7 @@ It is no longer only open — it has been **answered downstream by construction*
 record, and requires an origin to be complete before a fact can be assembled.
 Nothing in `fdos` asks for that, checks it, or knows it happened.
 
-Why this matters more than it looks: I4 makes provenance an *admission
+Why this matters more than it looks: E4 makes provenance an *admission
 criterion* for the ledger — source, method, fetch time, content hash. If what the
 hash addresses is specified only downstream, then the ledger's admission rule is
 authored by its consumer. That is a reverse edge in substance even though there
@@ -198,9 +198,8 @@ The disputed half — whether a proto contract that is *not* canonical may be
 defined outside `fdos` — is decided by
 [ADR-0026](../adr/0026-canonical-contracts-and-language-toolchains.md) via
 [RFC-0008](../rfc/0008-narrowing-two-responsibility-matrix-rows.md). It may, and
-the matrix row above now says so. Evidence and the four tests applied to
-`fdosconn.plugin.v1` are in
-[fdos#25](https://github.com/FabioCaffarello/fdos/issues/25).
+the matrix row above now says so. Evidence and the four tests applied to the private side's host-plugin schema
+are in [fdos#25](https://github.com/FabioCaffarello/fdos/issues/25).
 
 **Status: closed at `ecosystem/v0.2.0`.** D1, D2 and D3 remain open; D4 remains
 M8's gating deliverable.

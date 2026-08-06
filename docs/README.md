@@ -29,6 +29,7 @@ and under what constraints.
 | `rfc/` | Requests for Comments — decisions requiring design exploration. |
 | `ecosystem/` | The boundary between FDOS and its consuming repositories (ADR-0023). |
 | `blocked.md` | Work decided and not finished, with what it is waiting on. |
+| `disclosure.md` | What this public repository has revealed about the private side, and what of it is permanent. |
 
 ### `ecosystem/`
 

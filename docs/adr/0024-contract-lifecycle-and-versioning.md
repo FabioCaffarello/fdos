@@ -11,6 +11,14 @@ superseded_by: []
 
 # ADR-0024 — Contracts are versioned per module, and a breaking change is a process
 
+
+> **Banner — invariant renumbering (`ecosystem/v0.3.0`).** This decision cites
+> the ecosystem invariants as `I1`–`I8`. They were renumbered to `E1`–`E8` to
+> stop colliding with the downstream Charter's own `I-1`…`I-10`. The mapping is
+> the identity; read `I2` here as `E2`. Nothing about this decision changed —
+> the text stands as accepted, per `fdos:ADR-0000`. See
+> [`../ecosystem/invariants.md`](../ecosystem/invariants.md).
+
 ## Context
 
 [ADR-0018](0018-contract-surface-is-protobuf.md) decided that the contract

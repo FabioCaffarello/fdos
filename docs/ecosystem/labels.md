@@ -84,6 +84,6 @@ this file still matches the repository's actual labels.
 
 The labels were created from a script rather than by hand, so they are at least
 reproducible; that script is not committed, because a one-time provisioning
-script kept as though it were a generator is the failure I6 names. If label
+script kept as though it were a generator is the failure E6 names. If label
 drift becomes a real problem, the answer is a check that compares GitHub's
 labels against this file — with a negative test — not a script nobody runs.

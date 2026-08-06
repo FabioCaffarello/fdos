@@ -17,11 +17,11 @@ only the register of what that decision could not reach.
 > the private connector repository compiles against a published contract version
 > with no filesystem path dependency on this repository.
 
-**RESOLVED.** The consumer is no longer empty. Two of its modules —
-`libs/connector-sdk` and `libs/upstream` — require
+**RESOLVED.** The consumer is no longer empty. Two of its modules require
 `github.com/FabioCaffarello/fdos/libs/contracts v0.3.0`, and neither those
 `go.mod` files nor its `go.work` carries a `replace` directive. That is the
-criterion, met.
+criterion, met. The module names are the private side's and are not repeated
+here (`fdos:docs/disclosure.md`).
 
 **Verified how, and how far.** By reading the consumer's committed `go.mod`,
 `go.sum` and `go.work` through the GitHub API — the artifact channel, which is
