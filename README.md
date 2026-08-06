@@ -163,6 +163,7 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0025](docs/adr/0025-consumer-facing-surface-is-the-contracts-module.md) | The consumer-facing surface is the contracts module; other published modules are not offered |
 | [0026](docs/adr/0026-canonical-contracts-and-language-toolchains.md) | Only canonical contracts are FDOS's, and toolchain ownership is not named by language |
 | [0027](docs/adr/0027-invariant-renumbering-and-matrix-redaction.md) | Invariants are E1-E9, the matrix names no provider, and the open core must stand alone |
+| [0028](docs/adr/0028-provenance-admissibility.md) | A SourceRef is a content hash with an unspecified referent, and an interpreter is always named |
 
 ### Requests for Comment
 
