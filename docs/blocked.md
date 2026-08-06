@@ -255,12 +255,15 @@ and the entry point did not.
 
 **Still open:**
 
-- Nobody notices an unresolved claim. Claims accumulate and no `HoldingObserved`
-  is derived; who is told, and how, was operational and undecided. **Now
-  scheduled**: it is deliverable 3 of M8
-  ([`ecosystem/roadmap.md`](ecosystem/roadmap.md)), alongside the use case that
-  consumes a claim in the first place — the two are the same gap seen from
-  either end.
+- ~~Nobody notices an unresolved claim.~~ **Closed.** `app.Ledger.UnresolvedClaims`
+  answers which admitted claims resolve to no identity, at a required as-of.
+  Asking does not resolve anything — minting on inspection would make the act of
+  looking change the ledger, and an identity would come into existence because
+  somebody ran a report. Tested by asking twice and requiring the same answer.
+
+  What replaced it is narrower and undecided: **who mints, when, and on whose
+  authority.** Admission deliberately cannot, so a claim waits until something
+  with an owner acts on it. Nothing yet is that something.
 - The claim vocabulary is an open string. `identity.NewClaim` now refuses a
   non-canonical *scheme*, closing the `"Ticker"` / `"ticker"` half at rung 1.
   The other half — `"ticker"` and `"symbol"` for the same concept — is
