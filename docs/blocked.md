@@ -109,6 +109,18 @@ the suite fail.
 payload rather than trusting them. A fact claiming to be a `ledger.TradeSettled`
 while carrying a holding observation is the shape a corrupted stream takes.
 
+**Held closed through `fdos.ingest.v1` (M8).** The submission message was a new
+concept with two representations — the wire shape a producer sends and the
+admission command FDOS acts on — and for exactly one slice nothing proved they
+agreed. `libs/ledger-wire` now maps them under the same two properties,
+negative-tested two ways: a decoder that ignores reference bindings, and an
+encoder that forgets the stream name.
+
+The first is the useful one. Dropping references on decode is caught by the
+**wire → command → wire** direction and would also have been caught the other
+way here — but the direction that only reads is the one that stays silent when a
+field is never learned at all, which is why both are asserted rather than one.
+
 **B-003 is closed.** Every canonical concept now has a mechanism proving its two
 definitions agree. What remains is scope rather than absence: a payload type
 added without a conformance test would still drift, which is why
