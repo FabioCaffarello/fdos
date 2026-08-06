@@ -1,6 +1,5 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-05T00:00:00.000Z",
   "source": "manual",
   "stack": {
     "primaryLanguage": "go",
@@ -10,51 +9,29 @@
     "testFrameworks": [],
     "packageManager": "go-modules"
   },
+  "notes": [
+    "Two sensors, deliberately, and this file does not mirror the Makefile.",
+    "`make verify` runs nineteen checks. Listing them here would be a second copy of a list that already exists in one place, and the drifted copy is always the one that gets read — the same failure this repository names for CLAUDE.md and AGENTS.md. The Makefile's `verify` target is the list.",
+    "So a sensor exists only where it names a distinct execution context, not a distinct check. ADR-0014 makes `make verify` the whole gate: CI runs exactly it, so 'did the gate pass' is the honest unit of evidence.",
+    "`secrets-check-staged` is the second sensor because it observes something `verify` cannot: staged content, before it becomes a commit. Scanning the working tree and scanning what is about to be written are different questions, and only one of them can still be answered by refusing.",
+    "The `phases` field carried PREVC phase letters. PREVC was evaluated in M9 and declined — this repository already has a working agreement in CONTRIBUTING.md, and two descriptions of how work proceeds is the drifted-copy problem again. Config describing a workflow nobody runs is a playbook with no subject, which the .context contract forbids."
+  ],
   "sensors": [
     {
       "id": "verify",
-      "name": "Full verification",
-      "description": "Every enforcement mechanism available at the current milestone. The single gate CI invokes from M3.",
+      "name": "The gate",
+      "description": "Every enforcement mechanism available at this milestone. CI runs exactly this and nothing else (ADR-0014), so a green local run is a meaningful prediction of a green pipeline. Nineteen checks today; the Makefile is where they are enumerated.",
       "command": "make verify",
       "severity": "critical",
-      "blocking": true,
-      "phases": ["V", "C"]
+      "blocking": true
     },
     {
-      "id": "toolchain-check",
-      "name": "Toolchain pins",
-      "description": "Installed tools match the pins in mise.toml. Enforces Constitution §9 — reproducibility begins with the compiler.",
-      "command": "make toolchain-check",
+      "id": "secrets-check-staged",
+      "name": "Staged secret scan",
+      "description": "Scans what is about to be committed rather than what is already there. A distinct execution context from `verify`, and the only one where refusing still prevents the thing — once a secret is committed, history is the problem and rotation is the answer (Constitution §13).",
+      "command": "make secrets-check-staged",
       "severity": "critical",
-      "blocking": true,
-      "phases": ["E", "V"]
-    },
-    {
-      "id": "contracts-check",
-      "name": "Directory contracts",
-      "description": "Every directory declares a valid architectural contract that agrees with CODEOWNERS. Enforces Constitution §10.",
-      "command": "make contracts-check",
-      "severity": "critical",
-      "blocking": true,
-      "phases": ["R", "V"]
-    },
-    {
-      "id": "adr-check",
-      "name": "Decision log",
-      "description": "The ADR log is well-formed, uniquely numbered, and supersession links are bidirectional. Enforces Constitution §14.",
-      "command": "make adr-check",
-      "severity": "critical",
-      "blocking": true,
-      "phases": ["R", "V"]
-    },
-    {
-      "id": "constitution-check",
-      "name": "Enforcement table coverage",
-      "description": "Every Constitution principle appears in the §15 enforcement table, so the repository's self-assessment cannot go stale. Enforces ADR-0005.",
-      "command": "make constitution-check",
-      "severity": "critical",
-      "blocking": true,
-      "phases": ["R", "V"]
+      "blocking": true
     }
   ]
 }

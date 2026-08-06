@@ -137,6 +137,57 @@ pre-push. Hooks call the same `make` targets, and are explicitly bypassable: CI
 re-runs everything, so `--no-verify` costs a round trip and cannot let anything
 through.
 
+## The dotcontext harness: what is bound, and what was declined
+
+The harness offers sessions, traces, sensors, artifacts, task contracts,
+handoffs, replays, failure datasets, policy rules and a PREVC workflow. **Two of
+those are bound here.** The rest are recorded as declined rather than left
+looking unnoticed.
+
+### Bound, because they have a subject
+
+**Sensors** — `.context/config/sensors.json`. Two, and the file argues its own
+smallness: `make verify` runs nineteen checks and enumerating them here would be
+a second copy of a list the Makefile already holds. A sensor exists where there
+is a distinct *execution context*, not a distinct check — which is why
+`secrets-check-staged` is the second one, since scanning staged content and
+scanning the tree are different questions.
+
+**Policy** — `.context/config/policy.json`. It corresponds to the
+`needs/human-decision` label the pull-request workflow already requires, and M9
+extended it to the paths that had none: `docs/ecosystem/**` (Tier 0, vendored
+downstream), `docs/rfc/**`, the published contract surface, and the disclosure
+register.
+
+### Declined, with reasons
+
+**PREVC.** This repository has a working agreement — the draft pull request is
+the gate, ready is the approval, every mechanism ships a negative test and an
+execution-context answer — and it is written in `CONTRIBUTING.md`. PREVC is a
+second description of how work proceeds, and **two process descriptions is the
+drifted-copy problem this repository already names** for `CLAUDE.md` and
+`AGENTS.md`. Adopting it because the harness offers it is the *playbook with no
+subject* the `.context/` contract forbids. If it were to *replace* the working
+agreement that would be a real proposal wanting an ADR; sitting beside it, it
+should not.
+
+**Task contracts, handoffs, replays and failure datasets.** Machinery for
+multi-agent or long-running work. One session works this repository at a time,
+and a contract between an agent and itself records nothing a pull request does
+not. They become interesting when there is a second actor; there is not.
+
+**Sessions and traces.** Runtime state, correctly untracked. The durable record
+of what happened here is the decision log and the pull request bodies, both of
+which outlive any session.
+
+### A caution, learned expensively
+
+`sync` accepts `dryRun` and **does not honour it**. A preview call wrote 102
+files across four new top-level directories and turned the gate red; the count
+it reported as `filesCreated` was a description of what it had already done, not
+a projection. Assume the flag does nothing, and arrange to be able to undo any
+call. Recorded in `docs/blocked.md` under B-004.
+
 ## Developer environment
 
 `.devcontainer/` gives a zero-configuration path: it installs `mise`, and `mise`

@@ -10,7 +10,7 @@
           "docs/constitution.md"
         ]
       },
-      "reason": "The Constitution is the highest authority in the repository. It is amended only through an RFC, a version bump and an ADR — never edited directly."
+      "reason": "The Constitution is the highest authority in the repository. It is amended only through an RFC, a version bump and an ADR \u2014 never edited directly."
     },
     {
       "id": "protect-decision-log",
@@ -21,6 +21,48 @@
         ]
       },
       "reason": "The ADR log is append-only and immutable (ADR-0000). A decision that proves wrong is superseded by a new ADR, never rewritten. Only new files and supersession metadata should change here."
+    },
+    {
+      "id": "protect-ecosystem-corpus",
+      "effect": "require_approval",
+      "when": {
+        "paths": [
+          "docs/ecosystem/**"
+        ]
+      },
+      "reason": "Tier 0. The invariants E1-E9 and the responsibility matrix are authored here and vendored verbatim by a repository FDOS may not read, so an edit here changes rules on both sides of a boundary only one side can see. Amended only by an RFC here plus an ADR in both repositories (ADR-0023), and every amendment bills the consumer a reviewed re-sync."
+    },
+    {
+      "id": "protect-rfc-log",
+      "effect": "require_approval",
+      "when": {
+        "paths": [
+          "docs/rfc/**"
+        ]
+      },
+      "reason": "An accepted RFC is a historical record like an ADR: it is what a decision was reasoned from, including the arguments that lost and the ones its author withdrew. Editing one rewrites why, which is the part the log exists to keep."
+    },
+    {
+      "id": "protect-contract-surface",
+      "effect": "require_approval",
+      "when": {
+        "paths": [
+          "libs/contracts/proto/**",
+          "buf.yaml",
+          "buf.gen.yaml"
+        ]
+      },
+      "reason": "The published contract surface, consumed outside this repository at a pinned version. Any change is a change to somebody else's build, and a breaking one requires an RFC, a consumer issue opened before merge, and an N-1 window (ADR-0024). Not risk-conditional: there is no low-risk edit to a contract others depend on."
+    },
+    {
+      "id": "protect-disclosure-register",
+      "effect": "require_approval",
+      "when": {
+        "paths": [
+          "docs/disclosure.md"
+        ]
+      },
+      "reason": "The record of what this public repository has revealed about the private side. Editing it changes what is known about a disclosure rather than the disclosure, and a redaction without a record reads as though nothing was ever disclosed."
     },
     {
       "id": "protect-enforcement-mechanisms",
@@ -56,7 +98,7 @@
         ],
         "risk": "high"
       },
-      "reason": "High-risk changes to domain and application code require approval."
+      "reason": "High-risk changes to domain and application code require approval. The published contract surface is covered separately and unconditionally: risk labels are assigned by whoever is making the change, and a contract others build against should not depend on that self-assessment."
     },
     {
       "id": "protect-deployment",
