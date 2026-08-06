@@ -1,13 +1,19 @@
 ---
 id: RFC-0013
 title: Minting is an owned act, and canonicalisation is per scheme
-status: Draft
+status: Accepted
 date: 2026-08-06
 authors:
   - "@FabioCaffarello"
 ---
 
 # RFC-0013 — Minting is an owned act, and canonicalisation is per scheme
+
+> **Accepted**, recorded by
+> [ADR-0033](../adr/0033-minting-is-an-owned-act-and-canonicalisation-is-per-scheme.md),
+> which also settles the four open questions below. The rule set accepted is the
+> one proposed in §4 — four standard schemes — and resolution folds both sides
+> (§5).
 
 ## Summary
 
