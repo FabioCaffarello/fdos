@@ -1,7 +1,7 @@
 ---
 id: RFC-0010
 title: The public surface receives a claim, not a resolved identity
-status: Draft
+status: Accepted
 date: 2026-08-05
 authors:
   - "@FabioCaffarello"
@@ -22,9 +22,14 @@ authors:
 > eliminate. Both versions of the argument are stated there in full, so this
 > record needs no other source.
 >
-> **Draft.** It has a named precondition — see §6. It is written now so that
-> acceptance is mechanical on the day that precondition lands, and it is not
-> accepted before, because accepting against unsettled content is how a
+> **Accepted**, recorded by
+> [ADR-0029](../adr/0029-the-public-surface-receives-a-claim.md).
+>
+> It was written as a `Draft` with a named precondition — D4, §6 — so that
+> acceptance would be mechanical on the day that precondition landed rather than
+> a fresh judgement. [ADR-0028](../adr/0028-provenance-admissibility.md) settled
+> D4, and nothing else in this RFC depended on it. The discipline was the point:
+> writing against unsettled content is legitimate, accepting against it is how a
 > hypothesis becomes a decision without an ADR.
 
 ## 1. The problem

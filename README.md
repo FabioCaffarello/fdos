@@ -164,6 +164,7 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0026](docs/adr/0026-canonical-contracts-and-language-toolchains.md) | Only canonical contracts are FDOS's, and toolchain ownership is not named by language |
 | [0027](docs/adr/0027-invariant-renumbering-and-matrix-redaction.md) | Invariants are E1-E9, the matrix names no provider, and the open core must stand alone |
 | [0028](docs/adr/0028-provenance-admissibility.md) | A SourceRef is a content hash with an unspecified referent, and an interpreter is always named |
+| [0029](docs/adr/0029-the-public-surface-receives-a-claim.md) | The public surface receives a claim, and the ledger admits what a library merely builds |
 
 ### Requests for Comment
 
