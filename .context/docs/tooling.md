@@ -140,11 +140,24 @@ through.
 ## The dotcontext harness: what is bound, and what was declined
 
 The harness offers sessions, traces, sensors, artifacts, task contracts,
-handoffs, replays, failure datasets, policy rules and a PREVC workflow. **Two of
-those are bound here.** The rest are recorded as declined rather than left
-looking unnoticed.
+handoffs, replays, failure datasets, policy rules and a PREVC workflow. Sensors
+and policy were bound in M9; **M9.5 bound the PREVC workflow, sessions and task
+contracts as well** (ADR-0031), when the milestone calibration program gave the
+runtime a subject. What remains declined is recorded rather than left looking
+unnoticed.
 
 ### Bound, because they have a subject
+
+**PREVC, sessions and task contracts** — since M9.5. PREVC was evaluated in M9
+and declined: it was a second description of how work proceeds, and two process
+descriptions is the drifted-copy problem this repository names for `CLAUDE.md`
+and `AGENTS.md`. ADR-0031 reversed that the only way the objection allows — by
+making PREVC the single description. `CONTRIBUTING.md` now names the working
+agreement's stages with the PREVC letters; each milestone session opens with
+`workflow-init`, carries a task contract whose acceptance criteria are the
+gate's, and records `make verify` runs as the `verify` sensor. The declination
+and the argument that lost are preserved in the ADR. Where the harness's
+built-in PREVC skills and `CONTRIBUTING.md` disagree, `CONTRIBUTING.md` wins.
 
 **Sensors** — `.context/config/sensors.json`. Two, and the file argues its own
 smallness: `make verify` runs nineteen checks and enumerating them here would be
@@ -161,24 +174,26 @@ register.
 
 ### Declined, with reasons
 
-**PREVC.** This repository has a working agreement — the draft pull request is
-the gate, ready is the approval, every mechanism ships a negative test and an
-execution-context answer — and it is written in `CONTRIBUTING.md`. PREVC is a
-second description of how work proceeds, and **two process descriptions is the
-drifted-copy problem this repository already names** for `CLAUDE.md` and
-`AGENTS.md`. Adopting it because the harness offers it is the *playbook with no
-subject* the `.context/` contract forbids. If it were to *replace* the working
-agreement that would be a real proposal wanting an ADR; sitting beside it, it
-should not.
+**Handoffs, replays and failure datasets.** Machinery for multi-agent work.
+One session works this repository at a time, and a handoff between an agent
+and itself records nothing a pull request does not. They become interesting
+when there is a second actor; there is not. (Task contracts moved out of this
+list in M9.5: a contract carrying the gate's acceptance criteria and required
+sensors is what makes calibration sessions comparable.)
 
-**Task contracts, handoffs, replays and failure datasets.** Machinery for
-multi-agent or long-running work. One session works this repository at a time,
-and a contract between an agent and itself records nothing a pull request does
-not. They become interesting when there is a second actor; there is not.
+**Tracking session state.** Sessions and traces are runtime state, correctly
+untracked. The durable record of what happened here is still the decision log
+and the pull request bodies, both of which outlive any session; the calibration
+log summarizes what a session measured, and the raw state stays local.
 
-**Sessions and traces.** Runtime state, correctly untracked. The durable record
-of what happened here is the decision log and the pull request bodies, both of
-which outlive any session.
+### Defects measured while adopting the workflow (M9.5 pilot)
+
+`plan link` rejects `required_sensors` on execution phases in every documented
+format, while still half-registering the link — after which `approvePlan`'s two
+code paths disagree about whether a plan is linked at all. The P→R and R→E
+gates were passed with an explicit, trace-recorded `force`. Until fixed
+upstream, the phase gates are honour-system plus traces. To be reported against
+dotcontext alongside the `dryRun` defect below.
 
 ### A caution, learned expensively
 
