@@ -135,6 +135,23 @@ checked — that a cited local decision exists — and rung 6 for the half that
 cannot: nothing here can tell whether `fdos-connectors:ADR-0019` says what a
 document claims it says.
 
+### E9 has a path, and it stops short of a guarantee
+
+`E9` was admitted unmet at `v0.3.0` and sat at rung 6. It now has a public
+ingestion path that requires nothing private: a submission message in
+`fdos.ingest.v1`, an admission entry point that resolves and mints nothing, and
+a conformance kit in `examples/ingest`.
+
+**Its rung is 5, not higher, and the distinction matters.** The kit compiles and
+runs in CI, and its fixtures are compared, so *the kit* is checked at rung 3.
+`E9` itself is not: nothing detects a would-be adopter who never finds the kit,
+or who reads it and writes a producer anyway that nobody runs. It is
+documentation that executes, which is the strongest thing an invariant about
+*usability* can be.
+
+What would climb it is not another check here. It is a producer outside this
+programme submitting something, which is evidence rather than enforcement.
+
 ### E6 applies to this directory
 
 [`dependencies.yaml`](dependencies.yaml) is described in the governance brief as
