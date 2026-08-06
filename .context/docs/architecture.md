@@ -48,9 +48,11 @@ itself has no ADR yet.
 | `.github/` | CI workflows — `verify`, `release`, `supply-chain`. They invoke `make` and hold no logic (ADR-0014). |
 | `.context/` | This directory — knowledge for agents. |
 
-Every directory declares its contract in the front matter of its `README.md`:
-`purpose`, `owner`, `allowed`, `forbidden`. `make contracts-check` enforces that
-these exist, are complete, and agree with `CODEOWNERS`.
+Every top-level directory and every module under `libs/` declares its contract
+in the front matter of its `README.md`: `purpose`, `owner`, `allowed`,
+`forbidden`. `make contracts-check` enforces that these exist, are complete, and
+agree with `CODEOWNERS` — 16 contracts. It does not descend past a module:
+layers below one are packages, not boundaries (ADR-0013).
 
 From **M2** those `allowed`/`forbidden` lists become the **source** of the
 import-boundary linter configuration rather than a description of it. A README
