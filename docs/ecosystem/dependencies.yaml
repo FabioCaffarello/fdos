@@ -5,7 +5,7 @@
 # The governance design has this file GENERATED from `xrepo:v1` trailers in
 # GitHub issue bodies and validated in CI. It is not generated today, because no
 # issue carries such a trailer, and a generator with no input is not a generator
-# — it is a script that would produce an empty file and imply coverage (I6).
+# — it is a script that would produce an empty file and imply coverage (E6).
 #
 # So this is the honest intermediate: the edges that are known to exist,
 # recorded by hand, marked as such. An edge here is evidence someone looked. Its

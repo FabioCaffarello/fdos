@@ -12,6 +12,14 @@ authors:
 > **Accepted**, recorded by
 > [ADR-0026](../adr/0026-canonical-contracts-and-language-toolchains.md).
 
+
+> **Banner — disclosure redaction (`ecosystem/v0.3.0`).** This RFC names
+> identifiers belonging to the private repository. They are retained here
+> because they are the *subject* of the decision and removing them would make
+> the reasoning unreadable; current documents no longer repeat them. The
+> boundary rule and what remains permanently published are recorded in
+> [`../disclosure.md`](../disclosure.md).
+
 ## Why this needs an RFC at all
 
 The responsibility matrix in

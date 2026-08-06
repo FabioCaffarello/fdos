@@ -5,7 +5,7 @@ each `fdos` milestone unblocks downstream, and what `fdos` is relied upon for
 but has not scheduled.
 
 Both sequences are kept here because a milestone that unblocks nothing needs
-justifying, and one that blocks someone needs to be visible to them (I3).
+justifying, and one that blocks someone needs to be visible to them (E3).
 
 ## `fdos`
 
@@ -40,7 +40,7 @@ Deliverables, in this order:
 
 | # | Deliverable | Why it is here |
 |---|---|---|
-| 1 | **D4 decided** — RFC plus an ADR in both repositories | Gate. Accepting a fact from outside *is* the moment provenance becomes an admission criterion (I4). Building intake first would hard-code an answer to an open question, which is the accident ADR-0023 exists to prevent |
+| 1 | **D4 decided** — RFC plus an ADR in both repositories | Gate. Accepting a fact from outside *is* the moment provenance becomes an admission criterion (E4). Building intake first would hard-code an answer to an open question, which is the accident ADR-0023 exists to prevent |
 | 2 | An app-layer use case taking a claim through resolve → mint → derive → append | The missing call path above |
 | 3 | An unresolved claim is observable | Closes the open item under B-007: claims can accumulate today with nothing derived and nobody told — a connector can publish faithfully into silence |
 | 4 | Admission conformance | A fact whose provenance is inadmissible is rejected, and the rejection is testable rather than assumed |
@@ -73,7 +73,7 @@ authority on its own sequence; this copy is for alignment and will go stale.
 | C0 | Genesis — inherited platform, Charter, governance | ✅ |
 | C1 | Boundary proof — a module consuming the published FDOS contract | ✅ |
 | C1.5 | RFCs — plugin contract, session model, pipeline, lifecycle, isolation | ✅ |
-| C2 | Contract surface — `plugin-api`, `connector-sdk`, capture, session, testkit | in progress |
+| C2 | Contract surface — plugin API, connector SDK, capture, session, testkit | in progress |
 | C3 | Determinism toolchain over the pure layers | |
 | C4 | Runtime and first plugin — publishes claims | blocked, see below |
 | C5 | Browser runtime and first authenticated plugin | |
@@ -130,8 +130,15 @@ published *ahead* of the rest of the contract surface. The reasoning was that
 contracts arriving late would starve the parallel team, which would fill the gap
 with local types that could never be removed.
 
-**The ruling is declined, on the grounds that the condition it was written for
-did not occur.**
+> **Premise invalidated by [ADR-0027](../adr/0027-invariant-renumbering-and-matrix-redaction.md).**
+> `E9` requires the open core to be useful with the private repository absent,
+> which supplies the producer this rejection assumed did not exist: any third
+> party. The argument below was sound on the evidence available and is wrong on
+> this evidence. Reversing it needs its own RFC; until then, do not implement
+> against it.
+
+**The ruling was declined, on the grounds that the condition it was written for
+had not occurred.**
 
 - **Its sequencing premise has expired.** It orders acquisition *before* the
   wider contract surface. The wider surface shipped at M4 and grew through M7.

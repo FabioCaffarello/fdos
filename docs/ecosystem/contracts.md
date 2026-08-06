@@ -3,7 +3,7 @@
 Every contract `fdos` publishes, its current version, its status, who consumes
 it, and its deprecation state. This file is how a consuming repository discovers
 what exists without asking anyone. Keeping it accurate is not documentation
-work; it *is* the interface (I3).
+work; it *is* the interface (E3).
 
 Lifecycle and versioning rules:
 [ADR-0024](../adr/0024-contract-lifecycle-and-versioning.md).

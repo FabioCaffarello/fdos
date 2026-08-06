@@ -11,6 +11,21 @@ superseded_by: []
 
 # ADR-0026 — Only canonical contracts are FDOS's, and toolchain ownership is not named by language
 
+
+> **Banner — invariant renumbering (`ecosystem/v0.3.0`).** This decision cites
+> the ecosystem invariants as `I1`–`I8`. They were renumbered to `E1`–`E8` to
+> stop colliding with the downstream Charter's own `I-1`…`I-10`. The mapping is
+> the identity; read `I2` here as `E2`. Nothing about this decision changed —
+> the text stands as accepted, per `fdos:ADR-0000`. See
+> [`../ecosystem/invariants.md`](../ecosystem/invariants.md).
+
+> **Banner — disclosure redaction (`ecosystem/v0.3.0`).** This decision names
+> identifiers belonging to the private repository. They are retained here
+> because they are the *subject* of the decision and removing them would make
+> the reasoning unreadable; current documents no longer repeat them. The
+> boundary rule and what remains permanently published are recorded in
+> [`../disclosure.md`](../disclosure.md).
+
 ## Context
 
 Records what [RFC-0008](../rfc/0008-narrowing-two-responsibility-matrix-rows.md)

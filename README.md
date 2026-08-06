@@ -162,6 +162,7 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0024](docs/adr/0024-contract-lifecycle-and-versioning.md) | Contracts are versioned per module, and a breaking change is a process |
 | [0025](docs/adr/0025-consumer-facing-surface-is-the-contracts-module.md) | The consumer-facing surface is the contracts module; other published modules are not offered |
 | [0026](docs/adr/0026-canonical-contracts-and-language-toolchains.md) | Only canonical contracts are FDOS's, and toolchain ownership is not named by language |
+| [0027](docs/adr/0027-invariant-renumbering-and-matrix-redaction.md) | Invariants are E1-E9, the matrix names no provider, and the open core must stand alone |
 
 ### Requests for Comment
 
@@ -180,6 +181,7 @@ above it.
 
 | [0007](docs/rfc/0007-identity-resolution-and-the-acquisition-boundary.md) | Minting an identity is a fact; a connector emits a claim and resolution is a recorded derivation. | ADR-0022 |
 | [0008](docs/rfc/0008-narrowing-two-responsibility-matrix-rows.md) | Only *canonical* contracts are FDOS's; toolchain ownership is not named by language. | ADR-0026 |
+| [0009](docs/rfc/0009-renumbering-invariants-and-redacting-the-matrix.md) | Invariants renumbered to E1-E9; the matrix names no provider; the open core must stand alone. | ADR-0027 |
 
 ## Roadmap
 
