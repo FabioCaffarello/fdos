@@ -76,17 +76,16 @@ implementations"* — so the suite that defines what implementing `app.Store`
 *means* cannot live inside either adapter, or Postgres would depend on SQLite to
 be tested.
 
-**Proposed home: `libs/ledger/storetest`**, an exported package in the context
-module. It needs `domain` and `app` and nothing else, so it adds no dependency
-weight, and it is the same shape as the standard library's `testing/fstest`. The
-argument for putting it in the public API rather than hiding it: `app.Store` is
-public API, so the suite that says what implementing it means is public API too.
-
-Confirm that placement when the suite is written; it is the one design choice in
-this plan that is not already settled by an ADR.
+**Home: `libs/ledger/storetest`** — confirmed and written. An exported package in
+the context module, needing `domain` and `app` and nothing else, the same shape
+as the standard library's `testing/fstest`. It is public rather than internal for
+the same reason `app.Store` is: the port is public API, so what implementing it
+means is public API too, and an out-of-tree adapter that cannot run the suite is
+one nobody can hold to the contract.
 
 The suite takes a factory and runs every case against it — the in-memory store
-included, so the two implementations are held to one definition:
+included, so the two implementations are held to one definition. The ten cases
+below all exist and pass against `adapters/memory`:
 
 | # | Case | Proves |
 |---|---|---|
