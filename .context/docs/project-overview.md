@@ -22,24 +22,28 @@ is open, the answer is almost always whichever option preserves reproducibility.
 
 ## Current state
 
-**M6 complete — the Ledger vertical slice.**
+**M6 and M7 complete — the Ledger vertical slice, then wire conformance.**
 
-There is **no domain code and no application**. The Go in the repository is
-`libs/analysis` — the four static analysers that turn Constitution principles
-into build errors — and `libs/contracts`, the generated protobuf wire types.
+Six Go modules. `libs/analysis` holds the static analysers that turn
+Constitution principles into build errors; `libs/contracts` the published
+protobuf surface; `libs/kernel` the canonical types; `libs/ledger` the first
+bounded context; and `libs/kernel-wire` and `libs/ledger-wire` the codecs
+between domain and wire, each with the round-trip suite that keeps the two
+definitions in agreement.
 
 Generated wire types are **not** canonical models: they carry `json:` tags,
 import `sync` and `unsafe`, and hold mutable state, all of which the `impurity`
-analyser correctly rejects in a domain package (ADR-0018). The Go kernel arrives
-at M6.
+analyser correctly rejects in a domain package (ADR-0018). That is why every
+canonical concept has two definitions and a conformance test proving they agree,
+rather than one definition doing both jobs badly.
 
-This is deliberate, not incomplete. The canonical model is defined by ADR-0007 …
-ADR-0012 but lands as code with the Ledger at **M6**, so that the first domain
-is built under the constraints rather than retrofitted to them.
+There is still **no application** — `apps/` is empty, and a composition root
+needs something to compose.
 
-An agent asked to "add a feature" should say there is nothing yet to add it to,
-and point at the roadmap. An agent asked to create `libs/kernel` or a bounded
-context ahead of M6 should say the same.
+An agent asked to add a **second** bounded context, a canonical type, or a
+message on the published contract surface should ask which ADR sequences it
+first. `libs/contracts` is consumed outside this repository at a pinned version,
+so adding to it changes somebody else's build.
 
 What exists today, and is enforced:
 

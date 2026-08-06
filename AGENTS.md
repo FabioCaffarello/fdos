@@ -13,16 +13,33 @@ points at — this file is a signpost, not a substitute.
 4. [`CONTRIBUTING.md`](CONTRIBUTING.md) — workflow and definition of done.
 5. [`.context/`](.context/README.md) — structured knowledge derived from `docs/`.
 
-## There is no code yet, and that is deliberate
+## What exists
 
-FDOS has **no Go code**, no `go.mod`, no tests, no CI pipeline and no
-application. The canonical financial model is an output of the M1.5 RFCs.
+The canonical model has landed as code. RFC-0001 … RFC-0007 are accepted and
+recorded in ADR-0007 … ADR-0012 and ADR-0022; M6 built the Ledger as a vertical
+slice against them, and M7 added the conformance suites that keep the domain and
+wire definitions of each type from diverging.
 
-If asked to "add a feature", the correct response is that there is nothing yet
-to add it to, followed by a pointer to the roadmap. Do not create domain types,
-module files or business rules to make progress visible: doing so settles open
-RFC questions by accident, which is the most damaging thing that can be done to
-this repository at its current stage.
+| Module | Holds |
+|--------|-------|
+| `libs/analysis` | The analysers that turn architectural principles into build errors |
+| `libs/contracts` | The published contract surface — protobuf schemas and the Go generated from them |
+| `libs/kernel` | Canonical types: identity, money, temporal, provenance, explained |
+| `libs/kernel-wire` | Kernel ↔ protobuf codecs, and the round-trip conformance suite |
+| `libs/ledger` | The first bounded context: facts, claims, mints, resolution |
+| `libs/ledger-wire` | Ledger ↔ protobuf codecs, and the round-trip conformance suite |
+
+Each is an independent Go module published under its own tag (ADR-0004). A
+private repository already builds against `libs/contracts` at a pinned version,
+so a change to that module is a change to somebody else's build.
+
+**What is undecided is still not yours to decide.** The rule that mattered when
+the repository was empty has narrowed rather than lapsed: do not add a bounded
+context, a canonical type or a published message ahead of the ADR that sequences
+it. Adding a payload to `libs/contracts` because a consumer needs one is the
+version of this that will look most reasonable at the time —
+[`docs/blocked.md`](docs/blocked.md) B-007 records how that is meant to go
+instead, and it starts with an issue and an RFC.
 
 ## Commands
 
@@ -42,17 +59,22 @@ it, say so rather than implying you did.
 
 | Path | Contents |
 |------|----------|
-| `libs/` | Reusable libraries, one Go module per subdirectory. Empty until M2. |
+| `libs/` | Reusable libraries, one Go module per subdirectory. Six today. |
 | `apps/` | Deployable applications, composition roots only. Empty. |
-| `docs/` | Constitution, ADRs, RFCs. Authoritative. |
+| `docs/` | Constitution, ADRs, RFCs, and the register of blocked work. Authoritative. |
 | `deploy/` | Deployment topology. Empty. |
-| `examples/` | Executable demonstrations of the public contracts. Empty until M4. |
+| `examples/` | Executable demonstrations of the public contracts. Empty. |
 | `scripts/` | Enforcement mechanisms, invoked through `make`. |
-| `.github/` | CI workflows. Empty until M3. |
+| `.github/` | CI workflows — `verify`, `release`, `supply-chain`. They invoke `make` and hold no logic of their own (ADR-0014). |
 | `.context/` | Knowledge for agents, derived from `docs/`. |
 
-Directories are empty **by design**, not by omission. Each one's `README.md`
-states what may and may not live there.
+`apps/`, `deploy/` and `examples/` are empty **by design**, not by omission, and
+each says in its `README.md` what may live there.
+
+`make contracts-check` enforces that declaration for every **top-level**
+directory. It does not descend into `libs/`, so the per-module contracts there
+are convention rather than enforcement — and `libs/kernel` and `libs/ledger`,
+the two modules holding the domain core, currently have none.
 
 ## Rules that will get a change rejected
 

@@ -6,8 +6,9 @@ Repository knowledge for AI agents working on FDOS.
 Where the two disagree, `docs/` wins and the disagreement is a bug in the
 derivation.
 
-Start with the project overview — in particular the part explaining that FDOS
-currently has no Go code, and why that is deliberate.
+Start with the project overview — in particular the part recording which
+milestones have landed, and which parts of the repository are still empty by
+design rather than by omission.
 
 ## Guides
 

@@ -12,49 +12,60 @@ only the register of what that decision could not reach.
 
 ## B-001 — Private connector consumes the published contract module
 
-**Blocked on:** `financial-connectors` is an empty repository.
+**Milestone:** M5. This was M5's stated acceptance criterion:
 
-**Milestone:** M5. This is M5's stated acceptance criterion:
+> the private connector repository compiles against a published contract version
+> with no filesystem path dependency on this repository.
 
-> `financial-connectors` compiles against a published contract version with no
-> filesystem path dependency on this repository.
+**RESOLVED.** The consumer is no longer empty. Two of its modules —
+`libs/connector-sdk` and `libs/upstream` — require
+`github.com/FabioCaffarello/fdos/libs/contracts v0.3.0`, and neither those
+`go.mod` files nor its `go.work` carries a `replace` directive. That is the
+criterion, met.
 
-**Why it is blocked, precisely.** The repository exists but has no commits, no
-`go.mod`, and no plugin. It will be built from this reference architecture
-rather than the other way round, so it cannot consume anything until it exists.
+**Verified how, and how far.** By reading the consumer's committed `go.mod`,
+`go.sum` and `go.work` through the GitHub API — the artifact channel, which is
+the only coordination channel between the two repositories. FDOS has not built
+that repository and cannot: it is private, and depending on anything inside it
+would be the reverse edge the open-core boundary exists to prevent.
 
-**Delivered instead, and why it is not a substitute.** M5 proves the *publishing*
-half end to end: the contracts module is tagged, resolvable through the Go
-proxy, and `make consumer-check` builds a throwaway module against the published
-version with `GOWORK=off` — no workspace, no `replace`, no local path.
+**What is still untested, and is now the whole of what remains.** Resolution
+through a *private* module path — credentials, `GOPRIVATE`, a private proxy.
+That is exercised by the consumer's own CI, and whether it passes there is not
+observable from here. This repository's half stays proven by `make
+consumer-check`, which builds a throwaway module against the published version
+with `GOWORK=off` — no workspace, no `replace`, no local path.
 
-That proves the module is consumable. It does not prove a *private* repository
-can consume it, which is the part that involves credentials, a private module
-proxy path, and `GOPRIVATE`. Those are untested.
-
-**What unblocks it:** `financial-connectors` gaining a `go.mod` and one plugin
-that imports `github.com/FabioCaffarello/fdos/libs/contracts`. At that point the
-conformance suite (also B-002) can run against it.
-
-**Not impeding:** M5 completed without it. The open-core boundary is verified in
-the direction this repository controls.
+**A naming correction.** This entry, `README.md` and ADR-0020 called the consumer
+`financial-connectors`. It has since been renamed `fdos-connectors`; GitHub
+redirects the old name, which is why nothing broke and nobody noticed. ADR-0020
+is immutable and keeps the old name — that is the decision log working as
+designed, not a defect in it.
 
 ---
 
 ## B-002 — Plugin conformance suite
 
-**Blocked on:** B-001, and on there being a plugin interface to conform to.
+**Blocked on:** an undecided ownership question. No longer on absence.
 
 **Milestone:** M5 listed "plugin SDK skeleton + a conformance test suite private
 connectors must pass".
 
-**Why it is blocked.** A conformance suite tests that an implementation honours
-an interface. There is no plugin interface: the domain ports it would express
-are an M6 output (ADR-0013 puts ports in the `app` layer, which does not exist).
-Writing the suite now would define the interface by accident — the same
-pre-judgement M1.5 exists to prevent.
+**Why the original reasoning no longer holds.** It said there was no interface to
+conform to, because the ports would be an M6 output and the `app` layer did not
+exist (ADR-0013). M6 shipped and `libs/ledger/app` exists. Separately, the
+consumer has defined a host↔plugin wire contract of its own, in its own
+namespace, importing nothing from `fdos.*`.
 
-**What unblocks it:** the M6 ledger context defining its ports, plus B-001.
+**What is actually undecided.** Whether a plugin conformance suite is an FDOS
+deliverable at all. A plugin conforms to a *plugin runtime*, and the runtime is
+the consumer's; what a plugin owes FDOS is a well-formed fact, whose shape
+`libs/ledger-wire` already checks. Both readings are defensible and there is no
+written ecosystem boundary to settle them against — which is the real blocker,
+and a more useful thing to record than the absence that used to be.
+
+**What unblocks it:** the ecosystem boundary written down and ratified, giving
+this question an owner instead of an assumption.
 
 ---
 

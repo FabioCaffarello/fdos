@@ -10,14 +10,17 @@ reference data.
 
 That constraint is the whole design. Everything else follows from it.
 
-> **Status: M6 complete — the Ledger vertical slice. Next: M7.**
+> **Status: M6 and M7 complete.** M6 built the Ledger as a vertical slice; M7
+> added the codecs and round-trip conformance suites that keep each canonical
+> type's domain and wire definitions from diverging.
 > Six principles reached **rung 1** — the type system. A position cannot be
 > stored, a stream cannot be shortened, a fact cannot omit provenance, a query
 > cannot omit its as-of, and a projection returns `Explained[Position]` or
 > nothing at all.
 >
-> One acceptance criterion is **blocked**: no *private* repository has consumed
-> the contract yet, because `financial-connectors` is empty. See
+> M5's outstanding acceptance criterion is now **met**: `fdos-connectors` builds
+> against `libs/contracts` at a pinned version with no filesystem path
+> dependency. What remains untested is the *private*-module resolution path. See
 > [`docs/blocked.md`](docs/blocked.md) — B-001.
 
 ## Quick start
@@ -180,6 +183,7 @@ above it.
 | M4 | Contracts — protobuf schemas, `buf breaking` gate, generated Go SDK ✅ |
 | M5 | Open core boundary — published contract module, consumer proof, branch protection ✅ |
 | M6 | First domain — the Ledger, as a vertical slice validating everything above ✅ |
+| M7 | Wire conformance — codecs and round-trip suites proving the domain and wire definitions of every canonical type agree ✅ |
 
 ## Open Core
 
