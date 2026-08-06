@@ -169,9 +169,17 @@ Two defensible answers, and this document deliberately picks neither:
   Consumers satisfy it; FDOS can then say what "admissible provenance" means
   rather than assuming it.
 
-**Status:** open, and now load-bearing on a schedule. `fdos` has no ingestion
-path today, so nothing breaks while it stays open. It stops being free the
-moment `fdos` accepts its first externally-produced fact.
+**Status:** open, and now on the critical path. It is the **gating deliverable
+of M8** ([`roadmap.md`](roadmap.md)) — the milestone whose subject is accepting
+an externally-produced fact, which is the exact moment this stops being free.
+
+M8 cannot honestly start before it. Building the intake path first would
+hard-code an answer to a question two repositories are supposed to ratify, and
+the Go compiler would report nothing.
+
+An RFC is asked for from `fdos-connectors`
+([issue #2](https://github.com/FabioCaffarello/fdos-connectors/issues/2)),
+because the implementation experience is there rather than here.
 
 ### D5 — Which contracts are "the contract surface"
 

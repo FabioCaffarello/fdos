@@ -256,7 +256,11 @@ and the entry point did not.
 **Still open:**
 
 - Nobody notices an unresolved claim. Claims accumulate and no `HoldingObserved`
-  is derived; who is told, and how, is operational and undecided.
+  is derived; who is told, and how, was operational and undecided. **Now
+  scheduled**: it is deliverable 3 of M8
+  ([`ecosystem/roadmap.md`](ecosystem/roadmap.md)), alongside the use case that
+  consumes a claim in the first place — the two are the same gap seen from
+  either end.
 - The claim vocabulary is an open string. `identity.NewClaim` now refuses a
   non-canonical *scheme*, closing the `"Ticker"` / `"ticker"` half at rung 1.
   The other half — `"ticker"` and `"symbol"` for the same concept — is

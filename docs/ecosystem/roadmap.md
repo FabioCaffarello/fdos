@@ -22,7 +22,46 @@ justifying, and one that blocks someone needs to be visible to them (I3).
 | M5 | Open core boundary — published contract module, consumer proof | ✅ |
 | M6 | First domain — the Ledger as a vertical slice | ✅ |
 | M7 | Wire conformance — codecs and round-trip suites | ✅ |
-| — | *No milestone is currently defined beyond M7.* | |
+| M8 | **Ingestion** — how a fact produced outside FDOS enters the ledger | next |
+
+### M8 — Ingestion
+
+**Chosen by dependency, not by preference.** It is the only candidate that
+unblocks another repository: `fdos-connectors` C4 states that no position
+projects until FDOS resolves claims, and today nothing does.
+
+The domain half already exists. `libs/ledger/domain` has `Resolve`, `MintFor`
+and `DeriveHoldingObserved`. **Nothing in `app/` calls any of them** —
+`app.Ledger` offers `ObserveHolding`, `CorrectFact` and `ProjectPosition`, all
+of which presume identity has already been resolved by someone. That gap is the
+milestone.
+
+Deliverables, in this order:
+
+| # | Deliverable | Why it is here |
+|---|---|---|
+| 1 | **D4 decided** — RFC plus an ADR in both repositories | Gate. Accepting a fact from outside *is* the moment provenance becomes an admission criterion (I4). Building intake first would hard-code an answer to an open question, which is the accident ADR-0023 exists to prevent |
+| 2 | An app-layer use case taking a claim through resolve → mint → derive → append | The missing call path above |
+| 3 | An unresolved claim is observable | Closes the open item under B-007: claims can accumulate today with nothing derived and nobody told — a connector can publish faithfully into silence |
+| 4 | Admission conformance | A fact whose provenance is inadmissible is rejected, and the rejection is testable rather than assumed |
+
+**Where M8 stops: the `libs/` boundary.** No transport, no persistence, no
+`apps/`. Those are M9.
+
+Stopping there is not timidity, it is what the dependencies say. A transport
+requires D2 — platform identity, who may send a fact — which is undecided. A
+durable store requires choosing a technology, and ADR-0013 puts it in a separate
+module precisely so that choice can be made after the shape it serves is known.
+And what `fdos-connectors` needs to proceed is the *shape* and the *contract*,
+not a running server.
+
+The offline test stays intact: M8 is developable, buildable and testable with
+every provider unreachable and `fdos-connectors` deleted.
+
+**What would make this the wrong milestone:** if the in-memory-only store turns
+out to make the intake path unrepresentative — if durability changes the
+use case rather than just backing it. That is the thing to watch, and the
+signal to fold M9 forward.
 
 ## `fdos-connectors`
 
@@ -59,11 +98,18 @@ with no type defined downstream. See [`../blocked.md`](../blocked.md) — B-007.
 **This is the part of the roadmap that matters**, and the reason this file
 exists rather than two independent roadmaps.
 
-- **Nothing consumes a claim.** `libs/ledger` can resolve a claim, mint an
-  identity and derive a `HoldingObserved`. No process ingests, and nothing
-  reports a claim that was never resolved — a connector can publish faithfully
-  into silence. The consumer's C4 states that no position projects until FDOS
-  resolves claims. That dependency currently points at an unscheduled milestone.
+- **Nothing consumes a claim — now scheduled as M8.** `libs/ledger` can resolve
+  a claim, mint an identity and derive a `HoldingObserved`, but no use case
+  calls any of it and nothing reports a claim that was never resolved. The
+  consumer's C4 states that no position projects until FDOS resolves claims.
+  This was the one dependency pointing at an unscheduled milestone, and defining
+  M8 is what removed it.
+
+  **M8 is gated on D4, which is gated on them.** The RFC deciding what a
+  `SourceRef` must resolve to is asked for from `fdos-connectors`, because the
+  implementation experience is there. Until it exists, M8 cannot honestly start
+  — so the milestone that unblocks C4 is itself waiting on the repository C4
+  belongs to. That is not a deadlock: it is one RFC, and both sides know it.
 - **No release carries what M3 promised.** Every tag resolves through the Go
   proxy, so builds work; but no SBOM, attestation or signature has ever been
   published, because the release workflow failed on all fourteen tags (B-008).

@@ -22,6 +22,11 @@ That constraint is the whole design. Everything else follows from it.
 > against `libs/contracts` at a pinned version with no filesystem path
 > dependency. What remains untested is the *private*-module resolution path. See
 > [`docs/blocked.md`](docs/blocked.md) — B-001.
+>
+> **Next: M8, ingestion** — the path by which a fact produced outside FDOS
+> enters the ledger. Its gating deliverable is a decision, not code: what a
+> `SourceRef` must resolve to. See
+> [`docs/ecosystem/roadmap.md`](docs/ecosystem/roadmap.md).
 
 ## Quick start
 
@@ -188,6 +193,7 @@ above it.
 | M5 | Open core boundary — published contract module, consumer proof, branch protection ✅ |
 | M6 | First domain — the Ledger, as a vertical slice validating everything above ✅ |
 | M7 | Wire conformance — codecs and round-trip suites proving the domain and wire definitions of every canonical type agree ✅ |
+| M8 | Ingestion — how a fact produced outside FDOS enters the ledger: claims resolved, identities minted, unresolved claims made visible |
 
 ## Open Core
 
