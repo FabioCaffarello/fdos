@@ -161,6 +161,7 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0023](docs/adr/0023-ecosystem-boundary-and-one-way-contract-flow.md) | The ecosystem boundary is written down, and contracts flow one way |
 | [0024](docs/adr/0024-contract-lifecycle-and-versioning.md) | Contracts are versioned per module, and a breaking change is a process |
 | [0025](docs/adr/0025-consumer-facing-surface-is-the-contracts-module.md) | The consumer-facing surface is the contracts module; other published modules are not offered |
+| [0026](docs/adr/0026-canonical-contracts-and-language-toolchains.md) | Only canonical contracts are FDOS's, and toolchain ownership is not named by language |
 
 ### Requests for Comment
 
@@ -178,6 +179,7 @@ above it.
 | [0006](docs/rfc/0006-explainability-as-a-return-type.md) | Calculations return their computation trace, so one that cannot explain itself does not compile. | ADR-0012 |
 
 | [0007](docs/rfc/0007-identity-resolution-and-the-acquisition-boundary.md) | Minting an identity is a fact; a connector emits a claim and resolution is a recorded derivation. | ADR-0022 |
+| [0008](docs/rfc/0008-narrowing-two-responsibility-matrix-rows.md) | Only *canonical* contracts are FDOS's; toolchain ownership is not named by language. | ADR-0026 |
 
 ## Roadmap
 
