@@ -5,6 +5,7 @@ owner: "@FabioCaffarello"
 allowed:
   - GitHub Actions workflows that invoke make targets
   - Tool installation steps, versioned from mise.toml
+  - Local composite actions that install tools, shared by workflows
   - Pull request and issue templates
   - Actions pinned to full commit SHAs
 forbidden:
@@ -42,6 +43,13 @@ environment-specific. Even there the **version comes from `mise.toml`** via
 `scripts/tool-version.sh`. CI never declares a version of its own, so the pins
 developers use and the pins CI uses cannot diverge.
 
+That exception lives in one place: `actions/setup-toolchain`, used by both
+`verify.yml` and `release.yml`. It was extracted after the two drifted —
+`release.yml` had been given Go alone, so `make verify` failed at
+`toolchain-check` on every one of fourteen tags and no release was ever
+published ([`docs/blocked.md`](../docs/blocked.md) — B-008). A second copy of
+the setup is how that happened, so there is now only one.
+
 ## Pinned actions
 
 Every action is referenced by full commit SHA, never by tag or branch.
@@ -52,8 +60,13 @@ build — and therefore to every artifact, SBOM and provenance attestation the
 build produces. An attestation is worth exactly as much as the weakest input to
 it.
 
-`make action-pinning-check` fails the build on any unpinned reference. To
-resolve a SHA:
+`make action-pinning-check` fails the build on any unpinned reference, in
+workflows **and** in local composite actions under `actions/`. The second half
+was added when extracting `setup-toolchain` moved two pinned references out of
+the check's sight: the only symptom was the reported count falling from 14 to
+13, and an unpinned reference in that file would have passed silently.
+
+To resolve a SHA:
 
 ```sh
 gh api repos/<owner>/<repo>/git/ref/tags/<tag> --jq .object.sha

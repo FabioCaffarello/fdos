@@ -15,7 +15,7 @@ justifying, and one that blocks someone needs to be visible to them (I3).
 | M1 | Governance substrate — `.context`, contribution and release process | ✅ |
 | M1.5 | Canonical domain architecture — RFCs only | ✅ |
 | M2 | Determinism toolchain — layer boundaries, analysers, reproducible builds | ✅ |
-| M3 | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing | ✅ built, ⚠️ never succeeded on a tag (B-008) |
+| M3 | CI/CD and supply chain — pipeline, SBOM, provenance attestation, signing | ✅ built, ⚠️ has never produced a release; cause fixed, unproven until a tag runs (B-008) |
 | M2.5 | AI engineering — agent playbooks, prompt contracts, staleness checks | ✅ |
 | M3.5 | Developer experience — devcontainer, IDE configuration, task ergonomics | ✅ |
 | M4 | Contracts — protobuf schemas, `buf breaking` gate, generated Go SDK | ✅ |
@@ -66,9 +66,9 @@ exists rather than two independent roadmaps.
   resolves claims. That dependency currently points at an unscheduled milestone.
 - **No release carries what M3 promised.** Every tag resolves through the Go
   proxy, so builds work; but no SBOM, attestation or signature has ever been
-  published, because the release workflow has failed on all fourteen tags
-  (B-008). A consumer that wanted to verify provenance of the contract module it
-  pins cannot.
+  published, because the release workflow failed on all fourteen tags (B-008).
+  The cause is fixed and the next tag is the proof; until then a consumer that
+  wants to verify the provenance of the contract module it pins still cannot.
 - **The governance corpus has never been published as a version.** The consumer
   vendors the Constitution and script manifest byte-for-byte, pinned to nothing
   (B-009).

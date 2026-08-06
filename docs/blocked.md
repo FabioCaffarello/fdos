@@ -309,10 +309,33 @@ The release job sets up Go and then calls `make verify`, but never installs the
 rest of the pinned toolchain — unlike `verify.yml`, which does. So every release
 dies at the first check.
 
-**What unblocks it:** installing the pinned toolchain in `release.yml` the way
-`verify.yml` does, then re-tagging or back-filling the releases. Worth pairing
-with something that makes a failed release visible, since the silence is the
-part that let this run for fourteen tags.
+**The cause is fixed; the mechanism is still unproven.** Both workflows now use
+one composite action, `.github/actions/setup-toolchain`, which installs
+everything `make verify` needs. Copying the missing steps into `release.yml`
+would have worked too and was rejected: a pruned copy of the setup is precisely
+how this happened, and it would have left the same trap for whoever adds the
+next tool.
+
+`verify.yml` exercises that action on every pull request, so the shared half is
+proven immediately. **`release.yml` is not.** It fires only on a tag, so every
+step after `make verify` — the SBOM, the attestation, the cosign signature,
+`make consumer-check` against a freshly published version, and `gh release
+create` — has still never executed. Fixing the first failing step does not
+demonstrate that the ninth works.
+
+**What closes this:** one tag, and a run that goes green. Until then the
+correct reading is that a twenty-second failure has been replaced by an
+untested pipeline, which is better but is not the same as working.
+
+**Still worth doing, and not done here:** making a failed release *visible*.
+The silence is what let this run for fourteen tags; a tag push gates nothing,
+and nothing announced the failure. That is a separate change from the one that
+fixed the toolchain.
+
+**Not back-filled.** The fourteen existing tags remain without releases. They
+are resolvable through the Go proxy, which is what consumers actually need, and
+re-tagging published versions to attach supply-chain evidence after the fact is
+a decision about what an attestation means — not a repair.
 
 ---
 

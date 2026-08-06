@@ -24,6 +24,14 @@ cd "$ROOT"
 
 WORKFLOW_DIR=".github/workflows"
 
+# Composite actions in this repository are scanned too. They are not third
+# parties themselves, but they *reference* third parties, and a `uses:` hidden
+# one directory deeper is exactly as much write access to the build as one in a
+# workflow. Extracting a composite action moved two pinned references out of
+# this check's sight before this line existed; the count dropping from 14 to 13
+# was the only signal, and nothing would have reported an unpinned one.
+ACTION_DIR=".github/actions"
+
 failures=0
 checked=0
 
@@ -39,7 +47,7 @@ if [ ! -d "$WORKFLOW_DIR" ]; then
   exit 0
 fi
 
-for workflow in "${WORKFLOW_DIR}"/*.yml "${WORKFLOW_DIR}"/*.yaml; do
+while IFS= read -r workflow; do
   [ -f "$workflow" ] || continue
 
   while IFS= read -r line; do
@@ -60,7 +68,12 @@ for workflow in "${WORKFLOW_DIR}"/*.yml "${WORKFLOW_DIR}"/*.yaml; do
       fail "    resolve it: gh api repos/<owner>/<repo>/git/ref/tags/<tag> --jq .object.sha"
     fi
   done < <(grep -E '^[[:space:]]*-?[[:space:]]*uses:' "$workflow" || true)
-done
+done < <(
+  {
+    ls "${WORKFLOW_DIR}"/*.yml "${WORKFLOW_DIR}"/*.yaml 2>/dev/null || true
+    find "$ACTION_DIR" -name 'action.yml' -o -name 'action.yaml' 2>/dev/null || true
+  } | sort -u
+)
 
 if [ "$failures" -gt 0 ]; then
   printf '\nFAIL: %d unpinned action reference(s).\n' "$failures" >&2

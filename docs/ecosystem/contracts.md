@@ -92,5 +92,10 @@ workflow runs have failed, and zero GitHub releases exist**, so no published
 version carries an SBOM, a build-provenance attestation, a cosign signature, or
 release notes.
 
-The cause is a defect in `.github/workflows/release.yml`, not a design
-limitation. Recorded as B-008 in [`../blocked.md`](../blocked.md).
+The cause was a defect in `.github/workflows/release.yml`, not a design
+limitation, and it is fixed. But no release has run since, so this section stays
+true of **every version published so far** and will stay true until a tag proves
+otherwise. Recorded as B-008 in [`../blocked.md`](../blocked.md).
+
+A consumer that needs to verify the provenance of the module it pins cannot do
+so today, whatever the workflow now looks like.
