@@ -65,15 +65,28 @@ A slice starts as a **draft pull request carrying the plan**: the objective
 restated, what was read, what could not be found, the slice itself, the boundary
 tests applied, and the costs accepted. No work happens while it is a draft.
 
-**Marking it ready is the approval, and only a human marks it ready.** A session
-never marks its own — an approver and an author who are the same actor make the
-gate theatre on its first use.
+**Marking it ready is the approval, and the decision to mark it is never the
+session's.** An approver and an author who are the same actor make the gate
+theatre on its first use.
+
+The *decision* and the *keystroke* are separate, and only the first is
+load-bearing. Where the human has no GitHub access — which is the normal case
+here, since every `gh` call in this repository is made by the session — the
+session may perform the transition **only on an explicit instruction naming the
+pull request**, and says in that turn that it did so and on whose instruction.
+What it may never do is decide that its own slice is ready.
 
 This rule exists because the gate was designed with an approver who had no
 hands. The brief said approval was the ready transition, and the reviewer
 issuing that instruction could not perform it: the approval lived in a
 conversation while the artifact still said draft. Two slices ran on an approval
 that had no referent before anyone noticed.
+
+The first version of this rule then made the opposite error — it forbade the
+session from performing the transition at all, which in an operating model where
+the session holds the only keyboard means the gate can never open. Recorded
+rather than quietly rewritten, because a rule that has been wrong in both
+directions is worth showing the shape of.
 
 ### A review that changes a decision is recorded in the decision
 
