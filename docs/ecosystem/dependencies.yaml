@@ -14,6 +14,10 @@
 # What would climb the rung: issues carrying `xrepo:v1` trailers, a generator
 # that derives this file from them, and a CI check that fails on drift — with a
 # negative test, per the enforcement ladder.
+#
+# The `xrepo/` labels now exist in both repositories (see labels.md), so the
+# edges are at least *findable* through GitHub search. Findable is not derived:
+# the trailers below were written by hand and nothing reads them.
 
 version: 1
 

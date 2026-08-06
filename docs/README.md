@@ -39,7 +39,8 @@ delimiting markers in those files are what make "verbatim" checkable.
 
 `contracts.md` is the published-contract registry and is part of the interface —
 a version missing from it is undiscoverable by the only channel the other
-repository may use.
+repository may use. `labels.md` records the issue taxonomy both repositories
+share, so it is reviewable as a file rather than only as GitHub configuration.
 
 ### Current RFC set — M1.5, all Accepted
 
