@@ -22,20 +22,39 @@ is open, the answer is almost always whichever option preserves reproducibility.
 
 ## Current state
 
-**M6 and M7 complete — the Ledger vertical slice, then wire conformance.**
+**M8 complete — ingestion. A fact produced outside FDOS can now enter the
+ledger.**
 
-Six Go modules. `libs/analysis` holds the static analysers that turn
-Constitution principles into build errors; `libs/contracts` the published
-protobuf surface; `libs/kernel` the canonical types; `libs/ledger` the first
-bounded context; and `libs/kernel-wire` and `libs/ledger-wire` the codecs
-between domain and wire, each with the round-trip suite that keeps the two
-definitions in agreement.
+The module list is not repeated here. It changes, and a count in prose has a
+half-life shorter than the document — read `go.work`, which cannot be wrong.
+
+What each module is for: `libs/analysis` turns Constitution principles into
+build errors; `libs/contracts` is the published protobuf surface; `libs/kernel`
+the canonical types; `libs/ledger` the first bounded context; the `-wire`
+modules the codecs between domain and wire, each with a round-trip suite;
+`examples/ingest` the conformance kit a third-party producer runs.
 
 Generated wire types are **not** canonical models: they carry `json:` tags,
 import `sync` and `unsafe`, and hold mutable state, all of which the `impurity`
 analyser correctly rejects in a domain package (ADR-0018). That is why every
 canonical concept has two definitions and a conformance test proving they agree,
 rather than one definition doing both jobs badly.
+
+### What M8 shipped, and what it deliberately did not
+
+`app.Ledger.AcceptHoldingClaim` is the entry point an external producer can
+call. Every other one takes an `identity.ID`, which ADR-0007 and ADR-0022 forbid
+a producer from minting — so before it, the public application surface was
+structurally unusable from outside.
+
+**Admission resolves nothing and mints nothing.** An identity that came into
+existence because a stranger submitted a claim is an identity nobody chose, and
+once a producer depends on that, removing it changes what the ledger does.
+`UnresolvedClaims` reports which claims are waiting.
+
+So the current gap is the mirror of the one M8 closed: **nothing mints, so a
+claim cannot yet become an observation.** `Resolve`, `MintFor` and
+`DeriveHoldingObserved` exist and no caller invokes them. That is M9.
 
 There is still **no application** — `apps/` is empty, and a composition root
 needs something to compose.

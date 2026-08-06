@@ -50,6 +50,25 @@ still marked `Accepted`. ADR-0001 → ADR-0006 is the worked example in the repo
 
 Fixing a typo is fine. Changing what a decision *says* is not.
 
+## The plan-gate
+
+**A slice starts as a draft pull request carrying the plan**: the objective
+restated, what was read, what could not be found, the slice, the boundary tests
+applied, and the costs accepted. No work happens while it is a draft.
+
+**Marking it ready is the approval, and the decision to mark it is never the
+session's.** An author who is also the approver makes the gate theatre on its
+first use. Where the human has no GitHub access — the normal case here — the
+session may perform the transition **only on an explicit instruction naming the
+pull request**, and says in that turn that it did so and on whose instruction.
+
+**A review that changes a decision is recorded in the decision.** If the
+reasoning stays in a review thread, the decision is still conversational, now
+with a green artifact on top. The artifact carries the whole argument in its own
+text — including the argument that lost and the one the author withdrew. The
+test: a reader who saw none of the review can reconstruct why the decision has
+its shape, from the artifact alone.
+
 ## Pull requests
 
 Since M5, `main` is protected: direct pushes are impossible and every change
@@ -98,6 +117,19 @@ A clean clone must pass `make verify` with no tribal knowledge. If it does not,
 that is a repository bug.
 
 ## Adding an enforcement mechanism
+
+Every mechanism ships with a **negative test** — the invariant broken
+deliberately, the check failing with a useful message, the tree restored — and
+answers the **execution-context question** in its pull request and its ADR:
+
+> Where does this check actually run? What can it observe there that differs
+> from the fixture? What would it report if its subject were simply absent?
+>
+> **Silence is the answer that should worry you.**
+
+That question has caught real gaps: a rule stated with no execution site, a
+check that globbed the wrong directory, and an ADR that understated the
+enforcement already available to it.
 
 1. Write the script in `scripts/`, with a header naming the principle it
    enforces and its ladder rung.

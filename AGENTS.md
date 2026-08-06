@@ -62,7 +62,7 @@ it, say so rather than implying you did.
 
 | Path | Contents |
 |------|----------|
-| `libs/` | Reusable libraries, one Go module per subdirectory. Six today. |
+| `libs/` | Reusable libraries, one Go module per subdirectory. |
 | `apps/` | Deployable applications, composition roots only. Empty. |
 | `docs/` | Constitution, ADRs, RFCs, and the register of blocked work. Authoritative. |
 | `deploy/` | Deployment topology. Empty. |
@@ -75,7 +75,7 @@ it, say so rather than implying you did.
 each says in its `README.md` what may live there.
 
 `make contracts-check` enforces that declaration for every top-level directory
-**and every module under `libs/`** — 16 contracts. It stops there: layers below
+**and every module under `libs/`**. It stops there: layers below
 a module are packages rather than boundaries (ADR-0013), and a README per
 package would produce contracts nobody reads to satisfy a check nobody
 believes.
