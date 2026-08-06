@@ -160,6 +160,7 @@ corrections recorded as new decisions that supersede the old (ADR-0000).
 | [0022](docs/adr/0022-minting-an-identity-is-a-fact.md) | Minting an identity is a fact, and a connector emits a claim |
 | [0023](docs/adr/0023-ecosystem-boundary-and-one-way-contract-flow.md) | The ecosystem boundary is written down, and contracts flow one way |
 | [0024](docs/adr/0024-contract-lifecycle-and-versioning.md) | Contracts are versioned per module, and a breaking change is a process |
+| [0025](docs/adr/0025-consumer-facing-surface-is-the-contracts-module.md) | The consumer-facing surface is the contracts module; other published modules are not offered |
 
 ### Requests for Comment
 
