@@ -156,8 +156,20 @@ vet: ## Run go vet across all modules
 lint: ## Run golangci-lint across all modules
 	$(call FOR_EACH_MODULE,golangci-lint run ./...)
 
+# The race detector is the one place cgo is enabled, and it has to be.
+#
+# `-race` requires cgo on linux/amd64 — where CI runs — and does not on
+# darwin/arm64, where this was written. So the CGO_ENABLED=0 pin above passed
+# locally and failed in CI with `-race requires cgo`, which is exactly the
+# divergence ADR-0014 says a check must not have. A developer machine could not
+# reproduce it at all.
+#
+# Enabling cgo here does not weaken ADR-0035. That pin protects the *build* —
+# `repro-check`, releases, `vet`, `lint` all still run cgo-free, and a dependency
+# that quietly needed cgo would still fail them. A test binary is not a released
+# artifact and its reproducibility is not what anyone audits.
 test: ## Run all tests with the race detector
-	$(call FOR_EACH_MODULE,$(GO) test -race ./...)
+	$(call FOR_EACH_MODULE,CGO_ENABLED=1 $(GO) test -race ./...)
 
 analyze: ## Enforce domain purity and layer boundaries (FDOS analysers)
 	@$(SCRIPTS_DIR)/run-analyzers.sh
