@@ -313,31 +313,58 @@ The release job sets up Go and then calls `make verify`, but never installs the
 rest of the pinned toolchain — unlike `verify.yml`, which does. So every release
 dies at the first check.
 
-**The cause is fixed; the mechanism is still unproven.** Both workflows now use
-one composite action, `.github/actions/setup-toolchain`, which installs
-everything `make verify` needs. Copying the missing steps into `release.yml`
-would have worked too and was rejected: a pruned copy of the setup is precisely
-how this happened, and it would have left the same trap for whoever adds the
-next tool.
+**First fix.** Both workflows now use one composite action,
+`.github/actions/setup-toolchain`, which installs everything `make verify`
+needs. Copying the missing steps into `release.yml` would have worked too and
+was rejected: a pruned copy of the setup is precisely how this happened.
 
-`verify.yml` exercises that action on every pull request, so the shared half is
-proven immediately. **`release.yml` is not.** It fires only on a tag, so every
-step after `make verify` — the SBOM, the attestation, the cosign signature,
-`make consumer-check` against a freshly published version, and `gh release
-create` — has still never executed. Fixing the first failing step does not
-demonstrate that the ninth works.
+**RESOLVED, and proven rather than asserted.** A disposable tag —
+`libs/release-smoke/v0.0.0-rc.*`, a path that is not a Go module, so the proxy
+can neither serve nor cache it — ran the pipeline end to end. Suggested by
+`fdos-connectors` in [fdos#26](https://github.com/FabioCaffarello/fdos/issues/26)
+on exactly the grounds that a workflow whose later steps have never executed is
+not a working workflow.
 
-**What closes this:** one tag, and a run that goes green. Until then the
-correct reading is that a twenty-second failure has been replaced by an
-untested pipeline, which is better but is not the same as working.
+It paid for itself on the first attempt by failing at step nine.
 
-**Still worth doing, and not done here:** making a failed release *visible*.
-The silence is what let this run for fourteen tags; a tag push gates nothing,
-and nothing announced the failure. That is a separate change from the one that
-fixed the toolchain.
+**The second defect, which only a real run could find.** `cosign` was installed
+with no version. The run took whichever release was newest at that moment — one
+published under an hour earlier — and that version had made `--output-signature`
+a silently-ignored no-op under the new bundle format:
 
-**Not back-filled.** The fourteen existing tags remain without releases. They
-are resolvable through the Go proxy, which is what consumers actually need, and
+```
+WARNING: --output-signature is deprecated when using --new-bundle-format and will be ignored
+Error: signing dist/SHA256SUMS: create bundle file: open : no such file or directory
+```
+
+Every other tool in this repository reads its version from `mise.toml`. This one
+read it from whatever sigstore had shipped that morning — in the step that
+decides what "signed" means. ADR-0014 says every build input is pinned; this
+input was not pinned anywhere, and no commit here could have predicted the
+break.
+
+`cosign` is now pinned in `mise.toml` and the manifest is signed to a **bundle**,
+which carries signature, certificate and transparency-log entry together so a
+consumer verifies without separately fetching the certificate.
+
+**Second attempt: green.** The release carried four binaries, an SPDX SBOM,
+`SHA256SUMS`, the cosign bundle, and two build-provenance attestations.
+
+**Cost incurred, and not recoverable by me.** The smoke release was deleted; its
+two tags could not be. The `release-tags` ruleset refuses tag deletion — which is
+correct policy working as designed, and was not accounted for when the disposable
+tag was proposed. `libs/release-smoke/v0.0.0-rc.1` and `-rc.2` are therefore
+permanent. They name a path that is not a module, so no real module's version
+list is affected; they are clutter in `git tag`, nothing more. Removing them
+needs an admin bypass of the ruleset and is the repository owner's call.
+
+**Still worth doing, and not done here:** making a failed release *visible*. The
+silence is what let this run for fourteen tags — a tag push gates nothing, and
+nothing announced the failure. Now that the pipeline works, the next failure
+will be just as quiet.
+
+**Not back-filled.** The fourteen existing tags remain without releases. They are
+resolvable through the Go proxy, which is what consumers actually need, and
 re-tagging published versions to attach supply-chain evidence after the fact is
 a decision about what an attestation means — not a repair.
 
@@ -345,8 +372,11 @@ a decision about what an attestation means — not a repair.
 
 ## B-009 — The governance corpus is vendored, pinned to nothing
 
-**Blocked on:** `fdos-connectors` vendoring the published version. Nothing on
-this side remains.
+**RESOLVED.** `fdos-connectors` vendors `invariants.md` and `boundary.md` pinned
+to `ecosystem/v0.1.0` and byte-compared, recorded in `fdos-connectors:ADR-0026`. It also
+tracks the corpus pin *separately* from the platform pin, on the reasoning that
+one pin for both would couple a Tier-0 amendment to an unrelated script change —
+a distinction this repository had not thought of.
 
 **Why it matters.** `fdos-connectors` vendors the Constitution byte-for-byte and
 keeps a manifest of inherited enforcement scripts, with its own drift check

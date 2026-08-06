@@ -87,6 +87,28 @@ They happen to be compatible. That is care and luck, not a mechanism, and it is
 the reason [ADR-0023](../adr/0023-ecosystem-boundary-and-one-way-contract-flow.md)
 exists.
 
+### Citing a decision in the other repository
+
+Each repository keeps its own ADR and RFC sequence, and they have already
+collided. `fdos:ADR-0019` says the Claude Code export is not versioned;
+`fdos-connectors:ADR-0019` decides the namespace of their plugin schema. Same
+number, unrelated subjects. A bare `ADR-0019` in a document spanning both is
+ambiguous and will be misread — most likely by whoever wrote it, some weeks
+later.
+
+**Cross-repository references are always qualified:** `fdos:ADR-0014`,
+`fdos-connectors:ADR-0019`, `fdos:RFC-0007`.
+
+`make context-check` understands the convention: a reference qualified with
+another repository's name is skipped, because resolving it would require this
+repository to contain the other's decision log. One qualified with `fdos:` is
+still resolved locally, so a typo in our own name cannot silence the check.
+
+Both behaviours are negative-tested. This is rung 3 for the half that can be
+checked — that a cited local decision exists — and rung 6 for the half that
+cannot: nothing here can tell whether `fdos-connectors:ADR-0019` says what a
+document claims it says.
+
 ### I6 applies to this directory
 
 [`dependencies.yaml`](dependencies.yaml) is described in the governance brief as
