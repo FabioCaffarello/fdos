@@ -134,8 +134,8 @@ decision.
 
 ## B-004 — Claude Code loads no agents from a fresh clone
 
-**Blocked on:** the dotcontext export having no CLI, and Claude Code having no
-setting that points at `.context/`.
+**Blocked on:** the dotcontext export having no CLI. **The other half is now
+answered, and the answer is no.**
 
 **Milestone:** M2.5 / ADR-0019.
 
@@ -146,12 +146,48 @@ committed ten skills that were never in the reviewed roster.
 **Mitigation, and its weakness.** `make doctor` reports the missing export. That
 is rung 5 — it tells a person something and relies on them acting.
 
-**What unblocks it:** either a CLI `bootstrap` can invoke, or confirmation that
-`exportSkills` with `includeBuiltIn: false` produces a tree matching `.context/`
-exactly — in which case versioning becomes correct and ADR-0019 should be
-revisited.
+**The second unblocking path is closed, by measurement (M9).** This entry asked
+for *"confirmation that `exportSkills` with `includeBuiltIn: false` produces a
+tree matching `.context/` exactly — in which case versioning becomes correct and
+ADR-0019 should be revisited."*
 
----
+A `dryRun` export answers it:
+
+| | |
+|---|---|
+| Skills in the reviewed roster (`.context/skills/`) | **7** |
+| Skills exported with `includeBuiltIn: false` | **17** |
+| Difference | **10** |
+
+**The same ten.** `includeBuiltIn: false` excludes the tool's built-ins and
+still adds three general skills plus the five PREVC workflow skills and two
+tooling ones — none of which this repository reviewed. ADR-0019 was right, and
+is now right by measurement rather than by memory. **It is not revisited.**
+
+**A hazard found while measuring — and found the hard way, because `dryRun`
+writes.**
+
+The measurement above was taken with `dryRun: true`. It created **102 files
+across four new top-level directories** — `.agents/`, `.codex/`, `.gemini/`,
+`.windsurf/` — plus `.github/skills/`. The count it reported as `filesCreated`
+was not a projection; it was a description of what it had already done.
+
+`make contracts-check` caught it immediately: four directories with no README
+front matter, and the gate went red. The tree was restored by hand and the gate
+is green again.
+
+Two things follow, and the second is the one that matters:
+
+- Only `.claude/` is gitignored. The other targets are not, so the export dirties
+  the working tree in a way the gate refuses — the export is not merely unhelpful
+  here, it is a **broken build waiting for someone to run it.**
+- **A `dryRun` that writes is worse than no `dryRun`**, because it invites
+  exactly the "let me just preview this" that produced the mess. Anyone reaching
+  for this tool in this repository should assume the flag does nothing and
+  arrange to be able to undo the call.
+
+**What unblocks it, and it is now only one thing:** a CLI that `make bootstrap`
+can invoke, exporting the reviewed roster and nothing else.
 
 ## B-005 — Dependency review on pull requests
 

@@ -39,11 +39,11 @@ itself has no ADR yet.
 
 | Directory | Role |
 |-----------|------|
-| `libs/` | Reusable libraries. One independent Go module per subdirectory. Six today. |
+| `libs/` | Reusable libraries. One independent Go module per subdirectory. |
 | `apps/` | Deployable applications. Composition roots only. Empty. |
 | `docs/` | Constitution, ADRs, RFCs, and the register of blocked work. Authoritative record. |
 | `deploy/` | Deployment topology. Empty until there is something to deploy. |
-| `examples/` | Executable demonstrations of the public contract surface. Empty. |
+| `examples/` | Executable demonstrations of the public contract surface, and the conformance kit a third-party producer runs. |
 | `scripts/` | Enforcement mechanisms, invoked through `make`. |
 | `.github/` | CI workflows — `verify`, `release`, `supply-chain`. They invoke `make` and hold no logic (ADR-0014). |
 | `.context/` | This directory — knowledge for agents. |
@@ -51,7 +51,7 @@ itself has no ADR yet.
 Every top-level directory and every module under `libs/` declares its contract
 in the front matter of its `README.md`: `purpose`, `owner`, `allowed`,
 `forbidden`. `make contracts-check` enforces that these exist, are complete, and
-agree with `CODEOWNERS` — 16 contracts. It does not descend past a module:
+agree with `CODEOWNERS`. It does not descend past a module:
 layers below one are packages, not boundaries (ADR-0013).
 
 From **M2** those `allowed`/`forbidden` lists become the **source** of the

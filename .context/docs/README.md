@@ -10,6 +10,14 @@ Start with the project overview — in particular the part recording which
 milestones have landed, and which parts of the repository are still empty by
 design rather than by omission.
 
+**Then read [`docs/ecosystem/`](../../docs/ecosystem/boundary.md), which is not
+derived here and is not optional.** It is authoritative for two repositories,
+not one: the invariants `E1`–`E9`, the responsibility matrix vendored verbatim
+downstream, the published-contract registry, and the register of disputed items
+that are **not** settled by whoever writes code first. An agent that has not read
+it can violate a rule this repository cannot detect, because half the mechanism
+lives in a repository FDOS may not read.
+
 ## Guides
 
 | Guide | Contents |
