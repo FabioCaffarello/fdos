@@ -1,7 +1,7 @@
 ---
 id: RFC-0012
 title: What a producer submits — a claim submission that omits knowledge time
-status: Draft
+status: Accepted
 date: 2026-08-06
 authors:
   - "@FabioCaffarello"
@@ -9,9 +9,15 @@ authors:
 
 # RFC-0012 — What a producer submits
 
-> **Draft.** No precondition this time; it is a draft because the choice in §4
-> is a product statement as much as an engineering one, and the alternative is
-> defensible.
+> **Accepted**, recorded by [ADR-0030](../adr/0030-the-submission-shape.md),
+> which chose option A.
+>
+> It was written as a `Draft` because the choice in §4 is a product statement as
+> much as an engineering one, and the alternative was defensible. It reached
+> `main` still in that state, ahead of the decision — nothing was broken by that,
+> but the decision and its record arrived in separate changes rather than
+> together, and ADR-0030 says so rather than leaving the sequence to look like an
+> omission.
 
 ## 1. The problem, found by trying to write the conformance kit
 
