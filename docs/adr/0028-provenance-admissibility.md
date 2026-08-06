@@ -127,6 +127,28 @@ would describe a mechanism; what a reader needs is that **admissibility is
 unguaranteed today** — this decision states a rule that nothing enforces, and
 will keep stating it until the admission path exists.
 
+> **Banner — this clause understates the available enforcement.**
+>
+> The table above says no grammar is validated anywhere and that the check has
+> no execution site. **A chokepoint exists and was missed:** `libs/kernel-wire`
+> decodes provenance through `provenance.NewSource`, so a grammar rule in that
+> constructor would apply to every value crossing the wire codec, today, without
+> any admission path.
+>
+> The correction matters beyond accuracy. An ADR that understates available
+> enforcement gets cited later as evidence that enforcement was impossible.
+>
+> **It is still not implemented, and the reason is stronger than scope.**
+> Validating in the codec is enforcement at **decode**, not at admission, and
+> those differ in what they destroy. Admission rejects bad *new* data. Decode
+> makes *existing* data unreadable — if a producer's stored references are not
+> `sha256:` plus hex, switching this on does not break their build, it makes
+> facts they already hold unrecoverable through the normal path.
+>
+> That is a data-plane change wearing validation's clothes. It needs its own
+> decision, with migration of existing references as the central question rather
+> than a footnote.
+
 ### The dependency, named so it is not rediscovered
 
 The grammar check has **no execution site until there is an admission point**,

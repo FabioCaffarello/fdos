@@ -117,12 +117,13 @@ func (Confidence) EnumDescriptor() ([]byte, []int) {
 // accident, not intent.
 //
 // **The field is still named `value`, and ADR-0028 decided it should be
-// `content_hash`.** Renaming it is breaking under this repository's own
-// `buf breaking` configuration (WIRE_JSON + FILE), and ADR-0024 puts a breaking
-// change in a new package path — so the rename belongs to `fdos.kernel.v2` and
-// is a blocking obligation on it. It must land before any third-party producer
-// depends on this package, which makes the public ingestion path (E9) its
-// deadline rather than its opportunity.
+// `content_hash`.** A field rename is breaking under this repository's
+// `buf breaking` configuration, and ADR-0024 puts a breaking change in a new
+// package path, so the rename belongs to `fdos.kernel.v2`.
+//
+// The obligation is recorded as a hard milestone dependency in
+// docs/ecosystem/roadmap.md, not here: a comment is a reminder, and a reminder
+// is a deadline already lost.
 type SourceRef struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Value         string                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`

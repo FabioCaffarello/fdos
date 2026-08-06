@@ -24,6 +24,28 @@ justifying, and one that blocks someone needs to be visible to them (E3).
 | M7 | Wire conformance — codecs and round-trip suites | ✅ |
 | M8 | **Ingestion** — how a fact produced outside FDOS enters the ledger | next |
 
+### Hard dependency — the public ingress cannot ship before `fdos.kernel.v2`
+
+**`E9`'s public ingestion path must not publish while `SourceRef` is still named
+`value`.**
+
+[ADR-0028](../adr/0028-provenance-admissibility.md) decided the field should be
+`content_hash`, and the rename could not ship with it: a field rename is
+breaking under this repository's `buf breaking` configuration, and
+[ADR-0024](../adr/0024-contract-lifecycle-and-versioning.md) puts a breaking
+change in a new package path. So the rename belongs to `fdos.kernel.v2`.
+
+The ordering is not a preference. Once a public ingestion path publishes on
+`fdos.kernel.v1`, third-party producers depend on `GetValue()`, and renaming
+stops being a migration this programme can run — it becomes renaming a method in
+other people's code. **`E9` is the point of no return, not the opportunity.**
+
+**Rung 6.** Nothing checks this. A check written today would pass because the
+ingress does not exist, which is the failure class this repository keeps
+finding — a green check with no subject. Either a future check distinguishes
+"not applicable yet" from "verified", or it should not exist and this dependency
+carries the obligation alone. It carries it alone today, and says so.
+
 ### M8 — Ingestion
 
 **Chosen by dependency, not by preference.** It is the only candidate that
