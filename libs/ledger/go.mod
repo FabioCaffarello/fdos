@@ -3,7 +3,7 @@ module github.com/FabioCaffarello/fdos/libs/ledger
 go 1.26.2
 
 require (
-	github.com/FabioCaffarello/fdos/libs/kernel v0.5.0
+	github.com/FabioCaffarello/fdos/libs/kernel v0.6.0
 	pgregory.net/rapid v1.3.0
 )
 
