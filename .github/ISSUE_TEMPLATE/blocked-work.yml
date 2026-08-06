@@ -1,0 +1,35 @@
+name: Blocked work
+description: >-
+  Work FDOS has decided to do and cannot finish yet (ADR-0032). A blocked issue
+  that does not say what it is waiting on is indistinguishable from a forgotten
+  one.
+labels: ["status/blocked"]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        This is the live register that replaced `docs/blocked.md` (frozen at
+        B-001 … B-009). Add exactly one `type/` label after filing. A decision
+        still goes in the decision log — an issue is only the register of what
+        a decision could not reach.
+  - type: textarea
+    id: blocker
+    attributes:
+      label: Blocked on
+      description: Name the blocker precisely. This field is why the label exists.
+    validations:
+      required: true
+  - type: textarea
+    id: delivered
+    attributes:
+      label: Delivered instead
+      description: What shipped anyway, or the mitigation in place, and its weakness.
+  - type: textarea
+    id: unblocks
+    attributes:
+      label: What unblocks it
+      description: >-
+        The specific event, decision or action. If it is a human action, say
+        whose.
+    validations:
+      required: true

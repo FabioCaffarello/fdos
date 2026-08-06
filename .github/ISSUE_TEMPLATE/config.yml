@@ -1,0 +1,7 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Label taxonomy
+    url: https://github.com/FabioCaffarello/fdos/blob/main/docs/ecosystem/labels.md
+    about: >-
+      Namespaced and mutually exclusive within a namespace. Two type/ labels on
+      one issue means nobody decided what it is.

@@ -14,7 +14,7 @@
     "`make verify` runs nineteen checks. Listing them here would be a second copy of a list that already exists in one place, and the drifted copy is always the one that gets read — the same failure this repository names for CLAUDE.md and AGENTS.md. The Makefile's `verify` target is the list.",
     "So a sensor exists only where it names a distinct execution context, not a distinct check. ADR-0014 makes `make verify` the whole gate: CI runs exactly it, so 'did the gate pass' is the honest unit of evidence.",
     "`secrets-check-staged` is the second sensor because it observes something `verify` cannot: staged content, before it becomes a commit. Scanning the working tree and scanning what is about to be written are different questions, and only one of them can still be answered by refusing.",
-    "The `phases` field carried PREVC phase letters. PREVC was evaluated in M9 and declined — this repository already has a working agreement in CONTRIBUTING.md, and two descriptions of how work proceeds is the drifted-copy problem again. Config describing a workflow nobody runs is a playbook with no subject, which the .context contract forbids."
+    "The `phases` field carried PREVC phase letters, was removed when PREVC was evaluated in M9 and declined, and returns with ADR-0031: M9.5 adopted PREVC as the working agreement itself, with the milestone calibration program as the subject the M9 evaluation found missing. The declination and the argument that lost are recorded in the ADR — removing this history would read as though it never happened."
   ],
   "sensors": [
     {
@@ -23,7 +23,8 @@
       "description": "Every enforcement mechanism available at this milestone. CI runs exactly this and nothing else (ADR-0014), so a green local run is a meaningful prediction of a green pipeline. Nineteen checks today; the Makefile is where they are enumerated.",
       "command": "make verify",
       "severity": "critical",
-      "blocking": true
+      "blocking": true,
+      "phases": ["V"]
     },
     {
       "id": "secrets-check-staged",
@@ -31,7 +32,8 @@
       "description": "Scans what is about to be committed rather than what is already there. A distinct execution context from `verify`, and the only one where refusing still prevents the thing — once a secret is committed, history is the problem and rotation is the answer (Constitution §13).",
       "command": "make secrets-check-staged",
       "severity": "critical",
-      "blocking": true
+      "blocking": true,
+      "phases": ["E"]
     }
   ]
 }

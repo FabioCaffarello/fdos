@@ -41,8 +41,10 @@ the repository was empty has narrowed rather than lapsed: do not add a bounded
 context, a canonical type or a published message ahead of the ADR that sequences
 it. Adding a payload to `libs/contracts` because a consumer needs one is the
 version of this that will look most reasonable at the time —
-[`docs/blocked.md`](docs/blocked.md) B-007 records how that is meant to go
-instead, and it starts with an issue and an RFC.
+[`docs/blocked.md`](docs/blocked.md) B-007 (frozen; its open items live in
+[issue #57](https://github.com/FabioCaffarello/fdos/issues/57), per ADR-0032)
+records how that is meant to go instead, and it starts with an issue and an
+RFC.
 
 ## Commands
 

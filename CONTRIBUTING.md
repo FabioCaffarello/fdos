@@ -59,11 +59,40 @@ decision (ADR-0013). The contract surface is the sharp edge — it is consumed
 outside this repository at a pinned version, so adding to it is a change to
 somebody else's build, and it starts with an issue and an RFC.
 
+## The working agreement is PREVC, executed on the harness
+
+Since ADR-0031 the working agreement is named in five phases — **P**lan,
+**R**eview, **E**xecute, **V**erify, **C**onfirm — and executed on the
+dotcontext harness. The phases are not a second process beside the plan-gate;
+they are its stages, named:
+
+- **P — Plan.** A slice starts as a draft pull request carrying the plan
+  (next section).
+- **R — Review.** A human reviews the plan. Marking the pull request ready is
+  the approval, under the keystroke rule below.
+- **E — Execute.** The slices, on the gate's branch.
+- **V — Verify.** `make verify` per slice, recorded as the `verify` sensor on
+  the milestone's harness session.
+- **C — Confirm.** The pull request is ready for a human to merge; the session
+  records a checkpoint and completes.
+
+A milestone session opens with `workflow-init` and closes its harness session.
+Phase state lives under `.context/runtime/` and is not tracked — the durable
+record remains the decision log and the pull request bodies. Where the
+harness's built-in PREVC skills and this file disagree, **this file wins**, and
+the disagreement is a bug to report upstream.
+
+PREVC was evaluated in M9 and declined as a second process description; M9.5
+reversed that by ADR-0031 when the calibration program gave the runtime a
+subject. Both the declination and the reversal are recorded there — the
+argument that lost is part of the record.
+
 ## The plan-gate, and who closes it
 
 A slice starts as a **draft pull request carrying the plan**: the objective
 restated, what was read, what could not be found, the slice itself, the boundary
 tests applied, and the costs accepted. No work happens while it is a draft.
+This section and the next are phases P and R.
 
 **Marking it ready is the approval, and the decision to mark it is never the
 session's.** An approver and an author who are the same actor make the gate

@@ -1,5 +1,24 @@
 # Blocked work
 
+> **This register is frozen (ADR-0032).** Blocked work is now registered as
+> GitHub issues carrying the `status/blocked` label, using the taxonomy in
+> [`docs/ecosystem/labels.md`](ecosystem/labels.md). The entries below are
+> permanent history: the `B-NNN` identifiers stay citable, nothing may be
+> added here, and the open entries are annotated with the issue that now
+> tracks them.
+>
+> | Entry | State at freeze (2026-08-06) | Live record |
+> |---|---|---|
+> | B-001 | Resolved; private-path resolution unobservable from here | — |
+> | B-002 | Open | [#53](https://github.com/FabioCaffarello/fdos/issues/53) |
+> | B-003 | Closed | — |
+> | B-004 | Open | [#54](https://github.com/FabioCaffarello/fdos/issues/54) |
+> | B-005 | Open | [#55](https://github.com/FabioCaffarello/fdos/issues/55) |
+> | B-006 | Open | [#56](https://github.com/FabioCaffarello/fdos/issues/56) |
+> | B-007 | Decided; five open items | [#57](https://github.com/FabioCaffarello/fdos/issues/57) |
+> | B-008 | Resolved | — |
+> | B-009 | Publishing half done; consumer half unobservable from here | — |
+
 Work that FDOS has decided to do and cannot finish yet, with what it is waiting
 on. Kept because an unrecorded block becomes an unexplained gap: the next
 reader cannot tell "not done" from "deliberately not done" from "forgotten".
@@ -45,6 +64,8 @@ designed, not a defect in it.
 ---
 
 ## B-002 — Plugin conformance suite
+
+> Now tracked as [#53](https://github.com/FabioCaffarello/fdos/issues/53).
 
 **Blocked on:** an undecided ownership question. No longer on absence.
 
@@ -134,6 +155,8 @@ decision.
 
 ## B-004 — Claude Code loads no agents from a fresh clone
 
+> Now tracked as [#54](https://github.com/FabioCaffarello/fdos/issues/54).
+
 **Blocked on:** the dotcontext export having no CLI. **The other half is now
 answered, and the answer is no.**
 
@@ -191,6 +214,8 @@ can invoke, exporting the reviewed roster and nothing else.
 
 ## B-005 — Dependency review on pull requests
 
+> Now tracked as [#55](https://github.com/FabioCaffarello/fdos/issues/55).
+
 **Blocked on:** GitHub's Dependency Graph being unavailable on this repository.
 
 **Milestone:** M3 added `dependency-review` to `supply-chain.yml`, with a
@@ -212,6 +237,8 @@ removing the `false &&` guard in `.github/workflows/supply-chain.yml`.
 ---
 
 ## B-006 — Signed commits
+
+> Now tracked as [#56](https://github.com/FabioCaffarello/fdos/issues/56).
 
 **Blocked on:** no SSH signing key registered with GitHub, and `gh` lacking the
 `admin:ssh_signing_key` scope to add one.
@@ -246,6 +273,9 @@ not — and `docs/branch-protection.md` says so rather than implying coverage.
 ---
 
 ## B-007 — No published message is fully populatable by a connector
+
+> Decided (RFC-0007 → ADR-0022); the open items are now tracked as
+> [#57](https://github.com/FabioCaffarello/fdos/issues/57).
 
 **Blocked on:** acceptance of [RFC-0007](rfc/0007-identity-resolution-and-the-acquisition-boundary.md).
 
