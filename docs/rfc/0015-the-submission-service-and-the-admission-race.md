@@ -1,7 +1,7 @@
 ---
 id: RFC-0015
 title: The submission service, and the admission race a transport makes reachable
-status: Draft
+status: Accepted
 date: 2026-08-07
 authors:
   - "@FabioCaffarello"
@@ -380,14 +380,22 @@ commit for a stated structural reason, and that is where the cost lands.
 
 ## Open questions
 
-1. **Is a service permitted at all?** ADR-0029's decision body rejects *"a
-   service FDOS operates"*; its alternatives section rejects *"a service"*. The
-   gate ([#63](https://github.com/FabioCaffarello/fdos/pull/63) §3) argues three
-   shapes: a **narrowing** ADR, a **supersession**, or alternative **F** above.
-   **A narrowing is recommended** — the decision body already carries the
-   qualifier that makes it a narrowing rather than a reversal, and RFC-0008 with
-   ADR-0026 is this repository's precedent for narrowing a decision rather than
-   superseding it. **This is a human's decision and no session may take it.**
+1. ~~**Is a service permitted at all?**~~ **Closed by
+   [ADR-0037](../adr/0037-delivery-includes-a-service-the-adopter-operates.md),
+   which supersedes ADR-0029.** A service an adopter operates is permitted; a
+   service FDOS operates stays rejected.
+
+   This RFC recommended a **narrowing** — the decision body already carries the
+   qualifier, and RFC-0008 with ADR-0026 is the repository's precedent for
+   narrowing rather than superseding. **The recommendation was not taken**, and
+   the argument that won is recorded in ADR-0037 §Context: a decision whose
+   alternatives section flatly rejects *"a service"* cannot be read into
+   permitting one without the reading itself being a decision, and a narrowing
+   would have left `status: Accepted` on a document that refuses what the next
+   milestone builds.
+
+   Left here rather than deleted. The recommendation lost on its merits and a
+   reader should be able to see that it was made.
 2. **D2** ([#64](https://github.com/FabioCaffarello/fdos/issues/64)) — who may
    write to a named stream. §4 refuses to answer it by default; it does not
    answer it. `risk/truth-path`-adjacent.
