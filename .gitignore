@@ -8,6 +8,15 @@
 *.out
 *.prof
 
+# `go build` in an application directory drops the binary beside the source,
+# named after the module. Nothing in the tree produced one until M11 put a main
+# package in apps/, and the first one was staged before this line existed.
+#
+# Listed per application rather than globbed: a pattern loose enough to catch
+# any binary here is loose enough to hide a source file, and a source file
+# silently absent from a commit is the more expensive mistake.
+/apps/submitd/submitd
+
 # ---------------------------------------------------------------------------
 # Go
 # ---------------------------------------------------------------------------
