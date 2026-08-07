@@ -50,7 +50,6 @@ In place since M3:
 - SBOM generation (`syft`, SPDX) at release
 - SLSA provenance attestation for release artifacts
 - `cosign` keyless signing of the checksum manifest
-- dependency review on pull requests, copyleft licences denied
 - **all GitHub Actions pinned to full commit SHAs**, enforced by
   `make action-pinning-check`
 
@@ -91,7 +90,6 @@ say so explicitly.
 |---------|-----------|-------|
 | Secret scanning | `gitleaks`, **full history** | `make secrets-check`, pre-commit hook, weekly schedule |
 | Reachable vulnerabilities | `govulncheck` at a pinned module version | `make vuln-check`, weekly schedule |
-| Dependency delta review | `dependency-review-action`, copyleft denied | pull requests |
 | Build input integrity | every action pinned by commit SHA | `make action-pinning-check` |
 | Decision-log integrity | ADR diffed against its introducing commit | `make adr-immutability-check` |
 | Release integrity | SBOM, SLSA provenance attestation, cosign keyless signature | `release.yml` |
@@ -111,9 +109,25 @@ Stated plainly so nobody assumes coverage that does not exist:
 
 | Gap | Closes at |
 |-----|-----------|
+| **No dependency-delta or licence review on pull requests** | [#55](https://github.com/FabioCaffarello/fdos/issues/55) |
 | No enforcement of the LLM boundary | M4 |
 | Branch protection is documentation, not a mechanism | — see below |
 | The gitleaks CI install is pinned by version, not checksum | M3.5 |
+
+**Dependency review is configured and disabled.** `supply-chain.yml` carries the
+job — pinned action, `deny-licenses` set, `fail-on-severity: low` — behind
+`if: false`, because the action needs GitHub's Dependency Graph and every run
+failed with *"Dependency review is not supported on this repository"*. A
+permanently red check trains people to ignore CI, so disabling it was right;
+listing it as an active control was not. This document did exactly that until
+M10, when `libs/ledger-sqlite` added the repository's first heavy dependency and
+the check skipped.
+
+What covers the gap, and what does not: `make vuln-check` (govulncheck,
+reachable vulnerabilities) runs in the gate, so dependency *scanning* is not
+absent. The **PR-delta and licence view is**. Nothing mechanically denies a
+copyleft dependency — that is a manual audit, and it was performed by hand for
+the SQLite driver (ADR-0035) precisely because nothing else would have.
 
 **Branch protection, required checks and the merge queue are GitHub settings,
 not files.** They cannot be enforced from this repository.
