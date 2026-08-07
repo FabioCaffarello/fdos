@@ -53,6 +53,32 @@ func TestASubmissionIsAdmitted(t *testing.T) {
 	}
 }
 
+// A Content-Type may carry parameters and still be the media type this service
+// accepts. Comparing the header by string equality refuses a conformant client
+// for a reason the message does not explain, which is the defect this asserts is
+// gone.
+func TestContentTypeParametersAreNotARefusal(t *testing.T) {
+	for _, ct := range []string{
+		"application/x-protobuf",
+		"application/x-protobuf; charset=utf-8",
+		"application/x-protobuf;charset=utf-8",
+		"Application/X-Protobuf",
+	} {
+		t.Run(ct, func(t *testing.T) {
+			h, _ := fixture(t)
+			req := httptest.NewRequest(http.MethodPost, submissionPath,
+				bytes.NewReader(marshal(t, submission(t, validDigest))))
+			req.Header.Set("Content-Type", ct)
+			res := httptest.NewRecorder()
+			h.ServeHTTP(res, req)
+
+			if res.Code != http.StatusCreated {
+				t.Fatalf("%q was refused with %d: %s", ct, res.Code, res.Body.String())
+			}
+		})
+	}
+}
+
 // Every one of these must be refused, and the status code must distinguish
 // "you sent nonsense" from "the ledger will not have it" from "try again".
 func TestRefusals(t *testing.T) {
@@ -84,6 +110,18 @@ func TestRefusals(t *testing.T) {
 			name:  "no content type",
 			body:  marshal(t, submission(t, validDigest)),
 			ctype: "-",
+			want:  http.StatusUnsupportedMediaType,
+		},
+		{
+			name:  "a content type that is not a media type at all",
+			body:  marshal(t, submission(t, validDigest)),
+			ctype: ";;;",
+			want:  http.StatusUnsupportedMediaType,
+		},
+		{
+			name:  "the right media type inside a longer string",
+			body:  marshal(t, submission(t, validDigest)),
+			ctype: "text/plain, application/x-protobuf",
 			want:  http.StatusUnsupportedMediaType,
 		},
 		{

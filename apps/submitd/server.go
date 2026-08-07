@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 
@@ -11,9 +12,9 @@ import (
 
 	ingestv1 "github.com/FabioCaffarello/fdos/libs/contracts/gen/fdos/ingest/v1"
 	"github.com/FabioCaffarello/fdos/libs/kernel/provenance"
+	ledgerwire "github.com/FabioCaffarello/fdos/libs/ledger-wire"
 	"github.com/FabioCaffarello/fdos/libs/ledger/app"
 	"github.com/FabioCaffarello/fdos/libs/ledger/domain"
-	ledgerwire "github.com/FabioCaffarello/fdos/libs/ledger-wire"
 )
 
 // submissionPath is the one route this service has.
@@ -47,13 +48,33 @@ func newHandler(ledger *app.Ledger) http.Handler {
 	return mux
 }
 
+// isProtobuf reports whether the media type is the one this service accepts,
+// ignoring any parameters.
+//
+// An absent or unparseable header is not the media type, which is the answer
+// that keeps a caller who sent nothing from being treated as one who sent the
+// right thing.
+func isProtobuf(header string) bool {
+	mediaType, _, err := mime.ParseMediaType(header)
+	if err != nil {
+		return false
+	}
+	return mediaType == protobufMediaType
+}
+
 func submit(w http.ResponseWriter, r *http.Request, ledger *app.Ledger) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		refuse(w, http.StatusMethodNotAllowed, "a submission is a POST")
 		return
 	}
-	if ct := r.Header.Get("Content-Type"); ct != protobufMediaType {
+	// Parsed rather than compared. A Content-Type may carry parameters —
+	// `application/x-protobuf; charset=utf-8` is the same media type — and a
+	// string equality here refuses a conformant client for a reason it cannot
+	// see from the message. The parameters are then ignored, because protobuf
+	// has no charset and a client that sends one is wrong about something that
+	// does not matter.
+	if ct := r.Header.Get("Content-Type"); !isProtobuf(ct) {
 		refuse(w, http.StatusUnsupportedMediaType,
 			fmt.Sprintf("body must be %s, got %q", protobufMediaType, ct))
 		return
