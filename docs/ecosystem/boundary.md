@@ -123,11 +123,26 @@ ecosystem boundary or outside it.
 ### D2 — "Authentication" is two concerns wearing one word
 
 Provider authentication — credentials against any external provider — is the
-private side's. Platform identity — who may query the ledger, who may call the
-MCP surface — is `fdos`. Split explicitly before either is built.
+private side's. Platform identity — who may write a fact to a stream, who may
+query the ledger, who may call the MCP surface — is `fdos`. Split explicitly
+before either is built.
 
-**Status:** open, and not yet urgent: `fdos` has no query surface and no MCP
-server, so the `fdos` half has no subject yet.
+**Status:** open, registered as
+[fdos#64](https://github.com/FabioCaffarello/fdos/issues/64).
+
+**This entry previously said the `fdos` half had "no subject yet"**, on the
+grounds that there was no query surface and no MCP server. That reasoning was
+overtaken rather than wrong: the subject arrived through the **write** side,
+which the entry was not watching.
+[ADR-0030](../adr/0030-the-submission-shape.md) published a submission message
+carrying a producer-supplied `stream` name and recorded, as a cost, that nothing
+validates who may write to a named stream — assigning that question here. Its
+enforcement table carries the row at *none — D2 is open*.
+
+The correction is kept rather than overwritten because the failure mode is worth
+seeing: a disputed item was assessed as not-yet-urgent against one surface, and
+became urgent through a different one, in a decision that named D2 explicitly
+while doing it.
 
 ### D3 — Where normalisation stops
 
