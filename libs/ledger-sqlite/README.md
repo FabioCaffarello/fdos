@@ -106,6 +106,10 @@ precisely the failure the M10 gate measured in a different disguise.
 
 ### Adapter tests, which belong here
 
+All five exist and pass. `TestTheSchemaRefusesADuplicateSequence` was
+mutation-checked — removing the primary key turns it red — so the constraint is
+demonstrably doing the work rather than the Go code doing it alone.
+
 | # | Case | Proves |
 |---|---|---|
 | 11 | Append, close the database, reopen it, read the facts back | **the point of the module** — and the case the in-memory store cannot satisfy |
@@ -131,7 +135,17 @@ proposed here — saying so is better than implying coverage that does not exist
 
 ## Release chain
 
-This module pins `libs/ledger`, so it cannot compile until the port change is
-released as `libs/ledger v0.4.0` (ADR-0004). `make verify` runs each module with
-`GOWORK=off`, which is what makes that a build failure rather than something
-`go.work` hides until CI.
+Closed. This module pins `libs/ledger v0.4.0` and `libs/ledger-wire v0.4.0`,
+both released, which is the two-to-three coordinated releases ADR-0004 predicted
+for a change spanning modules:
+
+```
+libs/kernel       v0.7.0   the canonicalisation ruleset
+libs/ledger       v0.4.0   the port change
+libs/ledger-wire  v0.4.0   bumped to see it
+libs/ledger-sqlite         this module
+```
+
+`make verify` runs each module with `GOWORK=off`, which is what makes a missing
+link in that chain a build failure rather than something `go.work` hides until
+CI.
