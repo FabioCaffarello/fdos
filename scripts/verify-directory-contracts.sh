@@ -134,6 +134,25 @@ for path in "${ROOT}"/libs/*/; do
   check_contract "$path" "libs/$(basename "$path")"
 done
 
+# And every application under apps/, for the same reason and one more.
+#
+# The libs/ half of this loop was missing until M7, when it turned out the check
+# had been reporting success over the two modules holding the domain core. apps/
+# was empty then, so the same gap opened silently the moment M11 put a module in
+# it — the first application would have been the only Go module in the tree with
+# no stated contract.
+#
+# The extra reason is that an application's contract is mostly a list of what it
+# must NOT do. `apps/README.md` forbids business rules, admission criteria and
+# logic that cannot be tested without starting a process; a composition root is
+# where each of those is most tempting, because it is the one place with a
+# request in hand. ADR-0037 states that an application's front matter binds it.
+# This is what makes that true rather than aspirational.
+for path in "${ROOT}"/apps/*/; do
+  [ -d "$path" ] || continue
+  check_contract "$path" "apps/$(basename "$path")"
+done
+
 if [ "$failures" -gt 0 ]; then
   printf '\nFAIL: %d directory contract violation(s) across %d directories.\n' "$failures" "$checked" >&2
   exit 1

@@ -1,15 +1,30 @@
 ---
 id: ADR-0029
 title: The public surface receives a claim, and the ledger admits what a library merely builds
-status: Accepted
+status: Superseded
 date: 2026-08-06
 deciders:
   - "@FabioCaffarello"
 supersedes: []
-superseded_by: []
+superseded_by:
+  - ADR-0037
 ---
 
 # ADR-0029 — The public surface receives a claim, and the ledger admits what a library merely builds
+
+> **Superseded by [ADR-0037](0037-delivery-includes-a-service-the-adopter-operates.md).**
+> Delivery now includes a submission service **an adopter operates**; a service
+> **FDOS operates** is still rejected, for the reason given below. The two other
+> decisions here — that the public surface receives a claim, and that a library
+> builds while the ledger admits — are carried forward unchanged and restated
+> there, so that they are not read as withdrawn along with the third.
+>
+> The text below is preserved unaltered, as ADR-0000 requires: it records what
+> was decided and why, not what turned out to be right. Two statements in it are
+> known to be wrong now, and ADR-0037 says so rather than this document being
+> edited — the flat rejection of *"a service"* in §Alternatives, and the closing
+> note that the `SourceRef` rename *"binds this work"*, a deadline
+> `docs/ecosystem/roadmap.md` has since retracted.
 
 ## Context
 

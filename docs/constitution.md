@@ -194,7 +194,7 @@ an earlier target was not achievable.
 | 1 | Financial Truth | `Position` is a projection return value with no persist path (`domain.ProjectPosition`) | 1 | 1 ✅ |
 | 2 | Deterministic Engineering | `nondet`, `nofloat` analysers, now covering the kernel (`make analyze`) | 2 | 2 ✅ |
 | 3 | Canonical Model First | `impurity`, `layering` analysers (`make analyze`) | 2 | 2 ✅ |
-| 4 | Immutable Ledger | `Stream` has Append and no Update or Delete; the store refuses a shorter stream | 1 | 1 ✅ |
+| 4 | Immutable Ledger | `Stream` has Append and no Update or Delete; the store has no whole-stream write to refuse one with (ADR-0034) | 1 | 1 ✅ |
 | 5 | Event Sourcing | every read is a fold over facts; there is no state to read from | 1 | 1 ✅ |
 | 6 | Provenance | `NewEnvelope` requires it and `Provenance` has no incomplete constructor | 1 | 1 ✅ |
 | 7 | Temporal Modeling | both axes required; knowledge time never a caller's parameter; no query without an `AsOf` | 1 | 1 ✅ |
