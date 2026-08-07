@@ -4,8 +4,8 @@ github.com/FabioCaffarello/fdos/libs/kernel v0.7.0 h1:K2dzMHvhjBTlw6uTsBGBK+5SVE
 github.com/FabioCaffarello/fdos/libs/kernel v0.7.0/go.mod h1:hM9SmGyiNMlaofqVcXPjIma1pSPOu7IWI5I06vEbr5Y=
 github.com/FabioCaffarello/fdos/libs/kernel-wire v0.2.0 h1:2pugR6UWX16AFBTD0Pji5HxSc4RziwdIuytkzEXktRI=
 github.com/FabioCaffarello/fdos/libs/kernel-wire v0.2.0/go.mod h1:PMuxyT313CVb/cfy3C2IwwAE3Y+Rpxu8lC7dXjQGDpM=
-github.com/FabioCaffarello/fdos/libs/ledger v0.4.0 h1:3qEt5muRgx1osuwtvaCG9sLi3n53X7cSJYel/U1bdFU=
-github.com/FabioCaffarello/fdos/libs/ledger v0.4.0/go.mod h1:jwOGC8J6Irf3XyhQvN19lTksw9A2y25qtxJ66dBx56o=
+github.com/FabioCaffarello/fdos/libs/ledger v0.5.0 h1:+6ZcsfWz31tU2U8rQlyx/0Bkz5Q+ACNv8o7xQKxJnAk=
+github.com/FabioCaffarello/fdos/libs/ledger v0.5.0/go.mod h1:jwOGC8J6Irf3XyhQvN19lTksw9A2y25qtxJ66dBx56o=
 github.com/FabioCaffarello/fdos/libs/ledger-sqlite v0.1.0 h1:eBsTFOEdsE8WBIU3EZyCHm4GP50Xu2eY/fS7XdBLM0Y=
 github.com/FabioCaffarello/fdos/libs/ledger-sqlite v0.1.0/go.mod h1:aNDXXufs2mQ5xn6125QbYA7WQ1v4HwyjvfSksEr3sZ8=
 github.com/FabioCaffarello/fdos/libs/ledger-wire v0.4.0 h1:vAOgvuXshNMXiFiyxyowfzKgxur1hUr96VR+aeDZ/Qk=

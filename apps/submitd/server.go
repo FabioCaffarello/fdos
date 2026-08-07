@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"mime"
 	"net"
 	"net/http"
+	"strings"
 
 	"google.golang.org/protobuf/proto"
 
@@ -95,7 +97,7 @@ func submit(w http.ResponseWriter, r *http.Request, ledger *app.Ledger) {
 	}
 
 	var wire ingestv1.HoldingClaimSubmission
-	if err := proto.Unmarshal(body, &wire); err != nil {
+	if unmarshalErr := proto.Unmarshal(body, &wire); unmarshalErr != nil {
 		refuse(w, http.StatusBadRequest, "body is not a fdos.ingest.v1.HoldingClaimSubmission")
 		return
 	}
@@ -117,10 +119,65 @@ func submit(w http.ResponseWriter, r *http.Request, ledger *app.Ledger) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusCreated)
 	// The reference is text because fdos.ledger.v1 publishes no Ref message and
 	// adding one is a contract change rather than a handler convenience.
-	_, _ = fmt.Fprintln(w, ref.String())
+	write(w, ref.String())
+}
+
+// write emits the body and records a failure rather than discarding it.
+//
+// The fact is already appended by the time this runs, so a failed write is not
+// a failed submission — but it does mean a producer believes its submission was
+// lost when it was not, and it will resend. That is worth a line in a log and
+// is not worth a 500, which would be a lie about what happened.
+//
+// Logged rather than ignored because errcheck runs with check-blank: a
+// discarded error here would have to be spelled `_ =`, and the configuration
+// deliberately refuses that spelling.
+func write(w http.ResponseWriter, line string) {
+	if _, err := io.WriteString(w, safe(line)+"\n"); err != nil {
+		slog.Warn("the response could not be written; the fact is recorded regardless",
+			"error", err)
+	}
+}
+
+// safe bounds what a caller can make this service say back.
+//
+// A 4xx reason carries the ledger's own words, and those words quote the
+// submission — a malformed SourceRef is echoed so the producer can see which
+// one. So the response body contains caller-controlled bytes, and `gosec` is
+// right to flag that as a taint path.
+//
+// Two things make it inert rather than one, because the cheap one is not
+// enough on its own:
+//
+//   - printable ASCII only, bounded at 512 bytes. Control characters, newlines
+//     and anything that could open a tag are dropped rather than escaped —
+//     escaping preserves the payload for whatever decodes next.
+//   - the caller gets `text/plain` with `X-Content-Type-Options: nosniff`, so
+//     nothing reinterprets the body as markup.
+//
+// The bound matters separately: a submission may carry a long string, and an
+// error message quoting it in full would let a caller choose the size of the
+// response to an unauthenticated request.
+func safe(reason string) string {
+	const bound = 512
+
+	var b strings.Builder
+	for _, r := range reason {
+		if b.Len() >= bound {
+			b.WriteString("…")
+			break
+		}
+		if r >= 0x20 && r < 0x7f && r != '<' && r != '>' && r != '&' {
+			b.WriteRune(r)
+			continue
+		}
+		b.WriteByte('.')
+	}
+	return b.String()
 }
 
 // statusFor maps a refusal from the ledger onto a status code.
@@ -166,8 +223,9 @@ func reasonFor(err error) string {
 
 func refuse(w http.ResponseWriter, status int, reason string) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(status)
-	_, _ = fmt.Fprintln(w, reason)
+	write(w, reason)
 }
 
 // errOffLoopbackUnacknowledged is returned rather than a bare string so that a

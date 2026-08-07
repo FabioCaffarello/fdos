@@ -66,7 +66,15 @@ func run(args []string, errOut *os.File) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = store.Close() }()
+	// Closing the database is the last thing that can lose a fact, so a failure
+	// is reported rather than discarded. It cannot change the exit path — run
+	// has already returned by then — which is exactly why it would otherwise
+	// vanish.
+	defer func() {
+		if closeErr := store.Close(); closeErr != nil {
+			slog.Error("the ledger database did not close cleanly", "error", closeErr)
+		}
+	}()
 
 	// One Ledger for the process. It owns the lock table that serialises writes
 	// per stream, so constructing one per request would silently give up the

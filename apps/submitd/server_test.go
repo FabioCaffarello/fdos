@@ -413,3 +413,53 @@ func (f failingStore) Append(
 ) (domain.Ref, error) {
 	return domain.Ref{}, f.err
 }
+
+// A 4xx reason quotes the submission, so a caller chooses part of what this
+// service says back. That is a taint path `gosec` was right to flag.
+//
+// It is made inert rather than removed, because a producer that cannot see
+// which field was refused cannot conform — which is the whole point of the kit
+// on the other end.
+func TestACallerCannotChooseTheResponseBody(t *testing.T) {
+	h, _ := fixture(t)
+
+	hostile := "<script>alert(1)</script>" + strings.Repeat("A", 4096)
+	res := post(t, h, marshal(t, submission(t, hostile)))
+
+	if res.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status %d, want 422", res.Code)
+	}
+	body := res.Body.String()
+
+	for _, forbidden := range []string{"<", ">", "&", "\r"} {
+		if strings.Contains(body, forbidden) {
+			t.Errorf("the response echoed %q: %q", forbidden, body)
+		}
+	}
+	if n := len(body); n > 600 {
+		t.Errorf("the response is %d bytes — a caller chose its size", n)
+	}
+	if got := res.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+		t.Errorf("X-Content-Type-Options is %q; text/plain without nosniff can be resniffed", got)
+	}
+}
+
+// The bound and the filter, directly, so a failure names which one broke.
+func TestSafe(t *testing.T) {
+	for _, tc := range []struct{ name, in, want string }{
+		{"ordinary text survives", "acct-1 is not a content address", "acct-1 is not a content address"},
+		{"markup is dropped, not escaped", "<b>x</b>", ".b.x./b."},
+		{"newlines cannot forge a second line", "a\nb", "a.b"},
+		{"control characters go", "a\x00\x1b[31mb", "a..[31mb"},
+		{"non-ascii goes", "café", "caf."},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := safe(tc.in); got != tc.want {
+				t.Errorf("safe(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+	if n := len(safe(strings.Repeat("A", 10000))); n > 520 {
+		t.Errorf("safe did not bound a long reason: %d bytes", n)
+	}
+}
