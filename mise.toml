@@ -20,7 +20,7 @@
 
 [tools]
 # Required from M0.
-go = "1.26.2"
+go = "1.26.5"
 
 # Required from M2 (determinism toolchain).
 golangci-lint = "2.12.2"
