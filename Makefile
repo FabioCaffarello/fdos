@@ -10,6 +10,16 @@ SCRIPTS_DIR := scripts
 # the same; this makes it true whether or not mise is installed).
 export GOFLAGS := -mod=readonly
 
+# cgo is off, and that is a supply-chain decision rather than a preference
+# (ADR-0035). A cgo dependency makes the build depend on the host C toolchain,
+# which puts the byte-reproducibility `make repro-check` asserts at the mercy of
+# a system compiler nobody pinned.
+#
+# The tree was measured as cgo-free before this was pinned, so this preserves a
+# property rather than imposing one — and turns a future dependency that quietly
+# needs cgo into a build failure instead of a silent loss of reproducibility.
+export CGO_ENABLED := 0
+
 # ADR-0004 makes each libs/* an independent module, so Go commands run per
 # module rather than once at the root.
 #
@@ -146,8 +156,20 @@ vet: ## Run go vet across all modules
 lint: ## Run golangci-lint across all modules
 	$(call FOR_EACH_MODULE,golangci-lint run ./...)
 
+# The race detector is the one place cgo is enabled, and it has to be.
+#
+# `-race` requires cgo on linux/amd64 — where CI runs — and does not on
+# darwin/arm64, where this was written. So the CGO_ENABLED=0 pin above passed
+# locally and failed in CI with `-race requires cgo`, which is exactly the
+# divergence ADR-0014 says a check must not have. A developer machine could not
+# reproduce it at all.
+#
+# Enabling cgo here does not weaken ADR-0035. That pin protects the *build* —
+# `repro-check`, releases, `vet`, `lint` all still run cgo-free, and a dependency
+# that quietly needed cgo would still fail them. A test binary is not a released
+# artifact and its reproducibility is not what anyone audits.
 test: ## Run all tests with the race detector
-	$(call FOR_EACH_MODULE,$(GO) test -race ./...)
+	$(call FOR_EACH_MODULE,CGO_ENABLED=1 $(GO) test -race ./...)
 
 analyze: ## Enforce domain purity and layer boundaries (FDOS analysers)
 	@$(SCRIPTS_DIR)/run-analyzers.sh

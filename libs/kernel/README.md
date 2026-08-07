@@ -22,7 +22,7 @@ library (ADR-0013).
 
 | Package | Holds |
 |---------|-------|
-| `identity` | `EntityId`, and the claims that assert identity without asserting an entity |
+| `identity` | `EntityId`, the claims that assert identity without asserting an entity, and the versioned per-scheme canonicalisation applied to a claim before derivation |
 | `money` | Arbitrary-precision amounts, quantities, and explicit rounding contexts |
 | `temporal` | Bitemporal coordinates — effective time and knowledge time |
 | `provenance` | The envelope every fact carries: source, interpreter, confidence, derivation |

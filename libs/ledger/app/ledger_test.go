@@ -72,35 +72,18 @@ func TestProjectionIsUnchangedByLaterKnowledge(t *testing.T) {
 	})
 }
 
-// Constitution §4: history is never rewritten. A shorter stream arriving as a
-// save is a rewrite wearing the costume of a write.
-func TestStoreRefusesToShortenAStream(t *testing.T) {
-	ctx := context.Background()
-	store := memory.NewStore()
-
-	full, err := domain.NewStream("acct-1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	env := envelope(t, day(1), temporal.MustAt(time.Unix(1000, 0)))
-	full, _, err = full.Append(env, domain.KindObservation, domain.HoldingObserved{
-		Account: testAccount, Instrument: testInstrument, Quantity: money.MustParseQuantity("1", "share"),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if saveErr := store.Save(ctx, full); saveErr != nil {
-		t.Fatal(saveErr)
-	}
-
-	empty, err := domain.NewStream("acct-1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := store.Save(ctx, empty); err == nil {
-		t.Fatal("store accepted a shorter stream; history is never rewritten (§4)")
-	}
-}
+// Constitution §4: history is never rewritten.
+//
+// The test that used to live here drove `store.Save` with a shorter stream and
+// asserted a rejection. There is no longer an operation to drive: ADR-0034
+// removed the whole-stream write, so shortening a stream is unrepresentable
+// rather than refused. That moved the guarantee from rung 3 to rung 1, and a
+// rung-1 rule has nothing left for a test to exercise — the compiler is the
+// test.
+//
+// What replaced it, in `adapters/memory`, are the properties that *are* still
+// checkable: a stale read is refused, knowledge time cannot go backwards, and
+// two concurrent appends receive consecutive refs rather than the same one.
 
 // A correction is a new fact, not a mutation. Asking as of a knowledge time
 // before the correction still returns what FDOS believed then — which is what
@@ -220,7 +203,7 @@ func newFixture(t *rapid.T) *fixture {
 	// Knowledge time starts well after any effective time used here, so
 	// "learned later than it was true" is the normal case rather than an edge.
 	seq := clock.NewSequence(temporal.MustAt(time.Unix(1_000_000, 0).UTC()), time.Hour)
-	ledger, err := app.NewLedger(memory.NewStore(), seq)
+	ledger, err := app.NewLedger(memory.NewStore(), seq, identity.Canonicalisation())
 	if err != nil {
 		if t != nil {
 			t.Fatalf("new ledger: %v", err)
@@ -288,23 +271,6 @@ func mustOpen(from temporal.Instant) temporal.Interval {
 		panic(err)
 	}
 	return iv
-}
-
-func envelope(t *testing.T, effective, knowledge temporal.Instant) domain.Envelope {
-	t.Helper()
-	coordinates, err := temporal.Assign(mustOpen(effective), knowledge)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prov, err := provenance.Observed(testSource, effective, testInterpreter, provenance.ConfidenceAsserted)
-	if err != nil {
-		t.Fatal(err)
-	}
-	env, err := domain.NewEnvelope(coordinates, prov, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return env
 }
 
 func mustSource(v string) provenance.Source {

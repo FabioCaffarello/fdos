@@ -31,6 +31,7 @@ wire definitions of each type from diverging.
 | `libs/kernel-wire` | Kernel ↔ protobuf codecs, and the round-trip conformance suite |
 | `libs/ledger` | The first bounded context: facts, claims, mints, resolution |
 | `libs/ledger-wire` | Ledger ↔ protobuf codecs, and the round-trip conformance suite |
+| `libs/ledger-sqlite` | The durable event store (ADR-0034, ADR-0035). **Contract and test plan only** — it has no `go.mod` yet, because it cannot compile until the M10 port change is released as `libs/ledger v0.4.0` |
 
 Each is an independent Go module published under its own tag (ADR-0004). A
 private repository already builds against `libs/contracts` at a pinned version,
@@ -64,7 +65,7 @@ it, say so rather than implying you did.
 
 | Path | Contents |
 |------|----------|
-| `libs/` | Reusable libraries, one Go module per subdirectory. |
+| `libs/` | Reusable libraries, one Go module per subdirectory — except a directory carrying its contract ahead of its module, as `libs/ledger-sqlite` does. |
 | `apps/` | Deployable applications, composition roots only. Empty. |
 | `docs/` | Constitution, ADRs, RFCs, and the register of blocked work. Authoritative. |
 | `deploy/` | Deployment topology. Empty. |

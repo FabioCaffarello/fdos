@@ -22,7 +22,7 @@ func acceptFixture(t *testing.T, source string) (*app.Ledger, app.AcceptHoldingC
 	t.Helper()
 
 	at := temporal.MustAt(time.Date(2026, time.March, 1, 12, 0, 0, 0, time.UTC))
-	ledger, err := app.NewLedger(memory.NewStore(), clock.NewSequence(at, time.Hour))
+	ledger, err := app.NewLedger(memory.NewStore(), clock.NewSequence(at, time.Hour), identity.Canonicalisation())
 	if err != nil {
 		t.Fatalf("ledger: %v", err)
 	}

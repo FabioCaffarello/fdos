@@ -29,6 +29,28 @@ var ErrUnresolved = errors.New("ledger: claim does not resolve to a minted ident
 // new knowledge, which is how a trace stops meaning anything.
 var observationMethod = mustMethod("ledger.DeriveHoldingObserved", "1")
 
+// mintMethod names the derivation that brings an identity into existence.
+//
+// Minting is a derivation and not an observation: an identity is *computed*
+// from a claim by a versioned method, and nobody told FDOS it exists. That is
+// what makes `provenance.Derived` the right envelope for a mint (ADR-0033).
+var mintMethod = mustMethod("ledger.MintFor", "1")
+
+// resolves reports whether a mint answers a claim under a ruleset.
+//
+// Matching is on the **canonical seed**, not on bytes. `Claim.Equal` stays byte
+// equality — it is a value-type operator, and two claims differing by a byte
+// are two claims — but *resolution* is where sameness is decided, and ADR-0033
+// gives that decision a stated, versioned rule.
+//
+// Matching on the seed rather than on the folded claim is what makes resolution
+// agree with minting by construction: the seed is exactly what `identity.Derive`
+// hashes, so two claims resolve together precisely when they would mint
+// together.
+func resolves(minted EntityMinted, claim identity.Claim, rules identity.Ruleset) bool {
+	return rules.CanonicalSeed(minted.BornFrom) == rules.CanonicalSeed(claim)
+}
+
 // Resolve finds the identity a claim refers to, reading the ledger.
 //
 // **It reads. It does not re-resolve.** That is what makes replay deterministic
@@ -38,28 +60,27 @@ var observationMethod = mustMethod("ledger.DeriveHoldingObserved", "1")
 // same thing.
 //
 // The guarantee holds because the resolution *result* is ledger content, not
-// resolver behaviour.
+// resolver behaviour. What the ruleset governs is which *recorded* mint answers
+// a claim — so a ruleset change alters reads, which is why changing a shipped
+// rule is an ADR-class act (ADR-0033).
 //
 // Resolution reads the ledger and nothing else. A resolver that ever consulted
 // something outside it — a vendor's ticker-to-issuer table — would be consuming
 // versioned reference data, and the binding would belong in the envelope
-// (ADR-0010). That is not what this does.
+// (ADR-0010). That is not what this does; a ruleset is code, not data.
 //
 // Later mints do not shadow earlier ones: the *first* mint visible at the
 // coordinate wins, in the stream's deterministic order. Two mints for the same
 // claim is a defect the ledger records rather than hides, and merging them is
 // an EntitiesIdentified decision, not this function's.
-func Resolve(stream Stream, claim identity.Claim, asOf temporal.AsOf) (identity.ID, error) {
-	for _, f := range stream.VisibleAt(asOf) {
-		minted, ok := f.Payload().(EntityMinted)
-		if !ok {
-			continue
-		}
-		if minted.BornFrom.Equal(claim) {
-			return minted.Entity, nil
-		}
-	}
-	return identity.ID{}, fmt.Errorf("%w: %s", ErrUnresolved, claim)
+func Resolve(
+	stream Stream,
+	claim identity.Claim,
+	rules identity.Ruleset,
+	asOf temporal.AsOf,
+) (identity.ID, error) {
+	id, _, err := resolveWithTrace(stream, claim, rules, asOf)
+	return id, err
 }
 
 // DeriveHoldingObserved turns a claimed holding into an observed one by
@@ -78,6 +99,7 @@ func Resolve(stream Stream, claim identity.Claim, asOf temporal.AsOf) (identity.
 func DeriveHoldingObserved(
 	stream Stream,
 	claimedFact Fact,
+	rules identity.Ruleset,
 	asOf temporal.AsOf,
 ) (explained.Value[HoldingObserved], error) {
 	claimed, ok := claimedFact.Payload().(HoldingClaimed)
@@ -86,11 +108,11 @@ func DeriveHoldingObserved(
 			fmt.Errorf("%w: fact %s is not a HoldingClaimed", ErrEmptyType, claimedFact.Ref())
 	}
 
-	account, accountRef, err := resolveWithTrace(stream, claimed.Account, asOf)
+	account, accountRef, err := resolveWithTrace(stream, claimed.Account, rules, asOf)
 	if err != nil {
 		return explained.Value[HoldingObserved]{}, err
 	}
-	instrument, instrumentRef, err := resolveWithTrace(stream, claimed.Instrument, asOf)
+	instrument, instrumentRef, err := resolveWithTrace(stream, claimed.Instrument, rules, asOf)
 	if err != nil {
 		return explained.Value[HoldingObserved]{}, err
 	}
@@ -108,6 +130,10 @@ func DeriveHoldingObserved(
 	// different coordinate can select a different mint, so two derivations that
 	// omitted it would share a content address while disagreeing about the
 	// answer.
+	//
+	// `canonicalisation` is here for the same reason. Which mint answers a claim
+	// depends on the ruleset, so a derivation that omitted it would be unable to
+	// explain a match that a later ruleset would not make (ADR-0033).
 	return explained.FromDerivation(
 		observed,
 		observationMethod,
@@ -116,6 +142,7 @@ func DeriveHoldingObserved(
 			{Name: "account_claim", Value: claimed.Account.String()},
 			{Name: "instrument_claim", Value: claimed.Instrument.String()},
 			{Name: "as_of", Value: asOf.String()},
+			{Name: "canonicalisation", Value: rules.Version()},
 		},
 		nil,
 		claimedFact.Envelope().Provenance().Confidence(),
@@ -127,6 +154,7 @@ func DeriveHoldingObserved(
 func resolveWithTrace(
 	stream Stream,
 	claim identity.Claim,
+	rules identity.Ruleset,
 	asOf temporal.AsOf,
 ) (identity.ID, Ref, error) {
 	for _, f := range stream.VisibleAt(asOf) {
@@ -134,7 +162,7 @@ func resolveWithTrace(
 		if !ok {
 			continue
 		}
-		if minted.BornFrom.Equal(claim) {
+		if resolves(minted, claim, rules) {
 			return minted.Entity, f.Ref(), nil
 		}
 	}
@@ -142,22 +170,53 @@ func resolveWithTrace(
 }
 
 // MintFor builds the payload that brings an identity into existence for a
-// claim.
+// claim, explained.
 //
-// The identity is derived from the claim, once. `identity.Derive` is
-// deterministic, so replaying the same acquisition produces the same identifier
-// — and because the mint is then recorded as a fact, it is never re-derived
-// (ADR-0007).
+// The identity is derived from the claim's **canonicalised** value, once.
+// `identity.Derive` is deterministic, so replaying the same acquisition produces
+// the same identifier — and because the mint is then recorded as a fact, it is
+// never re-derived (ADR-0007).
+//
+// Canonicalisation happens **here**, before Derive, never inside it:
+// `canonicaliseSeed` stays the generic, scheme-blind floor (ADR-0033). What is
+// recorded in `BornFrom` is the claim **verbatim**: it is the birth certificate,
+// what the provider actually said, and the folded form is an input to the
+// derivation rather than a replacement for the evidence.
+//
+// The returned trace is what makes the mint's provenance `Derived`. It names
+// the claim fact being answered — when there is one, since RFC-0007 established
+// that an account is often minted from operator configuration before any
+// observation arrives — and records the ruleset version, so a mint made under
+// one set of rules stays distinguishable from a mint made under another.
 //
 // Deciding *whether* to mint is not this function's: the application layer
-// resolves first, and mints only when nothing answers.
-func MintFor(kind identity.Kind, claim identity.Claim) (EntityMinted, error) {
+// resolves first, and mints only when nothing answers (ADR-0033).
+func MintFor(
+	kind identity.Kind,
+	claim identity.Claim,
+	rules identity.Ruleset,
+	answers []string,
+	confidence provenance.Confidence,
+) (explained.Value[EntityMinted], error) {
 	if claim.IsZero() {
-		return EntityMinted{}, fmt.Errorf("%w: claim is unset", ErrEmptyType)
+		return explained.Value[EntityMinted]{}, fmt.Errorf("%w: claim is unset", ErrEmptyType)
 	}
-	id, err := identity.Derive(kind, claim.String())
+	id, err := identity.Derive(kind, rules.Fold(claim).String())
 	if err != nil {
-		return EntityMinted{}, err
+		return explained.Value[EntityMinted]{}, err
 	}
-	return EntityMinted{Entity: id, BornFrom: claim}, nil
+
+	return explained.FromDerivation(
+		EntityMinted{Entity: id, BornFrom: claim},
+		mintMethod,
+		answers,
+		[]provenance.Parameter{
+			{Name: "claim", Value: claim.String()},
+			{Name: "kind", Value: kind.String()},
+			{Name: "seed", Value: rules.CanonicalSeed(claim)},
+			{Name: "canonicalisation", Value: rules.Version()},
+		},
+		nil,
+		confidence,
+	)
 }

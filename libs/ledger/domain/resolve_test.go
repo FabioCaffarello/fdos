@@ -23,10 +23,7 @@ import (
 func TestALaterMintDoesNotShadowTheEarlierOne(t *testing.T) {
 	claim := identity.MustClaim("ticker", "PETR4")
 
-	first, err := domain.MintFor(identity.KindInstrument, claim)
-	if err != nil {
-		t.Fatal(err)
-	}
+	first := mintPayload(t, identity.KindInstrument, claim)
 	// A resolver bug, a replayed acquisition, a merge that should have been an
 	// EntitiesIdentified: however it happened, the ledger keeps it.
 	duplicate := domain.EntityMinted{
@@ -42,12 +39,12 @@ func TestALaterMintDoesNotShadowTheEarlierOne(t *testing.T) {
 		entry{envelope: envelopeAt(t, day(1), knowledge(2)), payload: duplicate},
 	)
 
-	early, err := domain.Resolve(stream, claim, asOf(t, day(2), knowledge(2)))
+	early, err := domain.Resolve(stream, claim, rules(), asOf(t, day(2), knowledge(2)))
 	if err != nil {
 		t.Fatalf("resolve early: %v", err)
 	}
 	// Five years later, by knowledge time.
-	late, err := domain.Resolve(stream, claim, asOf(t, day(2), knowledge(50_000)))
+	late, err := domain.Resolve(stream, claim, rules(), asOf(t, day(2), knowledge(50_000)))
 	if err != nil {
 		t.Fatalf("resolve late: %v", err)
 	}
@@ -67,7 +64,7 @@ func TestAMintIsInvisibleBeforeItWasKnown(t *testing.T) {
 	claim := identity.MustClaim("ticker", "PETR4")
 	stream := streamWith(t, mintFact(t, day(1), knowledge(100), claim))
 
-	if _, err := domain.Resolve(stream, claim, asOf(t, day(2), knowledge(50))); !errors.Is(err, domain.ErrUnresolved) {
+	if _, err := domain.Resolve(stream, claim, rules(), asOf(t, day(2), knowledge(50))); !errors.Is(err, domain.ErrUnresolved) {
 		t.Fatalf("a mint resolved before it was known: %v", err)
 	}
 }
@@ -78,7 +75,7 @@ func TestAMintIsInvisibleBeforeItWasKnown(t *testing.T) {
 func TestAnUnknownClaimDoesNotResolve(t *testing.T) {
 	stream := streamWith(t, mintFact(t, day(1), knowledge(1), identity.MustClaim("ticker", "PETR4")))
 
-	_, err := domain.Resolve(stream, identity.MustClaim("ticker", "VALE3"), asOf(t, day(2), knowledge(2)))
+	_, err := domain.Resolve(stream, identity.MustClaim("ticker", "VALE3"), rules(), asOf(t, day(2), knowledge(2)))
 	if !errors.Is(err, domain.ErrUnresolved) {
 		t.Fatalf("expected ErrUnresolved, got %v", err)
 	}
@@ -86,11 +83,132 @@ func TestAnUnknownClaimDoesNotResolve(t *testing.T) {
 
 // Claims differing only by whitespace are different claims. Deciding they are
 // the same thing is resolution, and resolution is a recorded fact.
-func TestClaimMatchingIsExact(t *testing.T) {
+//
+// ADR-0033 replaced this test. It is not a reversal of what it protected:
+// `Claim.Equal` is still byte equality, and deciding two claims are the same
+// thing is still resolution's job rather than an equality operator's. What
+// changed is that resolution now has a stated, versioned rule to decide it
+// with, instead of a byte comparison standing in for one.
+//
+// The trailing-space case is the one that matters for the record: it already
+// derived the *same* identity before this change, so refusing to resolve it
+// meant minting a second fact for an identity that already existed.
+func TestResolutionDecidesSamenessByRuleRatherThanByBytes(t *testing.T) {
 	stream := streamWith(t, mintFact(t, day(1), knowledge(1), identity.MustClaim("ticker", "PETR4")))
+	at := asOf(t, day(2), knowledge(2))
 
-	if _, err := domain.Resolve(stream, identity.MustClaim("ticker", "PETR4 "), asOf(t, day(2), knowledge(2))); err == nil {
-		t.Fatal("a whitespace-differing claim resolved; that is a resolution decision, not an equality one")
+	// Folded by the generic floor, which Derive has always applied.
+	for _, variant := range []string{"PETR4 ", "petr4"} {
+		if _, err := domain.Resolve(stream, identity.MustClaim("ticker", variant), rules(), at); err != nil {
+			t.Errorf("%q did not resolve, though minting it derives the same identity: %v", variant, err)
+		}
+	}
+
+	// Folded by nothing: `ticker` names no issuing standard, so it carries no
+	// rule. These are the cases where a wrong rule would merge two real
+	// instruments, and they must stay apart.
+	//
+	// `" PETR4"` sits here rather than above, and the asymmetry is real rather
+	// than an oversight: the seed is `scheme:value`, so a *leading* space in the
+	// value becomes an internal separator that the floor collapses but cannot
+	// remove, while a *trailing* one is stripped. PR #51 measured exactly this.
+	// Whether the two should behave alike is a `ticker` rule question, and
+	// `ticker` cannot have one.
+	for _, variant := range []string{" PETR4", "PETR4.SA", "PETR 4", "PETR4."} {
+		_, err := domain.Resolve(stream, identity.MustClaim("ticker", variant), rules(), at)
+		if !errors.Is(err, domain.ErrUnresolved) {
+			t.Errorf("%q resolved to the PETR4 mint; that is a merge, and merges are recorded", variant)
+		}
+	}
+}
+
+// The invariant ADR-0033 rests on, asserted rather than argued.
+//
+// Without it the design is not merely inelegant: a claim that mints to an
+// existing identity but does not resolve to it is a claim MintIdentity refuses
+// and Resolve cannot answer.
+func TestResolutionAgreesWithMinting(t *testing.T) {
+	base := identity.MustClaim("isin", "BRPETRACNPR0")
+	stream := streamWith(t, mintFact(t, day(1), knowledge(1), base))
+	at := asOf(t, day(2), knowledge(2))
+	baseID := mintPayload(t, identity.KindInstrument, base).Entity
+
+	// Spread across both folds and neither: vendor spacing on a standard
+	// scheme, generic whitespace and case, and values that are simply other
+	// instruments.
+	for _, value := range []string{
+		"BRPETRACNPR0", "BR PETR ACNPR0", "brpetracnpr0", "BRPETRACNPR0 ",
+		"BRPETRACNPR1", "BRPETRACNPR", "US0378331005",
+	} {
+		claim := identity.MustClaim("isin", value)
+
+		resolved, err := domain.Resolve(stream, claim, rules(), at)
+		resolvesToBase := err == nil && resolved.Equal(baseID)
+		mintsToBase := mintPayload(t, identity.KindInstrument, claim).Entity.Equal(baseID)
+
+		if resolvesToBase != mintsToBase {
+			t.Errorf("%q resolves-to-base=%v but mints-to-base=%v", value, resolvesToBase, mintsToBase)
+		}
+	}
+}
+
+// A mint records what the provider said, not what FDOS made of it. The folded
+// value is an input to the derivation; the raw value is the evidence, and a
+// resolution later found wrong has to be re-doable from it.
+func TestAMintRecordsTheClaimVerbatim(t *testing.T) {
+	spaced := identity.MustClaim("isin", "BR PETR ACNPR0")
+	minted := mintPayload(t, identity.KindInstrument, spaced)
+
+	if minted.BornFrom.Value() != "BR PETR ACNPR0" {
+		t.Errorf("BornFrom was canonicalised to %q; it is the birth certificate", minted.BornFrom.Value())
+	}
+	clean := mintPayload(t, identity.KindInstrument, identity.MustClaim("isin", "BRPETRACNPR0"))
+	if !minted.Entity.Equal(clean.Entity) {
+		t.Error("two renderings of one ISIN minted two identities")
+	}
+}
+
+// The mint's own derivation, without which its provenance cannot be Derived.
+func TestAMintExplainsItself(t *testing.T) {
+	claim := identity.MustClaim("isin", "BR PETR ACNPR0")
+
+	minted, err := domain.MintFor(
+		identity.KindInstrument, claim, rules(), []string{"acct-1#7"}, provenance.ConfidenceAsserted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if minted.Trace().IsZero() {
+		t.Fatal("a mint produced no trace, so its provenance cannot be Derived")
+	}
+	if got := minted.Record().Inputs(); !slices.Equal(got, []string{"acct-1#7"}) {
+		t.Errorf("the mint does not name the claim fact it answers: %v", got)
+	}
+
+	params := map[string]string{}
+	for _, p := range minted.Record().Parameters() {
+		params[p.Name] = p.Value
+	}
+	if params["claim"] != claim.String() {
+		t.Errorf("claim recorded as %q", params["claim"])
+	}
+	if params["seed"] != "ISIN:BRPETRACNPR0" {
+		t.Errorf("seed recorded as %q, want the canonicalised form", params["seed"])
+	}
+	// Which rules minted this is what makes a later rule change nameable.
+	if params["canonicalisation"] != rules().Version() {
+		t.Errorf("ruleset version recorded as %q, want %q", params["canonicalisation"], rules().Version())
+	}
+
+	// An account minted from operator configuration answers no fact, and that
+	// must be representable — RFC-0007's case, and it has no claim to name.
+	ahead, err := domain.MintFor(
+		identity.KindAccount, identity.MustClaim("account_number", "0001234-5"),
+		rules(), nil, provenance.ConfidenceAsserted)
+	if err != nil {
+		t.Fatalf("minting ahead of any observation failed: %v", err)
+	}
+	if len(ahead.Record().Inputs()) != 0 {
+		t.Errorf("a mint with no claim fact named inputs: %v", ahead.Record().Inputs())
 	}
 }
 
@@ -99,22 +217,13 @@ func TestClaimMatchingIsExact(t *testing.T) {
 func TestMintingIsDeterministicAndSeparatesKinds(t *testing.T) {
 	claim := identity.MustClaim("ticker", "PETR4")
 
-	first, err := domain.MintFor(identity.KindInstrument, claim)
-	if err != nil {
-		t.Fatal(err)
-	}
-	second, err := domain.MintFor(identity.KindInstrument, claim)
-	if err != nil {
-		t.Fatal(err)
-	}
+	first := mintPayload(t, identity.KindInstrument, claim)
+	second := mintPayload(t, identity.KindInstrument, claim)
 	if !first.Entity.Equal(second.Entity) {
 		t.Fatalf("minting is not deterministic: %s vs %s", first.Entity, second.Entity)
 	}
 
-	asAccount, err := domain.MintFor(identity.KindAccount, claim)
-	if err != nil {
-		t.Fatal(err)
-	}
+	asAccount := mintPayload(t, identity.KindAccount, claim)
 	if asAccount.Entity.Equal(first.Entity) {
 		t.Error("the same claim under different kinds produced the same identity")
 	}
@@ -141,7 +250,7 @@ func TestDerivingAnObservationNamesTheClaimAndBothMints(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := domain.DeriveHoldingObserved(stream, claimed, asOf(t, day(2), knowledge(10)))
+	result, err := domain.DeriveHoldingObserved(stream, claimed, rules(), asOf(t, day(2), knowledge(10)))
 	if err != nil {
 		t.Fatalf("derive: %v", err)
 	}
@@ -158,7 +267,7 @@ func TestDerivingAnObservationNamesTheClaimAndBothMints(t *testing.T) {
 	if got := result.Record().Inputs(); !slices.Equal(got, wantInputs) {
 		t.Errorf("inputs are %v, want the claim and both mints %v", got, wantInputs)
 	}
-	if !result.Value().Account.Equal(identity.MustDerive(identity.KindAccount, account.String())) {
+	if !result.Value().Account.Equal(identity.MustDerive(identity.KindAccount, rules().Fold(account).String())) {
 		t.Error("account resolved to the wrong identity")
 	}
 
@@ -169,7 +278,7 @@ func TestDerivingAnObservationNamesTheClaimAndBothMints(t *testing.T) {
 	for _, p := range result.Record().Parameters() {
 		params[p.Name] = p.Value
 	}
-	for _, want := range []string{"account_claim", "instrument_claim", "as_of"} {
+	for _, want := range []string{"account_claim", "instrument_claim", "as_of", "canonicalisation"} {
 		if params[want] == "" {
 			t.Errorf("derivation does not record %q", want)
 		}
@@ -196,11 +305,11 @@ func TestTheDerivationAddressDependsOnTheCoordinate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	early, err := domain.DeriveHoldingObserved(stream, claimed, asOf(t, day(2), knowledge(10)))
+	early, err := domain.DeriveHoldingObserved(stream, claimed, rules(), asOf(t, day(2), knowledge(10)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	late, err := domain.DeriveHoldingObserved(stream, claimed, asOf(t, day(2), knowledge(50_000)))
+	late, err := domain.DeriveHoldingObserved(stream, claimed, rules(), asOf(t, day(2), knowledge(50_000)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,7 +338,7 @@ func TestAClaimWithNoMintDerivesNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := domain.DeriveHoldingObserved(stream, claimed, asOf(t, day(2), knowledge(10))); !errors.Is(err, domain.ErrUnresolved) {
+	if _, err := domain.DeriveHoldingObserved(stream, claimed, rules(), asOf(t, day(2), knowledge(10))); !errors.Is(err, domain.ErrUnresolved) {
 		t.Fatalf("expected ErrUnresolved, got %v", err)
 	}
 }
@@ -266,11 +375,20 @@ func mintFact(t *testing.T, effective, known temporal.Instant, claim identity.Cl
 	if claim.Scheme() == "account_number" {
 		kind = identity.KindAccount
 	}
-	minted, err := domain.MintFor(kind, claim)
+	return entry{envelope: envelopeAt(t, effective, known), payload: mintPayload(t, kind, claim)}
+}
+
+// rules is the ruleset every test here resolves under: the one this build
+// ships (ADR-0033).
+func rules() identity.Ruleset { return identity.Canonicalisation() }
+
+func mintPayload(t *testing.T, kind identity.Kind, claim identity.Claim) domain.EntityMinted {
+	t.Helper()
+	minted, err := domain.MintFor(kind, claim, rules(), nil, provenance.ConfidenceAsserted)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return entry{envelope: envelopeAt(t, effective, known), payload: minted}
+	return minted.Value()
 }
 
 func claimedFact(t *testing.T, effective, known temporal.Instant, account, instrument identity.Claim, qty string) entry {

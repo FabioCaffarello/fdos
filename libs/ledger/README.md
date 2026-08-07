@@ -26,6 +26,12 @@ is derived from them, with the trace that produced it.
 | `domain/` | Facts, streams, claims, resolution, the position projection | `kernel` |
 | `app/` | Use cases and the ports they depend on | `kernel`, own `domain` |
 | `adapters/` | In-memory store, injected clock | `kernel`, own `domain`, own `app` |
+| `storetest/` | The conformance suite every `app.Store` must pass | `kernel`, own `domain`, own `app` |
+
+`storetest/` is exported rather than internal because `app.Store` is: an
+out-of-tree adapter that cannot run the suite is one nobody can hold to the
+contract. It lives here rather than in an adapter so that a second engine does
+not have to depend on the first merely to be tested (ADR-0034).
 
 The dependency rule is ADR-0013's and is enforced by the `layering` analyser,
 not by review.
@@ -61,14 +67,41 @@ two instruments silently inside an append-only ledger (ADR-0007).
 
 So a connector emits a **claim**; minting an identity is itself a **fact**; and
 resolution is a **derivation recorded in the ledger** rather than a
-precondition of appending (ADR-0022). `Resolve`, `MintFor` and
-`DeriveHoldingObserved` are that path.
+precondition of appending (ADR-0022).
 
-**Nobody notices an unresolved claim yet.** Claims can accumulate with no
-`HoldingObserved` derived and nothing reporting it — a connector can publish
-faithfully into silence. Who is told, and how, is operational and undecided; it
-is recorded in [`../../docs/blocked.md`](../../docs/blocked.md) under B-007
-rather than left to be discovered.
+The path, in the order it runs:
+
+| Step | Use case | What it may not do |
+|------|----------|--------------------|
+| Admit | `AcceptHoldingClaim` | resolve, or mint |
+| Look | `UnresolvedClaims` | resolve, or mint — looking must not be what stops a claim waiting |
+| Mint | `MintIdentity` | mint twice; a claim that already resolves is refused |
+| Derive | `ObserveClaimedHolding` | mint, or derive from a claim that does not resolve |
+
+`MintIdentity` is the **only** thing here that appends an `EntityMinted` fact,
+and that is the decision rather than an implementation detail (ADR-0033).
+Admission cannot mint because an identity that came into existence because a
+stranger submitted a claim is an identity nobody chose; inspection cannot mint
+because the act of looking must not change the ledger.
+
+Resolution decides sameness by a **versioned per-scheme ruleset**, applied
+before `identity.Derive` and never inside it. A rule exists only for a scheme
+whose issuing standard defines a canonical form, so `isin` has one and `ticker`
+cannot — deciding that `PETR4` and `PETR4.SA` are one instrument is a merge, and
+merges are recorded as `EntitiesIdentified`, never performed (ADR-0007,
+ADR-0033).
+
+**Who is entitled to mint is not answered.** A mint records a `Source` and an
+`Interpreter` and nothing verifies either, so the authority boundary today is
+the process boundary: whoever can call `MintIdentity` can mint. ADR-0033 records
+that at rung 6 rather than dressing it as something stronger.
+
+**Nobody is *told* about an unresolved claim.** `UnresolvedClaims` makes it
+askable and nothing asks — a connector can still publish faithfully into
+silence if no operator looks. Who is told, and how, is operational and
+undecided; it is tracked on
+[issue #57](https://github.com/FabioCaffarello/fdos/issues/57), which carries
+what remains of B-007 (ADR-0032).
 
 ## Adding a payload
 

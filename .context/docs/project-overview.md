@@ -52,9 +52,24 @@ existence because a stranger submitted a claim is an identity nobody chose, and
 once a producer depends on that, removing it changes what the ledger does.
 `UnresolvedClaims` reports which claims are waiting.
 
-So the current gap is the mirror of the one M8 closed: **nothing mints, so a
-claim cannot yet become an observation.** `Resolve`, `MintFor` and
-`DeriveHoldingObserved` exist and no caller invokes them. That is M9.
+### What M9 Track A closed
+
+That gap — **nothing minted, so a claim could not become an observation** — is
+closed. `app.Ledger.MintIdentity` is the only thing that appends an
+`EntityMinted` fact, and `ObserveClaimedHolding` derives the observation once
+both claims resolve. Admission and inspection still mint nothing, which is the
+pair of negatives M8 established (ADR-0033).
+
+Resolution now decides sameness by a **versioned per-scheme canonicalisation
+ruleset**, applied before `identity.Derive` rather than inside it. A rule exists
+only for a scheme whose issuing standard defines a canonical form — `isin`,
+`cusip`, `sedol`, `figi` — so `ticker` has none and cannot have one. An agent
+tempted to add a `ticker` rule is proposing a merge, and merges are recorded as
+`EntitiesIdentified`, never performed.
+
+**Who is entitled to mint is still unanswered.** A mint records an authority and
+nothing verifies it, so the boundary is the process boundary. Rung 6, recorded
+as such, and adjacent to D2.
 
 There is still **no application** — `apps/` is empty, and a composition root
 needs something to compose.
