@@ -159,12 +159,21 @@ func TestEntityMintedRoundTrips(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		envelope, ref := genEnvelope(t)
 		claim := genClaim(t, "ticker", "born_from")
-		minted, err := domain.MintFor(identity.KindInstrument, claim)
+		// MintFor now canonicalises before deriving and returns the mint
+		// explained, so the payload comes out of the Explained value
+		// (ADR-0033). The codec still sees the same EntityMinted shape, which
+		// is why this suite kept passing against libs/ledger v0.3.0 while the
+		// call site did not compile against v0.4.0.
+		explainedMint, err := domain.MintFor(
+			identity.KindInstrument, claim, identity.Canonicalisation(), nil, provenance.ConfidenceAsserted)
 		if err != nil {
 			t.Fatalf("mint: %v", err)
 		}
+		minted := explainedMint.Value()
 
-		original, err := domain.NewFact(ref, envelope, domain.KindObservation, minted)
+		// A mint is an occurrence: FDOS decided the identity, nobody observed
+		// it coming into existence (ADR-0034).
+		original, err := domain.NewFact(ref, envelope, domain.KindOccurrence, minted)
 		if err != nil {
 			t.Fatalf("new fact: %v", err)
 		}
