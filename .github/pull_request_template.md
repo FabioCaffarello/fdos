@@ -45,7 +45,35 @@ If this adds an enforcement mechanism:
       check failed with a useful message, and the working tree was restored and
       verified
 
-> A check that has never gone red is unverified.
+If this changes behaviour an existing test guards:
+
+- [ ] That test was **mutation-checked**: the new behaviour was reverted or
+      disabled, the guarding test went red *for the stated reason*, and the
+      change was restored and verified
+
+> A check that has never gone red is unverified — and one that goes red for a
+> different reason than you think is worse, because it will keep passing when
+> the thing it names actually breaks.
+
+<!--
+Both of the above want the same evidence and neither is satisfied by "tests
+pass". Paste the failure message. In M9 a mutation showed `MintIdentity`
+returning `nil` and recording a duplicate mint; in M10 one showed a store
+answering `ErrStaleRead` and appending anyway. Neither was visible from a green
+run.
+-->
+
+## If a session opened this pull request
+
+<!--
+`gh pr create --body …` replaces this template rather than appending to it, so
+a PR opened that way never sees the checklists above. Four PRs in M10 were
+opened that way and none carried them.
+-->
+
+- [ ] Opened by a person, from this template
+- [ ] Opened by a session — the checklists above were read and carried into the
+      body deliberately, not skipped by the tool
 
 ## Contract surface
 
