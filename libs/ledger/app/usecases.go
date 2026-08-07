@@ -27,6 +27,12 @@ type Ledger struct {
 	store Store
 	clock Clock
 	rules identity.Ruleset
+
+	// writes serialises the clock read with the append, per stream (ADR-0036).
+	// Not injected: it is an invariant of this type rather than a policy a
+	// composition root chooses, and a caller that could supply a no-op could
+	// disable a correctness property from outside.
+	writes streamLocks
 }
 
 // NewLedger wires the application service.
@@ -37,6 +43,14 @@ type Ledger struct {
 // is a composition-root decision to be made rather than defaulted into
 // (ADR-0033). `identity.Canonicalisation()` is what a caller almost always
 // wants; being made to name it is the point.
+//
+// # Construct one per process, not one per request
+//
+// The returned Ledger owns the lock table that serialises writes to a stream
+// (ADR-0036). Two Ledgers over one store share nothing, so concurrent writers
+// holding different instances are exactly as unserialised as they were before
+// that decision. Nothing detects it: the symptom is a legitimate append refused
+// with ErrNonMonotonicKnowledge, which reads like clock skew.
 func NewLedger(store Store, clock Clock, rules identity.Ruleset) (*Ledger, error) {
 	if store == nil || clock == nil {
 		return nil, errors.New("app: ledger needs a store and a clock")
@@ -73,6 +87,8 @@ type ObserveHoldingCommand struct {
 // This is the only place knowledge time is produced, and it comes from the
 // injected clock rather than from the caller or from `time.Now()`.
 func (l *Ledger) ObserveHolding(ctx context.Context, cmd ObserveHoldingCommand) (domain.Ref, error) {
+	defer l.writes.hold(cmd.Stream)()
+
 	coordinates, err := temporal.Assign(cmd.Effective, l.clock.Now())
 	if err != nil {
 		return domain.Ref{}, fmt.Errorf("assign coordinates: %w", err)
@@ -128,6 +144,11 @@ type CorrectFactCommand struct {
 
 // CorrectFact appends a correction as a new fact. Nothing is mutated.
 func (l *Ledger) CorrectFact(ctx context.Context, cmd CorrectFactCommand) (domain.Ref, error) {
+	// Held across the read as well as the write: this correction is built from a
+	// fact read out of the stream, so serialising only the append would leave the
+	// read it depends on unprotected.
+	defer l.writes.hold(cmd.Stream)()
+
 	stream, err := l.store.Load(ctx, cmd.Stream)
 	if err != nil {
 		return domain.Ref{}, err
@@ -246,6 +267,8 @@ type AcceptHoldingClaimCommand struct {
 // enforced — because there was no admission point to enforce it at. This is
 // that point.
 func (l *Ledger) AcceptHoldingClaim(ctx context.Context, cmd AcceptHoldingClaimCommand) (domain.Ref, error) {
+	defer l.writes.hold(cmd.Stream)()
+
 	if err := cmd.Source.CheckContentAddress(); err != nil {
 		return domain.Ref{}, fmt.Errorf("admission: %w", err)
 	}
@@ -369,6 +392,11 @@ type MintIdentityCommand struct {
 // the claim fact answered, and the ruleset under which the seed was
 // canonicalised.
 func (l *Ledger) MintIdentity(ctx context.Context, cmd MintIdentityCommand) (domain.Ref, error) {
+	// Held across resolve-then-append, which is the sequence AtLength exists to
+	// protect. In one process this makes the expectation unviolatable; across
+	// processes the store's check is still the guard (ADR-0036).
+	defer l.writes.hold(cmd.Stream)()
+
 	if err := cmd.Source.CheckContentAddress(); err != nil {
 		return domain.Ref{}, fmt.Errorf("mint: %w", err)
 	}
@@ -493,6 +521,10 @@ func (l *Ledger) ObserveClaimedHolding(
 	ctx context.Context,
 	cmd ObserveClaimedHoldingCommand,
 ) (domain.Ref, error) {
+	// Held across the read: the derivation below is built from facts in this
+	// stream, at a coordinate that must not move underneath it.
+	defer l.writes.hold(cmd.Stream)()
+
 	stream, err := l.store.Load(ctx, cmd.Stream)
 	if err != nil {
 		return domain.Ref{}, err
