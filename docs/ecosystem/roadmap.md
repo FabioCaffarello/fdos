@@ -26,7 +26,7 @@ justifying, and one that blocks someone needs to be visible to them (E3).
 | M9 | **Resolution** — who mints, when, on whose authority; per-scheme canonicalisation before `Derive`. Track B (agent knowledge and harness) delivered in-milestone | Track A gated on [PR #51](https://github.com/FabioCaffarello/fdos/pull/51); open items in [#57](https://github.com/FabioCaffarello/fdos/issues/57) |
 | M9.5 | Governance ops — PREVC adopted (ADR-0031), blocked register moved to issues (ADR-0032), issue templates, hygiene | in progress, gate [PR #52](https://github.com/FabioCaffarello/fdos/pull/52) |
 | M10 | **Persistence** — the ledger event store: durable facts, bitemporal as-of reads, reproducible. RFC before code | after M9 Track A |
-| M11 | **Transport** — first composition root in `apps/`: a submission service over `fdos.ingest.v1`; makes D2 a live decision | after M10 |
+| M11 | **Transport** — first composition root in `apps/`: a submission service over `fdos.ingest.v1`; makes D2 a live decision | plan gate open; two preconditions named there — ADR-0029's "never a service" clause, and D2 |
 | M12 | **Consumer enablement** — validator binary and conformance kit distributed; unblocks `fdos-connectors` C4 | after M11 and the D4 decision ([fdos#28](https://github.com/FabioCaffarello/fdos/issues/28)) |
 
 ### The `content_hash` rename, and why it has no deadline
