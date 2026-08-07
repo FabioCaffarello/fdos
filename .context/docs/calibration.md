@@ -48,8 +48,8 @@ did not match reality; policy triggers; drift found by `context-check` and
 ## The harness bootstrap
 
 ```
-workflow-init({ name: "<milestone-slug>" })
-harness createSession({ name, metadata: { milestone, gatePr } })
+workflow-init({ name: "<milestone-slug>", archive_previous: true })
+    → creates AND binds the harness session; take its id from the result
 workflow-manage defineTask({ taskTitle, acceptanceCriteria: <the gate's>,
                              requiredSensors: ["verify"] })
 … work by phases, workflow-advance at transitions …
@@ -57,12 +57,26 @@ harness recordSensor after every make verify
 workflow-manage checkpoint · harness completeSession
 ```
 
+**Do not call `harness createSession`.** An earlier version of this sequence
+listed it as step 2, carrying the milestone and gate-PR metadata. `workflow-init`
+has already created a session and bound it, so a second one is created and
+immediately orphaned: `defineTask` and `recordSensor` bind to the **first**,
+and the metadata ends up in a session holding no evidence. Measured in M11,
+by following this document literally. Record milestone and gate PR as
+`workflow-manage checkpoint` data instead — the checkpoint lands on the session
+the sensors are on.
+
 Known upstream defects (measured in the pilot, reported against
 `vinilana/dotcontext`): `sync` `dryRun` writes (the B-004 incident, issue
 [#54](https://github.com/FabioCaffarello/fdos/issues/54)); `plan link` rejects
 `required_sensors` in every documented format while half-registering the link,
 so phase gates may need an explicit, trace-recorded `force`. Never call
 `sync export*` from a session.
+
+The orchestration guidance returned by `workflow-init` recommends agents this
+repository deliberately does not have — `frontend-specialist` for a Go ledger,
+three sessions running. It is noise; ignore it rather than reporting it each
+time.
 
 ## The prompt template
 
