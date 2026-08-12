@@ -37,7 +37,7 @@ endef
 
 .PHONY: help bootstrap hooks doctor verify verify-timings affected ci-summary ci-stats \
 	toolchain-check toolchain-checksum-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
-	context-check agent-contract-check workspace-check pin-check proto-check proto-gen proto-lint proto-breaking consumer-check \
+	context-check agent-contract-check workspace-check pin-check registry-check release-plan affected-preflight proto-check proto-gen proto-lint proto-breaking consumer-check \
 	fmt fmt-check vet lint test analyze repro-check tidy tidy-check build clean \
 	secrets-check secrets-check-staged vuln-check commit-msg-check commit-msg-check-file
 
@@ -74,7 +74,7 @@ hooks: ## Install the git hooks (lefthook)
 # watched.
 VERIFY_TARGETS := toolchain-check toolchain-checksum-check contracts-check adr-check adr-immutability-check \
                   rfc-check constitution-check action-pinning-check context-check \
-                  agent-contract-check proto-check pin-check secrets-check tidy-check \
+                  agent-contract-check proto-check pin-check registry-check secrets-check tidy-check \
                   fmt-check vet workspace-check lint test analyze vuln-check repro-check
 
 verify: $(VERIFY_TARGETS) ## Run every enforcement mechanism available at this milestone
@@ -85,6 +85,19 @@ verify-timings: ## Run the gate with a stopwatch, reporting what each check cost
 
 affected: ## Print the modules affected by the current change
 	@$(SCRIPTS_DIR)/affected-modules.sh $(BASE)
+
+# ADR-0014 rejected pruning the gate by affectedness and said where the speed
+# belongs instead: "Speed belongs in a separate job." This is that job. It runs
+# a strict subset of what `verify` runs, so it cannot fail while the gate is
+# green — an advisory check that can go red alone is one people learn to ignore.
+affected-preflight: ## Run vet, lint and test over affected modules only (not the gate)
+	@$(SCRIPTS_DIR)/affected-preflight.sh $(BASE)
+
+# The affected graph and the release graph are the same graph. This is the one
+# command that answers "which modules now need a tag, and in what order" — a
+# question three milestones answered by hand (ADR-0045).
+release-plan: ## Print the release chain this change implies, in order
+	@$(SCRIPTS_DIR)/release-plan.sh $(BASE)
 
 # ---------------------------------------------------------------------------
 # Governance
@@ -132,6 +145,9 @@ workspace-check: ## Assert the tree compiles against its own source, not only ag
 
 pin-check: ## Assert first-party pins name published versions, and a changed module pins current
 	@$(SCRIPTS_DIR)/verify-module-pins.sh
+
+registry-check: ## Assert the contract registry describes the tags that exist
+	@$(SCRIPTS_DIR)/verify-registry.sh
 
 # ---------------------------------------------------------------------------
 # Contracts

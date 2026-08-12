@@ -66,6 +66,9 @@ without pushing, and drifts from what developers actually execute.
 | `make contracts-check` | Every directory declares a valid contract |
 | `make workspace-check` | The tree compiles against its own source, not only published versions |
 | `make pin-check` | First-party pins name published versions; a changed module pins current |
+| `make registry-check` | The contract registry describes the tags that exist |
+| `make release-plan` | The tag chain this change implies, in order (plans; does not publish) |
+| `make affected-preflight` | vet, lint and test over affected modules only — **not** the gate |
 | `make adr-check` | Decision log well-formed; supersession bidirectional |
 | `make rfc-check` | RFC set well-formed; an Accepted RFC produced ADRs |
 | `make constitution-check` | Every principle appears in the §15 enforcement table |
@@ -83,7 +86,7 @@ without pushing, and drifts from what developers actually execute.
 | `make verify-timings` | The gate with a stopwatch — what each check costs |
 | `make ci-summary` | The run environment and build-cache state |
 | `make ci-stats` | Duration percentiles and failure rate of recent gate runs |
-| `make affected` | Print the modules a change affects |
+| `make affected` | Print the modules a change affects — the same graph `release-plan` orders |
 | `make doctor` | Diagnose this working copy and name the fix for each problem |
 | `make proto-check` | Contract surface: lint, format, breaking, pinning, drift, FDOS schema rules |
 | `make proto-gen` | Regenerate Go from the proto schemas |
@@ -115,6 +118,9 @@ unreviewed change to the dependency graph.
 | `verify-tool-checksums.sh` | §9, ADR-0043 — downloaded artifacts are identified by digest | 3 |
 | `verify-workspace.sh` | §11, ADR-0044 — the tree is consistent with itself, not only resolvable | 3 |
 | `verify-module-pins.sh` | §11, ADR-0044 — a changed module pins what its siblings released | 3 |
+| `verify-registry.sh` | §11, ADR-0024, ADR-0045 — the registry matches the published tags | 3 |
+| `release-plan.sh` | nothing — orders the release chain a change implies (ADR-0045) | — |
+| `affected-preflight.sh` | nothing — advisory fast failure over affected modules | — |
 | `verify-directory-contracts.sh` | §10 — declared architectural boundaries | 2–3 |
 | `verify-adr.sh` | §14 — append-only decision log | 3 |
 | `verify-rfc.sh` | §14 — design is decided before it is built | 3 |
