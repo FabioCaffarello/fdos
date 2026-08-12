@@ -24,7 +24,7 @@ Forge configuration for FDOS. Governed by ADR-0014.
 
 | Workflow | Trigger | Runs |
 |----------|---------|------|
-| `verify.yml` | every push to `main`, every pull request | `make verify`, then `make ci-summary` |
+| `verify.yml` | every push to `main`, every pull request | `make affected-preflight` (advisory), `make verify`, then `make ci-summary` |
 | `supply-chain.yml` | pull requests, weekly schedule | dependency review; scheduled vulnerability and secret scans |
 | `release.yml` | tags matching `libs/*/v*` | build, SBOM, provenance attestation, cosign signature |
 | `ci-telemetry.yml` | weekly schedule, manual dispatch | `make ci-stats`, `make verify-timings` |

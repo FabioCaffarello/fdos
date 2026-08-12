@@ -31,6 +31,37 @@ env:
   GOWORK: "off"
 
 jobs:
+  # Fast failure over the affected modules only, and **not a gate**.
+  #
+  # ADR-0014 rejected pruning `verify` by affectedness — under-reporting ships a
+  # broken module and the failure is silent — and named where the speed belongs:
+  # "Speed belongs in a separate job." This is that job (ADR-0045).
+  #
+  # It runs a strict subset of what `verify` runs, over a subset of the modules,
+  # so it cannot go red while the gate is green. That is deliberate: a
+  # non-required check that can fail on its own is one people learn to ignore,
+  # and this repository has already disabled one for exactly that reason.
+  #
+  # `verify` does not depend on it. Making the gate wait on an advisory job
+  # would make the advisory job a gate.
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The affected set is a diff against the base, so the base has to be
+          # in the clone.
+          fetch-depth: 0
+
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup-toolchain
+
+      - name: make affected-preflight
+        run: make affected-preflight BASE=origin/${{ github.base_ref || 'main' }}
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20

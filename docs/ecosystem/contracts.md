@@ -48,6 +48,7 @@ module's directory prefix, so the tag names the path, not the concept.
 | `v0.3.0` | `kernel.v1.IdentifierClaim`, `ledger.payload.v1.HoldingClaimed`, `ledger.payload.v1.EntityMinted` — the shape a connector can populate without minting an identity ([ADR-0022](../adr/0022-minting-an-identity-is-a-fact.md)) | no |
 | `v0.4.0` | The `SourceRef` grammar, the `collected_at` correction, and the reserved `unmediated` interpreter — documentation only ([ADR-0028](../adr/0028-provenance-admissibility.md)) | no |
 | `v0.5.0` | `ingest.v1.HoldingClaimSubmission` — the first shape a producer outside FDOS can fill ([ADR-0030](../adr/0030-the-submission-shape.md)) | no |
+| `v0.6.0` | `kernel.v1.RoundingContext` carries a scale, so a rounded amount states the minor units it was rounded to rather than leaving them inferred | no |
 
 No breaking change has been published. `buf breaking` gates every pull request
 (`make proto-check`), so the first one will be deliberate.
@@ -59,7 +60,7 @@ publishes and another vendors, so it is discovered the same way.
 
 | Artifact | Version | Status | Consumers |
 |---|---|---|---|
-| `docs/ecosystem/` | `ecosystem/v0.3.0` | published | `fdos-connectors` — last pinned `v0.1.0`, two versions behind ([fdos-connectors#18](https://github.com/FabioCaffarello/fdos-connectors/issues/18), mirror [fdos#32](https://github.com/FabioCaffarello/fdos/issues/32)) |
+| `docs/ecosystem/` | `ecosystem/v0.3.1` | published | `fdos-connectors` — last pinned `v0.1.0`, two versions behind ([fdos-connectors#18](https://github.com/FabioCaffarello/fdos-connectors/issues/18), mirror [fdos#32](https://github.com/FabioCaffarello/fdos/issues/32)) |
 
 The tag does not match `libs/*/v*` and so does not trigger `release.yml`. There
 is nothing to build, sign or attest: the artifact is the tree at the tag.
@@ -77,7 +78,7 @@ that decision, **not an offer**.
 
 | Module | Version | Offered | Consumed externally |
 |---|---|---|---|
-| `libs/kernel` | `v0.8.0` | no | no |
+| `libs/kernel` | `v0.9.0` | no | no |
 | `libs/ledger` | `v0.8.0` | no | no |
 | `libs/kernel-wire` | `v0.2.0` | no | no |
 | `libs/ledger-wire` | `v0.4.0` | no | no |
