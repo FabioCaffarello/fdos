@@ -39,7 +39,7 @@ endef
 	toolchain-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
 	context-check agent-contract-check proto-check proto-gen proto-lint proto-breaking consumer-check \
 	fmt fmt-check vet lint test analyze repro-check tidy tidy-check build clean \
-	secrets-check secrets-check-staged vuln-check
+	secrets-check secrets-check-staged vuln-check commit-msg-check commit-msg-check-file
 
 help: ## Show available targets
 	@printf 'FDOS — Financial Data Operating System\n\n'
@@ -136,6 +136,22 @@ secrets-check: ## Scan the full history for committed secrets
 
 secrets-check-staged: ## Scan staged changes for secrets (used by the pre-commit hook)
 	@$(SCRIPTS_DIR)/verify-secrets.sh staged
+
+# Deliberately NOT in `verify`, and the reason is measured rather than cautious.
+# Nine of the last sixty commits on main violate the 72-character limit because
+# GitHub's squash-merge appends ` (#NN)` to a subject that was compliant when it
+# was written, and four more predate the convention. Wiring this into the gate
+# would fail on main today, for commits nobody can now amend (Constitution §4).
+#
+# This target ranges over `origin/main..HEAD` — the author's own commits, before
+# the forge rewrites them — which is the only range where a failure is both fair
+# and actionable. Raising it to a gate is an enforcement-ladder change and owes
+# an ADR (issue #109).
+commit-msg-check: ## Assert this branch's commit messages follow the convention
+	@$(SCRIPTS_DIR)/verify-commit-message.sh branch $(BASE)
+
+commit-msg-check-file: ## Assert one message file follows the convention (used by the commit-msg hook)
+	@$(SCRIPTS_DIR)/verify-commit-message.sh message $(MSG)
 
 vuln-check: ## Assert no known vulnerability is reachable from FDOS code
 	@$(SCRIPTS_DIR)/verify-vulns.sh

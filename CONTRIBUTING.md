@@ -239,7 +239,19 @@ Conventional prefixes: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`,
 subject under 50 characters; the `commit-msg` hook hard-fails above 72 and warns
 between the two.
 
-The hook checks the subject only. That the body records **why**, and states the
+`make commit-msg-check` runs the same check over every commit on your branch,
+without going through the hook. Use it after any `--no-verify`, and inside a
+linked git worktree, where lefthook drops the hook's argument and the commit
+aborts with `no message file given`
+([#109](https://github.com/FabioCaffarello/fdos/issues/109)).
+
+It is **not** part of `make verify`, and that is measured rather than cautious:
+GitHub's squash-merge appends ` (#NN)` to the subject, which pushes nine of the
+last sixty commits on `main` past 72 characters after they were written and
+accepted. The target ranges over `origin/main..HEAD` — your own commits, before
+the forge rewrites them — which is the only range where a failure is actionable.
+
+The check covers the subject only. That the body records **why**, and states the
 costs accepted, is not something a regexp can check — it stays a review
 obligation.
 

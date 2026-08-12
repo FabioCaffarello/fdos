@@ -70,6 +70,7 @@ without pushing, and drifts from what developers actually execute.
 | `make secrets-check` | Full git history scanned for secrets (`gitleaks`) |
 | `make vuln-check` | No known vulnerability reachable from FDOS code (`govulncheck`) |
 | `make hooks` | Install the git hooks (`lefthook`) |
+| `make commit-msg-check` | This branch's commit subjects follow the convention — not in `verify` |
 | `make affected` | Print the modules a change affects |
 | `make doctor` | Diagnose this working copy and name the fix for each problem |
 | `make proto-check` | Contract surface: lint, format, breaking, pinning, drift, FDOS schema rules |
