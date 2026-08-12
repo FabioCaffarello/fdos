@@ -267,7 +267,15 @@ func TestDerivingAnObservationNamesTheClaimAndBothMints(t *testing.T) {
 	if got := result.Record().Inputs(); !slices.Equal(got, wantInputs) {
 		t.Errorf("inputs are %v, want the claim and both mints %v", got, wantInputs)
 	}
-	if !result.Value().Account.Equal(identity.MustDerive(identity.KindAccount, rules().Fold(account).String())) {
+	// Derived the way minting derives — through the folded claim, not through a
+	// flattened `scheme:value` (ADR-0040). Reproducing the route rather than
+	// pinning a literal is what makes this assert that resolution found the mint,
+	// instead of asserting which bytes the kernel happens to hash.
+	wantAccount, err := identity.DeriveFromClaim(identity.KindAccount, rules().Fold(account))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Value().Account.Equal(wantAccount) {
 		t.Error("account resolved to the wrong identity")
 	}
 
@@ -448,4 +456,58 @@ func day(n int) temporal.Instant {
 func knowledge(hours int) temporal.Instant {
 	return temporal.MustAt(time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC).
 		Add(time.Duration(hours) * time.Hour))
+}
+
+// The collision closed end to end, which is what neither half could do alone.
+//
+// Measured on 2026-08-10: `claim("ticker", "x:y")` and `claim("ticker:x", "y")`
+// flattened to one `scheme:value` rendering, so minting derived one identifier
+// for both and resolution answered either claim with the other's identity. A
+// silent merge, in an append-only ledger, which ADR-0007 forbids and records as
+// EntitiesIdentified instead.
+//
+// Both assertions matter and they are not redundant. Minting apart while
+// resolving together would answer the wrong claim; resolving apart while minting
+// together would mint a second identity for an entity that already has one. The
+// invariant ADR-0033 states — two claims resolve to the same identity if and only
+// if minting them derives the same identity — is what ties them, and ADR-0040 is
+// why both sides had to move in one commit.
+func TestAMovedClaimBoundaryNeitherMintsNorResolvesTogether(t *testing.T) {
+	left := identity.MustClaim("ticker", "x:y")
+	right := identity.MustClaim("ticker:x", "y")
+
+	leftMint, err := domain.MintFor(
+		identity.KindInstrument, left, rules(), []string{"acct-1#1"}, provenance.ConfidenceAsserted)
+	if err != nil {
+		t.Fatalf("mint %s: %v", left, err)
+	}
+	rightMint, err := domain.MintFor(
+		identity.KindInstrument, right, rules(), []string{"acct-1#2"}, provenance.ConfidenceAsserted)
+	if err != nil {
+		t.Fatalf("mint %s: %v", right, err)
+	}
+
+	if leftMint.Value().Entity.Equal(rightMint.Value().Entity) {
+		t.Fatalf("%s and %s minted one identity (%s) — two claims, one entity, silently",
+			left, right, leftMint.Value().Entity)
+	}
+
+	// And resolution agrees: the stream holds only the left mint, so the right
+	// claim must find nothing rather than find the left entity.
+	stream := streamWith(t,
+		entry{envelope: envelopeAt(t, day(1), knowledge(1)), payload: leftMint.Value()},
+	)
+
+	resolved, err := domain.Resolve(stream, left, rules(), asOf(t, day(2), knowledge(2)))
+	if err != nil {
+		t.Fatalf("the minted claim did not resolve to its own mint: %v", err)
+	}
+	if !resolved.Equal(leftMint.Value().Entity) {
+		t.Errorf("%s resolved to %s, want its own mint %s", left, resolved, leftMint.Value().Entity)
+	}
+
+	if _, err := domain.Resolve(stream, right, rules(), asOf(t, day(2), knowledge(2))); !errors.Is(err, domain.ErrUnresolved) {
+		t.Errorf("%s resolved against a stream that only minted %s (err=%v); that is a merge, "+
+			"and merges are recorded as facts", right, left, err)
+	}
 }
