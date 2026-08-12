@@ -33,64 +33,64 @@ func TestTheWorkedProducerConforms(t *testing.T) {
 // the expectation was wrong rather than the rule.
 func TestEveryRefusal(t *testing.T) {
 	for _, tc := range []struct {
-		name   string
-		break_ func(*ingestv1.HoldingClaimSubmission)
-		want   string
+		name    string
+		corrupt func(*ingestv1.HoldingClaimSubmission)
+		want    string
 	}{
 		{
-			name:   "a source that is not a content address",
-			break_: func(s *ingestv1.HoldingClaimSubmission) { s.Source.Value = "https://example.invalid/statement.pdf" },
-			want:   "malformed source",
+			name:    "a source that is not a content address",
+			corrupt: func(s *ingestv1.HoldingClaimSubmission) { s.Source.Value = "https://example.invalid/statement.pdf" },
+			want:    "malformed source",
 		},
 		{
-			name:   "a source digest of the wrong length",
-			break_: func(s *ingestv1.HoldingClaimSubmission) { s.Source.Value = "sha256:abc123" },
-			want:   "malformed source",
+			name:    "a source digest of the wrong length",
+			corrupt: func(s *ingestv1.HoldingClaimSubmission) { s.Source.Value = "sha256:abc123" },
+			want:    "malformed source",
 		},
 		{
-			name:   "an uppercase digest",
-			break_: func(s *ingestv1.HoldingClaimSubmission) { s.Source.Value = "sha256:" + strings.Repeat("A", 64) },
-			want:   "malformed source",
+			name:    "an uppercase digest",
+			corrupt: func(s *ingestv1.HoldingClaimSubmission) { s.Source.Value = "sha256:" + strings.Repeat("A", 64) },
+			want:    "malformed source",
 		},
 		{
-			name:   "no source at all",
-			break_: func(s *ingestv1.HoldingClaimSubmission) { s.Source = nil },
-			want:   "source",
+			name:    "no source at all",
+			corrupt: func(s *ingestv1.HoldingClaimSubmission) { s.Source = nil },
+			want:    "source",
 		},
 		{
-			name:   "no instrument",
-			break_: func(s *ingestv1.HoldingClaimSubmission) { s.Instrument = nil },
-			want:   "instrument",
+			name:    "no instrument",
+			corrupt: func(s *ingestv1.HoldingClaimSubmission) { s.Instrument = nil },
+			want:    "instrument",
 		},
 		{
-			name:   "an identifier scheme that is not canonical",
-			break_: func(s *ingestv1.HoldingClaimSubmission) { s.Instrument.Scheme = "Ticker" },
-			want:   "canonical",
+			name:    "an identifier scheme that is not canonical",
+			corrupt: func(s *ingestv1.HoldingClaimSubmission) { s.Instrument.Scheme = "Ticker" },
+			want:    "canonical",
 		},
 		{
-			name:   "an interpreter with no version",
-			break_: func(s *ingestv1.HoldingClaimSubmission) { s.Interpreter.Version = "" },
-			want:   "interpreter",
+			name:    "an interpreter with no version",
+			corrupt: func(s *ingestv1.HoldingClaimSubmission) { s.Interpreter.Version = "" },
+			want:    "interpreter",
 		},
 		{
-			name:   "no interpreter at all",
-			break_: func(s *ingestv1.HoldingClaimSubmission) { s.Interpreter = nil },
-			want:   "interpreter",
+			name:    "no interpreter at all",
+			corrupt: func(s *ingestv1.HoldingClaimSubmission) { s.Interpreter = nil },
+			want:    "interpreter",
 		},
 		{
-			name:   "no effective interval",
-			break_: func(s *ingestv1.HoldingClaimSubmission) { s.Effective = nil },
-			want:   "effective",
+			name:    "no effective interval",
+			corrupt: func(s *ingestv1.HoldingClaimSubmission) { s.Effective = nil },
+			want:    "effective",
 		},
 		{
-			name:   "an unspecified confidence",
-			break_: func(s *ingestv1.HoldingClaimSubmission) { s.Confidence = kernelv1.Confidence_CONFIDENCE_UNSPECIFIED },
-			want:   "confidence",
+			name:    "an unspecified confidence",
+			corrupt: func(s *ingestv1.HoldingClaimSubmission) { s.Confidence = kernelv1.Confidence_CONFIDENCE_UNSPECIFIED },
+			want:    "confidence",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			submission := build()
-			tc.break_(submission)
+			tc.corrupt(submission)
 
 			wire, err := proto.Marshal(submission)
 			if err != nil {

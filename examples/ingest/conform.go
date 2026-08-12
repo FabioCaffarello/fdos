@@ -10,10 +10,10 @@ import (
 	ingestv1 "github.com/FabioCaffarello/fdos/libs/contracts/gen/fdos/ingest/v1"
 	"github.com/FabioCaffarello/fdos/libs/kernel/identity"
 	"github.com/FabioCaffarello/fdos/libs/kernel/temporal"
+	ledgerwire "github.com/FabioCaffarello/fdos/libs/ledger-wire"
 	"github.com/FabioCaffarello/fdos/libs/ledger/adapters/clock"
 	"github.com/FabioCaffarello/fdos/libs/ledger/adapters/memory"
 	"github.com/FabioCaffarello/fdos/libs/ledger/app"
-	ledgerwire "github.com/FabioCaffarello/fdos/libs/ledger-wire"
 )
 
 // Check reports whether a serialized submission would be admitted.
