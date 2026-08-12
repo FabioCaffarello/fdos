@@ -91,6 +91,35 @@ removed fields are reserved permanently. Anything else is a new major version,
 and both versions remain readable forever because both exist in the ledger
 forever (ADR-0011).
 
+**Reserve the name alongside the number** (ADR-0040). `reserved 7;` alone is
+half the rule: `buf` emits *two* findings for a deletion — the field, and the
+name not being reserved — because a later field reusing the name breaks JSON
+compatibility even with a fresh number. So a deletion reads:
+
+```protobuf
+reserved 7;
+reserved "old_field_name";
+```
+
+There are **zero** field-number reservations on this surface today, because
+nothing has been deleted. That is the state to preserve, not a gap: the policy
+costs nothing until the first deletion, and measured, adding `reserved` on
+*unused* numbers passes `buf` — so there is no reason to pre-reserve.
+
+Nothing checks this. `buf breaking` catches the deletion that forgets the
+reservation, but nothing catches a `reserved` block that drifts from what was
+actually removed, and nothing can catch a number reused after a `reserved` line
+is deleted. It is rung 6 and ADR-0040 records it as rung 6.
+
+**`buf breaking` cannot see a change of meaning.** Measured with the pinned
+`buf`: redefining what a field *means* in comments alone **passes**. ADR-0024's
+"nothing that changes the meaning of an existing field is ever a minor bump" has
+no mechanism behind it, so a semantic change is caught in review or not at all.
+The same blindness covers values: a change that alters every value a field
+carries — a new identity namespace, a reframed hash pre-image — passes, because
+no schema moved. ADR-0040 §5 records that class and where it must be written
+down instead.
+
 ## What proto3 cannot do
 
 There is no `required`. The schema cannot make an envelope-less fact
