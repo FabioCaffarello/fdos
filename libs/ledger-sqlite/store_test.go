@@ -3,6 +3,7 @@ package sqlite_test
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
@@ -239,6 +240,101 @@ func TestTheSchemaRefusesADuplicateSequence(t *testing.T) {
 		`INSERT INTO facts (stream, sequence, effective_from, knowledge, encoded) VALUES ('acct-1', 1, 'x', 'y', x'00')`)
 	if err == nil {
 		t.Fatal("the schema accepted a second fact at sequence 1; a Ref would address two facts")
+	}
+}
+
+// A deleted interior row is corruption, not a shape to tolerate. This is the
+// scenario the 2026-08-07 audit measured: with the sequence derived from
+// COUNT(*), deleting row 2 of 3 made Load return the third fact under ref #2 —
+// silently re-pointing every later ref at different content — and made the next
+// Append collide with the surviving row, leaving the stream permanently
+// unappendable.
+//
+// An append-only stream whose sequence is assigned by the store (ADR-0034) has
+// no legitimate source of gaps, so both paths must refuse rather than repair.
+func TestAGapIsRefusedRatherThanRenumbered(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ledger.db")
+	store := open(t, path)
+	ctx := context.Background()
+	// A slice, not a map: knowledge time must increase with every append, and Go
+	// randomises map iteration order — the exact nondeterminism this repository's
+	// analysers exist to forbid, and it made this test flaky before it was fixed.
+	for hour, ticker := range []string{1: "PETR4", 2: "VALE3", 3: "ITUB4"}[1:] {
+		if _, err := store.Append(
+			ctx, "acct-1", app.Any(), envelopeAt(t, hour+1), domain.KindObservation, claim(t, ticker),
+		); err != nil {
+			t.Fatalf("seed %d: %v", hour, err)
+		}
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	raw := openRaw(t, path)
+	if _, err := raw.Exec(`DELETE FROM facts WHERE stream = 'acct-1' AND sequence = 2`); err != nil {
+		t.Fatal(err)
+	}
+	if err := raw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	reopened := open(t, path)
+
+	t.Run("Load refuses", func(t *testing.T) {
+		stream, err := reopened.Load(ctx, "acct-1")
+		if !errors.Is(err, sqlitestore.ErrGap) {
+			t.Fatalf("Load returned (%d facts, %v); want ErrGap — renumbering makes a "+
+				"FactCorrected name a different fact than the one it corrects", stream.Len(), err)
+		}
+	})
+
+	t.Run("Append refuses", func(t *testing.T) {
+		_, err := reopened.Append(
+			ctx, "acct-1", app.Any(), envelopeAt(t, 4), domain.KindObservation, claim(t, "BBAS3"))
+		if !errors.Is(err, sqlitestore.ErrGap) {
+			t.Fatalf("Append returned %v; want ErrGap rather than a UNIQUE constraint "+
+				"failure or a compounded gap", err)
+		}
+	})
+}
+
+// The sequence must come from what was stored, not from a count of what
+// survives. Load is asserted to reproduce the refs Append handed out, which is
+// the property a FactCorrected reference depends on.
+func TestLoadReproducesTheStoredSequences(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ledger.db")
+	store := open(t, path)
+	ctx := context.Background()
+
+	var appended []domain.Ref
+	// A slice, not a map: knowledge time must increase with every append, and Go
+	// randomises map iteration order — the exact nondeterminism this repository's
+	// analysers exist to forbid, and it made this test flaky before it was fixed.
+	for hour, ticker := range []string{1: "PETR4", 2: "VALE3", 3: "ITUB4"}[1:] {
+		ref, err := store.Append(
+			ctx, "acct-1", app.Any(), envelopeAt(t, hour+1), domain.KindObservation, claim(t, ticker))
+		if err != nil {
+			t.Fatalf("seed %d: %v", hour, err)
+		}
+		appended = append(appended, ref)
+	}
+
+	stream, err := store.Load(ctx, "acct-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stream.Len() != len(appended) {
+		t.Fatalf("loaded %d facts, appended %d", stream.Len(), len(appended))
+	}
+	for _, want := range appended {
+		fact, gErr := stream.Get(want)
+		if gErr != nil {
+			t.Errorf("ref %s is not resolvable after Load (%v); Append handed it to a caller", want, gErr)
+			continue
+		}
+		if got := fact.Ref(); got != want {
+			t.Errorf("Get(%s) returned a fact carrying ref %s", want, got)
+		}
 	}
 }
 

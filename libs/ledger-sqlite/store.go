@@ -103,15 +103,37 @@ func Open(dsn string) (*Store, error) {
 // Close releases the database.
 func (s *Store) Close() error { return s.db.Close() }
 
+// ErrGap is returned when a stream's stored sequences are not 1..N contiguous.
+//
+// An append-only stream whose sequence is assigned by the store (ADR-0034) has
+// no legitimate source of gaps: Append never reserves a number it might not use,
+// which is what makes gaplessness free here and expensive in a database sequence.
+// So a gap is not a condition to tolerate — it is evidence that rows were
+// deleted or the file was altered out of band, and the only safe response is to
+// refuse the stream and say which sequence is missing.
+//
+// Tolerating one is worse than it sounds. Replay assigns refs by position, so a
+// single missing row silently re-points every later ref at different content: a
+// FactCorrected naming s#3 would correct whatever landed at position 3 instead.
+var ErrGap = errors.New("sqlite: stream has a sequence gap")
+
 // Load rebuilds the stream from its facts, or returns app.ErrStreamNotFound.
 //
 // The stream is replayed through `domain.Stream.Append` rather than
 // reconstructed field by field, so a decoded fact goes through the same
 // constructor a new one does. A store that assembled a Stream directly could
 // produce one the domain would refuse to build.
+//
+// Replay assigns each ref from the stream's current length, so it reproduces the
+// stored sequences exactly when they are 1..N contiguous — and silently
+// renumbers them when they are not. The stored sequence is therefore read and
+// compared rather than discarded, which is what makes the replay's assumption
+// checked instead of assumed. The sequence is stored twice, in the column and
+// inside the encoded fact's own ref, and both are compared: they cannot
+// disagree unless the row was written by something other than Append.
 func (s *Store) Load(ctx context.Context, name string) (loaded domain.Stream, err error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT encoded FROM facts WHERE stream = ? ORDER BY sequence`, name)
+		`SELECT sequence, encoded FROM facts WHERE stream = ? ORDER BY sequence`, name)
 	if err != nil {
 		return domain.Stream{}, fmt.Errorf("sqlite: load %s: %w", name, err)
 	}
@@ -127,14 +149,38 @@ func (s *Store) Load(ctx context.Context, name string) (loaded domain.Stream, er
 
 	found := false
 	for rows.Next() {
+		var stored int64
 		var encoded []byte
-		if err := rows.Scan(&encoded); err != nil {
+		if err := rows.Scan(&stored, &encoded); err != nil {
 			return domain.Stream{}, fmt.Errorf("sqlite: scan %s: %w", name, err)
 		}
 		fact, err := decodeFact(encoded)
 		if err != nil {
 			return domain.Stream{}, fmt.Errorf("sqlite: %s: %w", name, err)
 		}
+
+		// What replay is about to assign. Rows arrive ordered by sequence, so a
+		// contiguous stream has stored == expected at every step.
+		//
+		// len() cannot be negative; the guard states it rather than assuming it, so
+		// the widening below is checked rather than hoped — the same shape Append
+		// uses for the same reason.
+		replayed := stream.Len()
+		if replayed < 0 {
+			return domain.Stream{}, fmt.Errorf("sqlite: %s replayed %d facts", name, replayed)
+		}
+		expected := uint64(replayed) + 1              //nolint:gosec // guarded non-negative above
+		if stored < 0 || uint64(stored) != expected { //nolint:gosec // guarded non-negative here
+			return domain.Stream{}, fmt.Errorf(
+				"%w: %s expected sequence %d, found %d — replay would renumber every later fact",
+				ErrGap, name, expected, stored)
+		}
+		if got := fact.Ref().Sequence; got != expected {
+			return domain.Stream{}, fmt.Errorf(
+				"%w: %s row %d carries ref %s#%d — the column and the encoded fact disagree",
+				ErrGap, name, expected, name, got)
+		}
+
 		stream, _, err = stream.Append(fact.Envelope(), fact.Kind(), fact.Payload())
 		if err != nil {
 			return domain.Stream{}, fmt.Errorf("sqlite: replay %s: %w", name, err)
@@ -183,12 +229,24 @@ func (s *Store) Append(
 	}()
 
 	var length int64
+	var highest sql.NullInt64
 	var lastKnowledge sql.NullString
 	err = tx.QueryRowContext(ctx,
-		`SELECT COUNT(*), MAX(knowledge) FROM facts WHERE stream = ?`, name).
-		Scan(&length, &lastKnowledge)
+		`SELECT COUNT(*), MAX(sequence), MAX(knowledge) FROM facts WHERE stream = ?`, name).
+		Scan(&length, &highest, &lastKnowledge)
 	if err != nil {
 		return domain.Ref{}, fmt.Errorf("sqlite: read %s: %w", name, err)
+	}
+
+	// COUNT and MAX answer two different questions, and conflating them was the
+	// defect: COUNT is how many facts survive, MAX is what position the last one
+	// holds. They are equal exactly when the sequences are 1..N contiguous, so
+	// comparing them is a whole-stream integrity check at no extra cost — no
+	// second query, no row scan. Appending onto a gap would compound it.
+	if highest.Valid && highest.Int64 != length {
+		return domain.Ref{}, fmt.Errorf(
+			"%w: %s holds %d facts with highest sequence %d",
+			ErrGap, name, length, highest.Int64)
 	}
 
 	if want, checked := expect.Length(); checked && int(length) != want {
@@ -203,12 +261,18 @@ func (s *Store) Append(
 			app.ErrNonMonotonicKnowledge, name, lastKnowledge.String, knowledge)
 	}
 
-	// COUNT(*) cannot be negative; the guard states it rather than assuming it,
-	// so the conversion below is checked rather than hoped.
-	if length < 0 {
-		return domain.Ref{}, fmt.Errorf("sqlite: %s reported %d facts", name, length)
+	// The next sequence comes from the highest one stored, never from a count of
+	// surviving rows. Every mature event store assigns and stores the sequence
+	// rather than recomputing it: COUNT(*)+1 collides with a live row the moment
+	// any row is missing, which makes the stream permanently unappendable.
+	//
+	// The gap check above already proved COUNT and MAX agree, so this is the same
+	// number today — but it is the correct number for the same reason a stored
+	// sequence is the correct thing to load.
+	if highest.Int64 < 0 {
+		return domain.Ref{}, fmt.Errorf("sqlite: %s reported highest sequence %d", name, highest.Int64)
 	}
-	ref = domain.Ref{Stream: name, Sequence: uint64(length) + 1} //nolint:gosec // guarded non-negative above
+	ref = domain.Ref{Stream: name, Sequence: uint64(highest.Int64) + 1} //nolint:gosec // guarded non-negative above
 	fact, err := domain.NewFact(ref, envelope, kind, payload)
 	if err != nil {
 		return domain.Ref{}, fmt.Errorf("sqlite: %w", err)
