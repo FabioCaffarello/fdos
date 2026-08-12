@@ -19,6 +19,15 @@ outputs:
   go-version:
     description: The Go version resolved from mise.toml
     value: ${{ steps.pins.outputs.go }}
+  # Whether `setup-go` restored the module and build caches.
+  #
+  # Exposed because the gate's duration is bimodal — 87s to 279s across twenty
+  # runs, a 3.2x spread — and nothing recorded which mode a run was in. The
+  # cache was the plausible explanation and stayed plausible for want of one
+  # boolean (RFC-0018 Phase 0).
+  cache-hit:
+    description: Whether the Go module and build caches were restored
+    value: ${{ steps.go.outputs.cache-hit }}
 
 runs:
   using: composite
@@ -37,6 +46,7 @@ runs:
         } >> "$GITHUB_OUTPUT"
 
     - name: Set up Go
+      id: go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version: ${{ steps.pins.outputs.go }}

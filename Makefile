@@ -35,7 +35,7 @@ define FOR_EACH_MODULE
 	done
 endef
 
-.PHONY: help bootstrap hooks doctor verify affected \
+.PHONY: help bootstrap hooks doctor verify verify-timings affected ci-summary ci-stats \
 	toolchain-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
 	context-check agent-contract-check proto-check proto-gen proto-lint proto-breaking consumer-check \
 	fmt fmt-check vet lint test analyze repro-check tidy tidy-check build clean \
@@ -65,10 +65,23 @@ hooks: ## Install the git hooks (lefthook)
 		printf 'lefthook not installed — hooks skipped. See mise.toml.\n'; \
 	fi
 
-verify: toolchain-check contracts-check adr-check adr-immutability-check rfc-check constitution-check \
-        action-pinning-check context-check agent-contract-check proto-check \
-        secrets-check tidy-check fmt-check vet lint test analyze vuln-check repro-check ## Run every enforcement mechanism available at this milestone
+# What the gate is, defined once.
+#
+# `verify` expands it as prerequisites; `verify-timings` passes it to a script
+# that runs the same checks with a stopwatch. Two consumers, one definition —
+# the `setup-toolchain` precedent (B-008): a second copy of what the gate
+# contains is the copy that drifts, and the drifted one is never the one being
+# watched.
+VERIFY_TARGETS := toolchain-check contracts-check adr-check adr-immutability-check \
+                  rfc-check constitution-check action-pinning-check context-check \
+                  agent-contract-check proto-check secrets-check tidy-check \
+                  fmt-check vet lint test analyze vuln-check repro-check
+
+verify: $(VERIFY_TARGETS) ## Run every enforcement mechanism available at this milestone
 	@printf '\nAll checks passed.\n'
+
+verify-timings: ## Run the gate with a stopwatch, reporting what each check costs
+	@$(SCRIPTS_DIR)/verify-timings.sh $(VERIFY_TARGETS)
 
 affected: ## Print the modules affected by the current change
 	@$(SCRIPTS_DIR)/affected-modules.sh $(BASE)
@@ -192,6 +205,20 @@ analyze: ## Enforce domain purity and layer boundaries (FDOS analysers)
 
 repro-check: ## Assert every command builds byte-reproducibly
 	@$(SCRIPTS_DIR)/verify-reproducible-build.sh
+
+# ---------------------------------------------------------------------------
+# Pipeline telemetry
+#
+# These enforce nothing. They exist because nothing here could say what the gate
+# costs or why one run took 2.9x another, and a plan to grow or shrink the gate
+# without those numbers is a guess (RFC-0018 Phase 0).
+# ---------------------------------------------------------------------------
+
+ci-summary: ## Report the run environment and build-cache state
+	@$(SCRIPTS_DIR)/ci-run-summary.sh
+
+ci-stats: ## Report duration percentiles and failure rate for recent gate runs
+	@$(SCRIPTS_DIR)/ci-run-stats.sh $(LIMIT)
 
 tidy: ## Tidy every module's dependencies
 	$(call FOR_EACH_MODULE,$(GO) mod tidy)
