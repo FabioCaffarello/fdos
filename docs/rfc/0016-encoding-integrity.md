@@ -11,7 +11,7 @@ authors:
 
 ## Summary
 
-Nine measured defects share one root: an encoding that leaves a process — a
+Nine measured defects shared one root: an encoding that leaves a process — a
 UUIDv5 seed, a content-address pre-image, a timestamp column, a sequence number
 — was built by string concatenation or by a convenient in-memory comparison,
 and nothing anywhere states that such an encoding must be **injective** (two
@@ -30,6 +30,12 @@ meaning-change to a field an external consumer already pins.
 **The proposal's central finding: the set does not force `fdos.kernel.v2`, and
 the one item that would has an additive route that is also the better design.**
 
+Two of the nine defects have since left this document as straight repairs —
+[#80](https://github.com/FabioCaffarello/fdos/pull/80) and
+[#81](https://github.com/FabioCaffarello/fdos/pull/81) — because they implemented
+decisions already accepted rather than exploring a design. What remains is the
+work that needs a decision before it can be written.
+
 ## Motivation
 
 ### What breaks
@@ -44,29 +50,26 @@ reproduced by running code, not by reading it.
 | 3 | `provenance.go:500-523` builds the derivation pre-image with unescaped `"\ninput="` / `"\nparam="` separators | A parameter value containing `\nparam=` forges another parameter. Measured: two structurally different derivations share address `881ab834…`, and the inputs/parameters boundary is crossable |
 | 4 | `explained.go:209` consumes a `Fold` seed that `:222` never records | Two folds with different seeds and different answers produce one identical trace |
 | 5 | `libs/ledger-sqlite/store.go:200` compares knowledge times as RFC3339 strings; `temporal.go:78` formats with `RFC3339Nano`, which omits trailing zeros | `.` (0x2E) sorts below `Z` (0x5A), so any sub-second instant compares as *earlier* than the whole second it follows. The memory store (`memory/store.go:85`) uses `!incoming.After(last)` and disagrees |
-| 6 | `store.go:188` derives the next sequence from `COUNT(*)`; `store.go:138` discards the stored `sequence` on load | After one deleted row: refs silently re-point to different content, **and** the stream becomes permanently unappendable (`UNIQUE constraint failed`). Both measured |
-| 7 | `money.go:246-250` traps neither `apd.Inexact` nor `apd.Rounded`, and `BaseContext` rounds half-up | The context named `exact` silently discards a unit at 96 significant digits. Measured: `10^96 + 1 == 10^96`, error `nil`. **This contradicts ADR-0008's decision text twice over** — see below |
 | 8 | `rounding.go:103` — `precision` is significant digits, and there is no `Quantize` anywhere in `libs/kernel/money` | "Round to the cent" is inexpressible. One context yields three different decimal places for `1/3`, `1000/3`, `0.001/3` |
 | 9 | Zero `reserved` field-number declarations exist anywhere in `libs/contracts/proto/` | A field deletion plus number reuse is undetectable by `buf breaking` |
 
-**Defect 7 is not a design improvement; it is an accepted decision not being
-honoured.** ADR-0008's Decision says, in two separate sentences:
-
-> "**There is no default rounding context** and no privileged mode — the correct
-> choice is jurisdiction- and instrument-specific, and a default is exactly how
-> that decision goes unexamined. **Precision loss is signalled and recorded in the
-> computation trace.**"
-
-`exactContext()` violates both. It inherits `apd.BaseContext`'s rounding, which
-is half-up — a privileged default mode, chosen by omission, in the one context
-whose name promises no rounding at all. And because neither `apd.Inexact` nor
-`apd.Rounded` is trapped, the loss is **neither signalled nor recorded**. Worse,
-`Add`, `Sub` and `Mul` all route through this context (`money.go:164`, `:176`,
-`:207`; `quantity.go:70`, `:82`) — the three operations ADR-0008 and
-`money.proto:51-52` both describe as *exact*.
-
-So this item is a correctness repair against an accepted ADR, not a proposal, and
-it should not be sequenced behind the design questions in the rest of this RFC.
+> **Two defects left this RFC as straight repairs.** Numbering is preserved so
+> that existing citations keep resolving, and the two are recorded here rather
+> than deleted:
+>
+> - **6 — the store's sequence** (`COUNT(*)`-derived, and discarded on load) →
+>   **[#80](https://github.com/FabioCaffarello/fdos/pull/80)**. It implements
+>   ADR-0034, which already assigns sequence assignment to the store and records
+>   it at rung 1.
+> - **7 — the exact money context** (traps neither `Inexact` nor `Rounded`) →
+>   **[#81](https://github.com/FabioCaffarello/fdos/pull/81)**. It implements
+>   ADR-0008, which already requires that precision loss be signalled and that no
+>   rounding mode be privileged.
+>
+> Neither explored a design, both sat on the critical path to a first queryable
+> answer, and both are now negative-tested with their tests verified to fail for
+> the right reason. What remains in this RFC is the work that genuinely needs a
+> decision before it can be written.
 
 Constitution principles at stake, read against the honest §15 table:
 
@@ -76,8 +79,10 @@ Constitution principles at stake, read against the honest §15 table:
   Nothing claims a derivation address *identifies* one derivation, and defect 3
   is that gap.
 - **§4 Immutable Ledger** sits at rung 1 because there is no whole-stream write
-  to refuse. Defect 6 mutates history through the read path instead, which the
-  row does not cover.
+  to refuse. The store's sequence defect mutated history through the *read* path
+  instead — a shape the row does not cover — which is why it was invisible to a
+  principle held at rung 1. Repaired in
+  [#80](https://github.com/FabioCaffarello/fdos/pull/80).
 
 None of these is a rung regression to admit. They are properties no current
 mechanism ever claimed — which is exactly why they were never caught.
@@ -86,7 +91,7 @@ mechanism ever claimed — which is exactly why they were never caught.
 
 **Partly, and the boundary matters more than the fixes.**
 
-- Defects 4, 7, 8, 9 are retrofittable at any time. They change what future
+- Defects 4, 8 and 9 are retrofittable at any time. They change what future
   computations produce and nothing that already exists.
 - Defects 1 and 2 change **derived identifiers**, and — measured — break less
   than they appear to: resolution recomputes both sides from persisted claims, so
@@ -98,9 +103,9 @@ mechanism ever claimed — which is exactly why they were never caught.
   address has no recoverable pre-image and cannot be translated. **Safe today
   only because nothing has been persisted; not a property that survives one
   adopter.**
-- Defects 5 and 6 change **persisted storage** and are the easy half — both
-  columns are redundant projections of the encoded blob, so a rebuild recovers
-  everything. But §Migration shows that without a version marker a store written
+- Defect 5 changes **persisted storage**. It is the easy half — the temporal
+  columns are a redundant projection of the encoded blob, so a rebuild recovers
+  everything — but §Migration shows that without a version marker a store written
   before the fix keeps producing wrong answers *after* it, silently, forever.
 
 So the retrofittable claim in the audit's Phase-0 framing ("cheap now, permanent
@@ -199,99 +204,8 @@ class needs a governance home rather than a case-by-case judgement.
 | 3 | Injective derivation pre-image | `fdos.kernel.v1.DerivationRef.content_hash` (shape unchanged) | **Value-changing** | Fix is length-prefixed framing of the pre-image |
 | 4 | Record the `Fold` seed | none | **Internal** | Additive to `provenance.NewDerivation`'s inputs at the call site |
 | 5 | Orderable temporal storage | none — `libs/ledger-sqlite` publishes no proto | **Internal + storage** | The wire is already correct: `temporal.proto:14-32` carries `google.protobuf.Timestamp`, an integer seconds-and-nanos pair that is orderable by construction. The store **re-renders** it as `RFC3339Nano` text and loses a property the contract already had. The fix restores the representation the contract chose, one layer down. See Migration |
-| 6 | `MAX(sequence)+1`, preserve stored sequence on load | none | **Internal** | Implements ADR-0034 correctly; see below |
-| 7 | Trap `Inexact`/`Rounded` in the exact context | none | **Internal** | Behaviour behind an unchanged signature |
 | 8 | Express decimal places | **`fdos.kernel.v1.RoundingContext`** (`money.proto:59-62`) | **Additive *or* meaning-changing — this is the decision** | See below |
 | 9 | A `reserved` policy | all of `libs/contracts/proto` | **Additive** | Adoptable inside `v1` at zero cost: measured, `reserved` on unused numbers passes `buf`. It must reserve **names alongside numbers** — reserving an in-use number produces *two* `buf` findings, the deletion and the un-reserved name |
-
-**Item 6 is not a new decision.** ADR-0034 already decided that the store
-assigns the sequence, and records it in its own enforcement table as *rung 1 —
-"the sequence is assigned by the store, not by a pure value."* `COUNT(*)`
-assigns it by *position*, and the load path re-derives refs through
-`domain.Stream.Append`. Fixing this implements an accepted decision that the
-implementation does not currently honour. It still needs an ADR — the `app.Store`
-port's documented semantics change — but it needs no design exploration and
-should not wait for the rest of this RFC.
-
-**It does need one thing the audit's version of the fix omits: a reader rule.**
-Prior art is emphatic that a writer rule alone is insufficient — every mature
-sequence is monotonic but **not contiguous**. PostgreSQL states it outright:
-"sequence objects cannot be used if 'gapless' assignment of sequence numbers is
-needed." Kafka guarantees offsets are permanent and ordered while transaction
-markers leave visible holes. EventStoreDB's truncation makes a stream's first
-visible revision non-zero. And in a global sequence a hole is *ambiguous*
-between "rolled back forever" and "committing right now", which is why Marten
-needs a high-water mark and why reading past a hole is silent data loss.
-
-FDOS is in the easy case and should exploit it. A single-writer, append-only
-per-stream sequence assigned by the store has **no legitimate source of gaps**:
-`Append` never rolls back a reserved number, because it does not reserve one.
-Therefore a gap is not a condition to tolerate — it is **evidence of corruption
-or of out-of-band deletion**, and the correct reader rule is to *refuse the
-stream and say so*, not to renumber it into consistency. Renumbering is what the
-code does today, and it is why one deleted row silently re-points every
-subsequent ref.
-
-This is a stricter rule than "preserve the stored sequence", and it is the one
-the append-only guarantee actually licenses.
-
-### The encoding rule itself
-
-Prior art is unanimous that "canonical" must name a profile rather than describe
-an intention, so the proposal is specific. **One profile, no parameters.**
-
-Every value that will be hashed or ordered is serialised by a single function
-obeying four rules:
-
-1. **Domain separation by type tag.** Each structured value is prefixed by a
-   constant tag naming what it is (`entity-seed`, `derivation`, `parameter`).
-   Git's `"blob 16\0"` is the model: two distinct kinds of thing can never
-   produce one byte string.
-2. **Length-prefix every variable-length component**, as a fixed-width
-   big-endian count. This is what makes the encoding injective, and it is what
-   `":"` and `"\nparam="` fail to do — no separator is safe when the payload may
-   contain it, and escaping merely moves the problem to the escape character.
-3. **One ordering, stated.** Where a collection has no inherent order
-   (derivation parameters), sort by the **UTF-8 byte encoding** of the key.
-   Bytewise is chosen over UTF-16 code units deliberately: the specs disagree
-   (see Prior art), Go strings are already UTF-8, and picking the basis that
-   needs no transcoding removes a whole class of divergence.
-4. **Minimum-length integers, no alternative renderings.** DER clause 10's
-   discipline, enumerated rather than assumed.
-
-**And the decode side is not optional.** BIP 66 and DAG-CBOR together show that
-encoder rules without decoder enforcement decay into per-implementation
-dialects. So:
-
-- Where a non-canonical rendering can arrive from outside — a submission's
-  `stream` name, a claim's scheme — it is **rejected**, never normalised into
-  canonical form. Normalising is how two distinct inputs become one value, which
-  is the defect class this RFC exists to close.
-
-  **This is not new policy; it is `claim.go`'s existing reasoning generalised.**
-  `NewClaim` already refuses a non-canonical scheme rather than folding it,
-  and says why at `claim.go:28-31`: *"A non-canonical scheme is rejected rather
-  than normalised, because silently folding `\"Ticker\"` into `\"ticker\"` hides
-  that a connector is emitting something the vocabulary does not contain."* The
-  proposal is that every encoding boundary inherit that stance.
-
-  It also locates defect 1 precisely. `NewClaim` checks the scheme's **shape**
-  (lowercase, unpadded) and not its **membership** in the vocabulary, which is
-  deliberately open. So `"ticker:x"` is a well-formed scheme by every rule the
-  constructor enforces, and `"x:y"` is a well-formed value because values are
-  verbatim by decision. The collision is reachable through the public
-  constructor without violating anything — which is why the fix belongs in the
-  encoding and not in a stricter claim.
-- The rejection predicate is a single small function per encoding, testable in
-  isolation against a corpus of non-canonical byte strings, in the shape of
-  BIP 66's `IsValidSignatureEncoding`.
-
-**Scalar domains are named before the bytes**, per RFC 8785's own limit: an
-instant is an integer count of nanoseconds from a stated epoch; a decimal is a
-coefficient-and-exponent pair, never a float; a string is UTF-8 bytes with no
-normalisation applied. This is why item 8 sits inside this RFC rather than beside
-it — a rounding context cannot be encoded into a trace before the domain has
-words for both of its concepts.
 
 ### The one item that decides whether this is `fdos.kernel.v2`
 
@@ -392,8 +306,9 @@ precision 9. So adding a scale concept does not retire `precision`; the two
 interact, and the accepting ADR must state that precision is sized from the
 largest representable amount times the currency's minor units, and that an
 Invalid Operation surfaces as a **domain error**, never as a NaN a caller can
-propagate. This is the same trap as defect 7 one level up: an arithmetic
-condition that is not trapped becomes a wrong number instead of a refusal.
+propagate. This is the same trap the exact context had one level up
+([#81](https://github.com/FabioCaffarello/fdos/pull/81)): an arithmetic condition
+that is not trapped becomes a wrong number instead of a refusal.
 
 **Therefore: the P0 set does not force `fdos.kernel.v2`, and no
 `fdos-connectors` migration issue is owed under ADR-0024 step 2.** Two
@@ -591,8 +506,6 @@ independent of fix 3 — they change the same addresses and should land together
 | Byte order equals chronological order | **3 — CI** | Property test over instants that differ only in sub-second precision — the region `storetest` currently cannot reach |
 | The two stores agree | **3 — CI** | `storetest` gains fractional-second knowledge times. Today it builds every one as `epoch.Add(N * time.Hour)`, fixed-width and fraction-free, which is the single region where lexicographic and chronological order coincide — the suite is structurally blind to defect 5 and both stores pass it |
 | A store's encoding version is known | **1 — type** | `Open` reads `user_version` and returns an error naming the migration; an unreadable store cannot be queried because there is no value to query it with |
-| Refs survive a load, and a gap is refused | **3 — CI** | Test: delete an interior row; assert `Load` **fails naming the gap** rather than renumbering, and that an intact stream round-trips its stored sequences. An append-only single-writer sequence has no legitimate gap, so tolerating one is how corruption becomes an answer |
-| The exact context is exact | **3 — CI** | Test: `10^96 + 1 != 10^96`, and the trap fires rather than rounding |
 | Non-canonical input is refused, not normalised | **3 — CI** | A corpus of non-canonical byte strings, each asserted **rejected** by a single small predicate per encoding — BIP 66's `IsValidSignatureEncoding` shape. Encoder rules without this row are what DAG-CBOR's own spec admits decays into dialects |
 | Field numbers are never reused | **6 — discipline** | A `reserved` policy is a convention `buf` cannot check for fields that were never declared. Stated as rung 6 rather than implied to be higher |
 
@@ -952,14 +865,13 @@ Each names who resolves it. None is resolved here.
    the accepting ADR by a **human**, not produced by a session. It is the one
    value in this RFC that can never be changed again without repeating the whole
    migration.
-5. **Which items leave this RFC as straight repairs.** Two of the nine explore no
-   design at all — they implement accepted decisions the code does not honour:
-   **item 6** (ADR-0034 already assigns sequence assignment to the store and
-   records it at rung 1) and **item 7** (ADR-0008 already requires that precision
-   loss be signalled and that no rounding mode be privileged). Both are on the
-   critical path for a first queryable answer, and splitting them into their own
-   ADR now would unblock the read path sooner than the design questions here can
-   be settled. **Human**, on sequencing grounds.
+5. **Whether the remaining seven should split further.** Two items already left
+   as straight repairs (#80, #81) because they implemented accepted decisions.
+   Of what remains, **item 9** — the `reserved` policy — is the next candidate:
+   it is additive, adoptable inside `v1` at measured zero cost, and depends on
+   none of the design questions above. Splitting it would leave this RFC as
+   exactly the identity, derivation and storage encodings, which are the three
+   that share the injectivity property. **Human**, on sequencing grounds.
 
 ## Consequences
 
