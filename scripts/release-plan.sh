@@ -77,7 +77,7 @@ while IFS= read -r module; do
       continue
       ;;
   esac
-  if [ -z "$own" ] || [ -n "$(git diff --name-only "${module}/v${own}" HEAD -- "$module" 2>/dev/null)" ]; then
+  if [ -z "$own" ] || [ -n "$(git diff --name-only "${module}/v${own}" -- "$module" 2>/dev/null)" ]; then
     needs_tag="${needs_tag}${module}"$'\n'
   fi
 done <<EOF

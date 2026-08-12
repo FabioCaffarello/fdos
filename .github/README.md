@@ -28,6 +28,15 @@ Forge configuration for FDOS. Governed by ADR-0014.
 | `supply-chain.yml` | pull requests, weekly schedule | dependency review; scheduled vulnerability and secret scans |
 | `release.yml` | tags matching `libs/*/v*` | build, SBOM, provenance attestation, cosign signature |
 | `ci-telemetry.yml` | weekly schedule, manual dispatch | `make ci-stats`, `make verify-timings` |
+| `release-prepare.yml` | manual dispatch | `make release-prepare`, then opens the pull request |
+| `release-tag.yml` | manual dispatch | `make release-tag` — the only job that may write a tag |
+
+`release-tag.yml` is the one place `contents: write` appears, behind a `release`
+environment restricted to `main`. Publishing is a dispatched act because keyless
+signing binds the artifact's identity to the workflow: a tag pushed without a
+human choosing to publish is a signed statement nobody decided to make
+(ADR-0046). Its `publish` input must be typed as `yes`; anything else is a dry
+run.
 
 `ci-telemetry.yml` gates nothing. It exists because nothing here could say what
 the gate costs: measured across twenty runs, `verify` ranged from 87s to 279s —

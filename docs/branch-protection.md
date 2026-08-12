@@ -1,8 +1,8 @@
 # Branch and tag protection
 
-**Applied**, as two repository rulesets (ADR-0020). This document records what
-is configured and why, so a change made in the GitHub UI can be recognised as a
-change.
+**Applied**, as two repository rulesets (ADR-0020) and one deployment
+environment (ADR-0046). This document records what is configured and why, so a
+change made in the GitHub UI can be recognised as a change.
 
 It was previously a checklist with no mechanism. ADR-0014 declined to apply it
 from CI because that needs an admin-scoped token — a worse risk than the one it
@@ -67,6 +67,21 @@ This matters more than it looks. `release.yml` signs artifacts and attests build
 provenance against a tag; if the tag can move, the attestation describes
 something that is no longer there.
 
+## `release` — deployment environment
+
+Applied, and used by `release-tag.yml` alone (ADR-0046).
+
+| Rule | Why |
+|------|-----|
+| Deployment branch policy: protected branches only | A release is cut from `main` or not at all |
+
+**Required reviewers are deliberately not set**, for the same reason required
+approvals is 0 above: a single maintainer cannot approve their own dispatch, and
+a rule that must always be bypassed is worse than no rule. It rises the day
+there is a second maintainer.
+
+This is the only place `contents: write` is granted in this repository.
+
 ## Signed commits — required, then removed
 
 `required_signatures` was applied and **removed the same day**, because it
@@ -99,6 +114,7 @@ says authorship is part of provenance; until this is done, it is not.
 ```sh
 gh api repos/FabioCaffarello/fdos/rulesets -q '.[] | "\(.name)  \(.target)  \(.enforcement)"'
 gh api repos/FabioCaffarello/fdos/rulesets/<id>
+gh api repos/FabioCaffarello/fdos/environments/release
 ```
 
 **Nothing checks that the live rulesets match this document.** They are

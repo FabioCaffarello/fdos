@@ -1,15 +1,23 @@
 ---
 id: ADR-0045
 title: The affected graph is the release graph, and the registry is checked against the tags
-status: Accepted
+status: Superseded
 date: 2026-08-12
 deciders:
   - "@FabioCaffarello"
 supersedes: []
-superseded_by: []
+superseded_by:
+  - ADR-0046
 ---
 
 # ADR-0045 — The affected graph is the release graph, and the registry is checked against the tags
+
+> **Superseded by [ADR-0046](0046-publishing-a-tag-is-a-dispatched-act.md).**
+> Rule G1 below — "every module row names its module's newest tag" — makes the
+> release ritual it was written to protect unperformable: the registry update
+> belongs in the commit being tagged, so during that pull request the row names
+> a version no tag has yet. Everything else here is restated unchanged in the
+> successor, which also decides the publication half.
 
 ## Context
 
