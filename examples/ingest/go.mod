@@ -5,7 +5,7 @@ go 1.26.2
 require (
 	github.com/FabioCaffarello/fdos/libs/contracts v0.5.0
 	github.com/FabioCaffarello/fdos/libs/kernel v0.8.0
-	github.com/FabioCaffarello/fdos/libs/ledger v0.6.0
+	github.com/FabioCaffarello/fdos/libs/ledger v0.7.0
 	github.com/FabioCaffarello/fdos/libs/ledger-wire v0.4.0
 	google.golang.org/protobuf v1.36.11
 )
