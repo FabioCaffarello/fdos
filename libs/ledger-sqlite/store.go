@@ -76,11 +76,33 @@ CREATE INDEX IF NOT EXISTS facts_as_of ON facts (stream, effective_from, knowled
 // asserting these rather than assuming a default as the minimum. `journal_mode`
 // and `synchronous` are what decide whether a committed fact survives losing
 // power; `foreign_keys` and `busy_timeout` are hygiene.
+//
+// # The order is load-bearing, and it was wrong
+//
+// `busy_timeout` must be first, because it is the setting that decides what
+// every *later* statement does when the database is locked. It used to be last,
+// which meant the three pragmas that can block ran under the default timeout of
+// zero — return `SQLITE_BUSY` immediately, never retry.
+//
+// `journal_mode = WAL` takes an exclusive lock, so a second process opening a
+// database that a first process is actively writing failed on the first
+// statement it issued. Measured on darwin/arm64, four processes opening one
+// database under load: two of six attempts died with
+// `PRAGMA journal_mode = WAL: database is locked (261)` before appending
+// anything.
+//
+// That is a *startup* failure and it reads like a corruption report, which is
+// the part that makes it expensive: an operator running a CLI against the
+// database a service is writing to is told the database is locked by a message
+// naming a durability setting they did not choose and cannot act on.
+//
+// Setting it first costs nothing — `busy_timeout` takes no lock and cannot
+// itself be blocked.
 var pragmas = []string{
+	"PRAGMA busy_timeout = 5000",
 	"PRAGMA journal_mode = WAL",
 	"PRAGMA synchronous = FULL",
 	"PRAGMA foreign_keys = ON",
-	"PRAGMA busy_timeout = 5000",
 }
 
 // Store is a durable app.Store backed by SQLite.

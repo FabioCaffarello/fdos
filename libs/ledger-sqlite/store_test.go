@@ -4,8 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -532,4 +536,159 @@ func TestTemporalColumnsAreStoredAsIntegers(t *testing.T) {
 			t.Errorf("%s is stored as %s, want integer", column, kind)
 		}
 	}
+}
+
+// A second process opens the database while a first is writing (ADR-0035).
+//
+// # Why this spawns processes instead of goroutines
+//
+// The first draft of this test used goroutines and passed against the defect it
+// was written for. Two `*sql.DB` handles in one process do not race the way two
+// processes do: SQLITE_BUSY_RECOVERY is raised when connections contend to
+// recover a write-ahead log, and that contention is between OS processes holding
+// the same file. A goroutine version measures nothing and reports success, which
+// is worse than no test.
+//
+// So the test binary re-executes itself. `helperOpensTheDatabase` is the child.
+//
+// # What it holds
+//
+// `Open` issues four pragmas, three of which can block: `journal_mode` takes an
+// exclusive lock, and an opener whose write-ahead log needs recovery takes one
+// too. `busy_timeout` decides whether blocking means *wait* or means *fail now*,
+// so it must be issued first. It used to be issued last.
+//
+// Measured on darwin/arm64 with the original order: four processes opening one
+// database simultaneously lost two of six rounds to
+// `PRAGMA journal_mode = WAL: database is locked (261)`, before appending
+// anything. The rounds below are what turn a one-in-three defect into a test
+// that fails when the ordering regresses rather than one that usually does.
+//
+// This is the deployment case, not a synthetic one: a service holding the
+// database while an operator starts a CLI against it is two processes opening
+// one file, which is the whole shape of a local stack.
+func TestASecondProcessOpensWhileAFirstIsWriting(t *testing.T) {
+	if os.Getenv(helperEnv) != "" {
+		return // the child runs in TestMain's place; see helperOpensTheDatabase
+	}
+
+	path := filepath.Join(t.TempDir(), "ledger.db")
+	seed := open(t, path)
+	if _, err := seed.Append(
+		context.Background(), "acct-1", app.Any(), envelopeAt(t, 1),
+		domain.KindObservation, claim(t, "PETR4"),
+	); err != nil {
+		t.Fatalf("seed append: %v", err)
+	}
+	if err := seed.Close(); err != nil {
+		t.Fatalf("seed close: %v", err)
+	}
+
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatalf("executable: %v", err)
+	}
+
+	const (
+		rounds  = 8
+		openers = 4
+	)
+	for round := range rounds {
+		var wg sync.WaitGroup
+		failures := make([]error, openers)
+		for i := range openers {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				cmd := exec.Command(self, "-test.run=TestASecondProcessOpensWhileAFirstIsWriting")
+				cmd.Env = append(os.Environ(), helperEnv+"="+path)
+				if out, err := cmd.CombinedOutput(); err != nil {
+					failures[i] = fmt.Errorf("%w: %s", err, out)
+				}
+			}()
+		}
+		wg.Wait()
+		for i, err := range failures {
+			if err != nil {
+				t.Fatalf("round %d, opener %d: a process could not open a database "+
+					"another process holds: %v", round, i, err)
+			}
+		}
+	}
+}
+
+// helperEnv names the database a child process should open.
+const helperEnv = "FDOS_SQLITE_CONCURRENT_OPEN"
+
+// TestMain runs the child body when the environment marks this process as one.
+//
+// The child must open *and write*, because an opener that only reads never
+// contends for the exclusive lock the defect was about.
+func TestMain(m *testing.M) {
+	path := os.Getenv(helperEnv)
+	if path == "" {
+		os.Exit(m.Run())
+	}
+	os.Exit(helperOpensTheDatabase(path))
+}
+
+func helperOpensTheDatabase(path string) int {
+	store, err := sqlitestore.Open(path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "open: %v\n", err)
+		return 1
+	}
+	// The append is expected to be refused: it carries a knowledge time that
+	// does not advance. It still begins an immediate transaction and still takes
+	// the write lock, which is the contention the parent needs and is why the
+	// error is discarded rather than reported.
+	//nolint:errcheck // the refusal is the expected outcome; the lock it takes is the point
+	_, _ = store.Append(
+		context.Background(), "acct-1", app.Any(), helperEnvelope(),
+		domain.KindObservation, helperClaim())
+	if err := store.Close(); err != nil {
+		fmt.Fprintf(os.Stderr, "close: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
+// helperClaim and helperEnvelope are the fixture without a *testing.T.
+//
+// The child process runs before `m.Run`, so there is no test to fail — a
+// malformed fixture here is a programming error in the test file and panicking
+// says so at the point it happens.
+func helperClaim() domain.HoldingClaimed {
+	return domain.HoldingClaimed{
+		Account:    identity.MustClaim("account_number", "0001234-5"),
+		Instrument: identity.MustClaim("ticker", "VALE3"),
+		Quantity:   money.MustParseQuantity("100", "share"),
+	}
+}
+
+func helperEnvelope() domain.Envelope {
+	effective := temporal.MustAt(epoch)
+	interval, err := temporal.OpenFrom(effective)
+	if err != nil {
+		panic(err)
+	}
+	coordinates, err := temporal.Assign(interval, temporal.MustAt(epoch.Add(time.Hour)))
+	if err != nil {
+		panic(err)
+	}
+	source, err := provenance.NewSource(
+		"sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+	if err != nil {
+		panic(err)
+	}
+	prov, err := provenance.Observed(
+		source, effective, provenance.Unmediated(), provenance.ConfidenceAsserted)
+	if err != nil {
+		panic(err)
+	}
+	envelope, err := domain.NewEnvelope(coordinates, prov, nil)
+	if err != nil {
+		panic(err)
+	}
+	return envelope
 }
