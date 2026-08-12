@@ -67,7 +67,9 @@ func (q Quantity) Add(other Quantity) (Quantity, error) {
 		return Quantity{}, fmt.Errorf("%w: %s vs %s", ErrCurrencyMismatch, q.unit, other.unit)
 	}
 	var out apd.Decimal
-	if _, err := exactContext().Add(&out, &q.amount, &other.amount); err != nil {
+	if err := exactly(&out, func(c *apd.Context, o *apd.Decimal) (apd.Condition, error) {
+		return c.Add(o, &q.amount, &other.amount)
+	}); err != nil {
 		return Quantity{}, err
 	}
 	return Quantity{amount: out, unit: q.unit}, nil
@@ -79,7 +81,9 @@ func (q Quantity) Sub(other Quantity) (Quantity, error) {
 		return Quantity{}, fmt.Errorf("%w: %s vs %s", ErrCurrencyMismatch, q.unit, other.unit)
 	}
 	var out apd.Decimal
-	if _, err := exactContext().Sub(&out, &q.amount, &other.amount); err != nil {
+	if err := exactly(&out, func(c *apd.Context, o *apd.Decimal) (apd.Condition, error) {
+		return c.Sub(o, &q.amount, &other.amount)
+	}); err != nil {
 		return Quantity{}, err
 	}
 	return Quantity{amount: out, unit: q.unit}, nil

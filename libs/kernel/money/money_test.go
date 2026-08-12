@@ -196,3 +196,88 @@ func genDecimalText() *rapid.Generator[string] {
 		return out
 	})
 }
+
+// The exact context must refuse, not approximate. ADR-0008 decides two things
+// this guards: "there is no default rounding context and no privileged mode",
+// and "precision loss is signalled and recorded in the computation trace".
+//
+// Before the traps were added, every case below returned a nil error and a
+// silently rounded value, because the context inherited apd.BaseContext's
+// half-up rounding. Add, Sub and Mul are the three operations ADR-0008 and
+// fdos.kernel.v1.Decimal both describe as exact, so a silent loss here is a
+// wrong number with no trace of having been one.
+func TestExactArithmeticRefusesToLosePrecision(t *testing.T) {
+	// maxPrecision is 96 significant digits. A 1 in the 97th place is the
+	// smallest input that cannot be represented, which makes it the case a
+	// half-up default discards most quietly.
+	huge := "1" + repeat("0", 96)
+	one := "1"
+
+	t.Run("Add", func(t *testing.T) {
+		sum, err := money.MustParse(huge, "BRL").Add(money.MustParse(one, "BRL"))
+		if !errors.Is(err, money.ErrInexact) {
+			t.Fatalf("10^96 + 1 returned (%s, %v); want ErrInexact — a discarded unit "+
+				"that reports success is unauditable", sum, err)
+		}
+	})
+
+	t.Run("Sub", func(t *testing.T) {
+		_, err := money.MustParse(huge, "BRL").Sub(money.MustParse("0."+one, "BRL"))
+		if !errors.Is(err, money.ErrInexact) {
+			t.Fatalf("10^96 - 0.1 returned %v; want ErrInexact", err)
+		}
+	})
+
+	t.Run("Mul", func(t *testing.T) {
+		big := "1." + repeat("1", 60)
+		_, err := money.MustParse(big, "BRL").Mul(money.MustParseQuantity(big, "share"))
+		if !errors.Is(err, money.ErrInexact) {
+			t.Fatalf("a 61-digit product needing 121 digits returned %v; want ErrInexact", err)
+		}
+	})
+
+	t.Run("QuantityAdd", func(t *testing.T) {
+		_, err := money.MustParseQuantity(huge, "share").
+			Add(money.MustParseQuantity(one, "share"))
+		if !errors.Is(err, money.ErrInexact) {
+			t.Fatalf("quantity 10^96 + 1 returned %v; want ErrInexact", err)
+		}
+	})
+}
+
+// The guard must not fire on arithmetic that is genuinely exact, or it would
+// simply move the defect: a kernel that refuses 1.50 + 2.25 is no more usable
+// than one that silently rounds 10^96 + 1.
+//
+// The zero case is the one worth stating. "1.500 - 1.500" is 0.000, not 0:
+// trailing zeros are significant because they record the precision of the value
+// (fdos.kernel.v1.Decimal), so a context that discarded them would be losing
+// information the ledger is required to keep.
+func TestExactArithmeticStillPermitsExactResults(t *testing.T) {
+	for _, tc := range []struct {
+		name, a, b, want string
+	}{
+		{"different scales", "1.50", "2.25", "3.75"},
+		{"trailing zeros survive", "1.500", "-1.500", "0.000"},
+		{"long but representable", "0." + repeat("1", 40), "0." + repeat("1", 40),
+			"0." + repeat("2", 40)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sum, err := money.MustParse(tc.a, "BRL").Add(money.MustParse(tc.b, "BRL"))
+			if err != nil {
+				t.Fatalf("%s + %s: %v", tc.a, tc.b, err)
+			}
+			if sum.String() != tc.want {
+				t.Errorf("%s + %s = %s; want %s", tc.a, tc.b, sum, tc.want)
+			}
+		})
+	}
+}
+
+func repeat(s string, n int) string {
+	out := make([]byte, 0, len(s)*n)
+	for range n {
+		out = append(out, s...)
+	}
+	return string(out)
+}
