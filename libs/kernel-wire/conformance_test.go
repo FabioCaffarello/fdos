@@ -181,6 +181,12 @@ func TestRoundingContextRoundTrips(t *testing.T) {
 			rapid.Uint32Range(1, 96).Draw(t, "precision"),
 			rapid.SampledFrom(modes).Draw(t, "mode"),
 		)
+		// The scale is drawn *including its absence*, because absent and zero
+		// are different instructions and only a generator that produces both
+		// can catch a codec that conflates them (ADR-0040).
+		if rapid.Bool().Draw(t, "hasScale") {
+			original = original.WithScale(rapid.Int32Range(-8, 8).Draw(t, "scale"))
+		}
 
 		wire := kernelwire.EncodeRoundingContext(original)
 		back, err := kernelwire.DecodeRoundingContext(wire)
@@ -190,10 +196,59 @@ func TestRoundingContextRoundTrips(t *testing.T) {
 		if back.Precision() != original.Precision() || back.Mode() != original.Mode() {
 			t.Fatalf("lost information: %s -> %s", original, back)
 		}
+
+		wantScale, wantOK := original.Scale()
+		gotScale, gotOK := back.Scale()
+		if gotOK != wantOK {
+			t.Fatalf("scale presence changed: %v -> %v (%s -> %s)", wantOK, gotOK, original, back)
+		}
+		if gotScale != wantScale {
+			t.Fatalf("scale changed: %d -> %d", wantScale, gotScale)
+		}
+
 		if !proto.Equal(wire, kernelwire.EncodeRoundingContext(back)) {
 			t.Fatal("wire round trip is not the identity")
 		}
 	})
+}
+
+// The case a generated getter hides. `GetScale()` returns zero for an absent
+// field, and zero is a real scale — round to whole units, which is JPY. A codec
+// reading the getter instead of the pointer would decode every unconstrained
+// context as a yen one, and no round-trip property over contexts that all carry
+// a scale would notice.
+func TestAnAbsentScaleDoesNotDecodeAsZero(t *testing.T) {
+	unconstrained := money.MustRoundingContext(10, money.RoundingModeHalfEven)
+	if _, ok := unconstrained.Scale(); ok {
+		t.Fatal("fixture is not discriminating: the context already carries a scale")
+	}
+
+	wire := kernelwire.EncodeRoundingContext(unconstrained)
+	if wire.Scale != nil {
+		t.Errorf("an absent scale crossed the wire as %d; absent and zero are different "+
+			"instructions", wire.GetScale())
+	}
+
+	back, err := kernelwire.DecodeRoundingContext(wire)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := back.Scale(); ok {
+		t.Error("an unconstrained context decoded as scale-constrained; every rounding it " +
+			"governs would silently become whole units")
+	}
+
+	// And the reverse: an explicit zero must survive as an explicit zero.
+	whole := unconstrained.WithScale(0)
+	backWhole, err := kernelwire.DecodeRoundingContext(kernelwire.EncodeRoundingContext(whole))
+	if err != nil {
+		t.Fatal(err)
+	}
+	scale, ok := backWhole.Scale()
+	if !ok || scale != 0 {
+		t.Errorf("scale 0 decoded as (%d, %v); JPY has no minor unit and that is not the "+
+			"same as having no constraint", scale, ok)
+	}
 }
 
 func TestTemporalCoordinatesRoundTrip(t *testing.T) {

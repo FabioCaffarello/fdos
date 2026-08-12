@@ -166,11 +166,20 @@ func DecodeQuantity(w *kernelv1.Quantity) (money.Quantity, error) {
 }
 
 // EncodeRoundingContext converts a RoundingContext to its wire form.
+//
+// The scale crosses only when the context fixes one, because absent and zero are
+// different instructions: absent is "no scale constraint", zero is "round to
+// whole units", and zero is JPY (ADR-0040). Writing zero for an absent scale
+// would turn every unconstrained context into a yen one on the far side.
 func EncodeRoundingContext(rc money.RoundingContext) *kernelv1.RoundingContext {
-	return &kernelv1.RoundingContext{
+	w := &kernelv1.RoundingContext{
 		Precision: rc.Precision(),
 		Mode:      encodeRoundingMode(rc.Mode()),
 	}
+	if scale, ok := rc.Scale(); ok {
+		w.Scale = &scale
+	}
+	return w
 }
 
 // DecodeRoundingContext rebuilds a RoundingContext.
@@ -185,6 +194,12 @@ func DecodeRoundingContext(w *kernelv1.RoundingContext) (money.RoundingContext, 
 	rc, err := money.NewRoundingContext(w.GetPrecision(), mode)
 	if err != nil {
 		return money.RoundingContext{}, fmt.Errorf("%w: %w", ErrMalformed, err)
+	}
+	// Presence, not GetScale(): the generated getter returns zero for an absent
+	// field, and zero is a real scale. Reading it through the getter would make
+	// every unconstrained context decode as "round to whole units".
+	if w.Scale != nil {
+		rc = rc.WithScale(w.GetScale())
 	}
 	return rc, nil
 }
