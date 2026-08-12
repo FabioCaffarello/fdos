@@ -1,14 +1,25 @@
-# Release: signed binaries with an SBOM and verifiable build provenance.
+# Release: signed artifacts with an SBOM and verifiable build provenance.
 #
-# Scope. Go *libraries* are not released by this workflow — a Go module release
-# is a tag, and the module proxy serves it from the repository (ADR-0004). The
-# only artifact FDOS produces today is `fdoslint`, the binary that enforces the
-# domain purity rules. It is released so that a consumer can verify the tool
-# gating their code was built from the source it claims.
+# Triggered by a tag, which `release-tag.yml` is the only thing allowed to push
+# (ADR-0046). Tags are `libs/<name>/vX.Y.Z` and `apps/<name>/vX.Y.Z`, following
+# Go's subdirectory-prefixed convention (ADR-0004).
 #
-# Tags follow Go's subdirectory-prefixed convention: libs/<name>/vX.Y.Z.
+# # What a release carries is decided by the module, not by the tag shape
 #
-# Every action is pinned to a full commit SHA.
+# This workflow used to hardcode `libs/analysis` and `fdoslint` while triggering
+# on `libs/*/v*`, so **every library tag published a linter**. The release for
+# `libs/kernel/v0.9.0` carries `fdoslint_linux_amd64`, an SBOM called
+# `fdoslint.spdx.json`, and a signed `SHA256SUMS` describing none of the kernel.
+# An adopter verifying that signature is verifying a linter, and the signature is
+# real — which makes it worse than no signature, because it looks like evidence
+# (ADR-0047).
+#
+# `make release-artifacts` now assembles what the *module* publishes: its
+# binaries if it has any, and for a `libs/*` module the zip the proxy serves,
+# which is the artifact an external build actually consumes.
+#
+# The workflow invokes `make` and a shared composite action, and holds no logic
+# of its own (ADR-0014). Every action is pinned to a full commit SHA.
 
 name: release
 
@@ -16,6 +27,7 @@ on:
   push:
     tags:
       - "libs/*/v*"
+      - "apps/*/v*"
 
 permissions:
   contents: read
@@ -39,9 +51,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      # The same toolchain the gate uses. This step previously installed Go
-      # alone, which is why `make verify` below failed on all fourteen tags and
-      # no release was ever published (B-008).
+      # The same toolchain the gate uses. This step once installed Go alone,
+      # which is why `make verify` below failed on all fourteen tags and no
+      # release was ever published (B-008).
       - name: Set up the toolchain
         uses: ./.github/actions/setup-toolchain
 
@@ -50,66 +62,26 @@ jobs:
       - name: make verify
         run: make verify
 
-      - name: Build release binaries
-        run: |
-          set -euo pipefail
-          mkdir -p dist
-          cd libs/analysis
-          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
-            os="${target%/*}"; arch="${target#*/}"
-            GOOS="$os" GOARCH="$arch" go build \
-              -trimpath -buildvcs=false \
-              -o "../../dist/fdoslint_${os}_${arch}" \
-              ./cmd/fdoslint
-          done
-          cd ../..
-          ( cd dist && sha256sum fdoslint_* > SHA256SUMS )
-          cat dist/SHA256SUMS
+      - name: make release-artifacts
+        id: artifacts
+        env:
+          TAG: ${{ github.ref_name }}
+        run: make release-artifacts
 
-      # `make repro-check` already proves the host build is reproducible. This
-      # records what the released bytes actually are, so the claim is checkable
-      # by someone who does not trust this workflow.
-      - name: Generate SBOM
-        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+      - name: Sign and attest
+        uses: ./.github/actions/release-evidence
         with:
-          path: ./libs/analysis
-          format: spdx-json
-          output-file: dist/fdoslint.spdx.json
-          upload-artifact: false
+          module: ${{ steps.artifacts.outputs.module }}
 
-      - name: Attest build provenance
-        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
-        with:
-          subject-path: dist/fdoslint_*
-
-      # The version comes from mise.toml like every other tool. Left unpinned,
-      # this installed whatever was newest when a tag happened to be pushed —
-      # and the newest had changed the signing flags, so the release failed with
-      # no commit in this repository to point at (B-008).
-      - name: Resolve pinned cosign version
-        id: cosign-pin
-        run: echo "version=$(scripts/tool-version.sh cosign)" >> "$GITHUB_OUTPUT"
-
-      - name: Install cosign
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-        with:
-          cosign-release: v${{ steps.cosign-pin.outputs.version }}
-
-      # Keyless signing: the identity is the workflow, bound by the OIDC token.
-      # There is no private key to leak, and no key custody to get wrong.
+      # Proving a published *module* is importable is a statement about a
+      # library (ADR-0020). Applications are not imported, so this stays on the
+      # library path rather than being generalised or skipped conditionally
+      # inside the shared action (ADR-0039 §3).
       #
-      # A bundle rather than a bare .sig: it carries the signature, the signing
-      # certificate and the transparency-log entry together, so a consumer can
-      # verify without separately fetching the certificate. cosign v3 makes this
-      # the only supported output — `--output-signature` is accepted and then
-      # ignored, which is how this step failed while looking like it had run.
-      - name: Sign the checksum manifest
-        run: cosign sign-blob --yes --bundle dist/SHA256SUMS.bundle dist/SHA256SUMS
-
-      # The tag is published; prove it is consumable from outside the repository
-      # before the release is announced (ADR-0020). Not in `make verify`: it
-      # depends on proxy propagation, which the per-commit gate must not inherit.
+      # Not in `make verify`: it depends on proxy propagation, which the
+      # per-commit gate must not inherit.
       - name: Prove the published module is consumable
+        if: startsWith(github.ref_name, 'libs/')
         run: make consumer-check
 
       - name: Publish release
@@ -118,10 +90,4 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          gh release create "$TAG" \
-            --title "$TAG" \
-            --generate-notes \
-            dist/fdoslint_* \
-            dist/SHA256SUMS \
-            dist/SHA256SUMS.bundle \
-            dist/fdoslint.spdx.json
+          gh release create "$TAG" --title "$TAG" --generate-notes dist/*

@@ -70,6 +70,7 @@ without pushing, and drifts from what developers actually execute.
 | `make release-plan` | The tag chain this change implies, in order (plans; does not publish) |
 | `make release-prepare` | Set a module's registry row to the version about to be released |
 | `make release-tag` | Create a release tag after six preconditions hold (dry run unless `PUBLISH=1`) |
+| `make release-artifacts` | Assemble into `dist/` what the tagged module publishes |
 | `make affected-preflight` | vet, lint and test over affected modules only — **not** the gate |
 | `make adr-check` | Decision log well-formed; supersession bidirectional |
 | `make rfc-check` | RFC set well-formed; an Accepted RFC produced ADRs |
@@ -124,6 +125,7 @@ unreviewed change to the dependency graph.
 | `release-plan.sh` | nothing — orders the release chain a change implies (ADR-0046) | — |
 | `release-prepare.sh` | nothing — sets the registry row for a release in flight | — |
 | `release-tag.sh` | nothing — refuses to tag unless six preconditions hold (ADR-0046) | — |
+| `release-artifacts.sh` | nothing — assembles a module's binaries and published zip (ADR-0047) | — |
 | `affected-preflight.sh` | nothing — advisory fast failure over affected modules | — |
 | `verify-directory-contracts.sh` | §10 — declared architectural boundaries | 2–3 |
 | `verify-adr.sh` | §14 — append-only decision log | 3 |

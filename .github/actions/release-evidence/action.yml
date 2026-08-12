@@ -1,0 +1,81 @@
+# Turn the contents of dist/ into evidence: an SBOM, a provenance attestation,
+# and a signed checksum manifest.
+#
+# One definition, used by the release and by the rehearsal, for the reason
+# `setup-toolchain` exists: two copies of a signing path drift, and the copy that
+# drifts is the one nobody is watching. ADR-0039 asked for exactly this
+# extraction and named the failure it prevents — B-008, where a pruned copy of
+# the setup meant fourteen tags published nothing while looking fine.
+#
+# It signs whatever is in dist/. What goes in there is `make release-artifacts`'
+# business, which is where the decision about *what a module publishes* lives.
+#
+# Every action is pinned to a full commit SHA.
+
+name: Sign and attest the release artifacts
+description: SBOM, build provenance and a cosign-signed checksum manifest over dist/
+
+inputs:
+  module:
+    description: The module the artifacts belong to, e.g. libs/kernel
+    required: true
+
+runs:
+  using: composite
+
+  steps:
+    # Named after the module rather than after a binary. The SBOM in every
+    # library release was called `fdoslint.spdx.json` because the path was
+    # hardcoded, which described the wrong thing in twenty releases.
+    - name: Generate SBOM
+      uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+      with:
+        path: ./${{ inputs.module }}
+        format: spdx-json
+        output-file: dist/sbom.spdx.json
+        upload-artifact: false
+
+    # The manifest is regenerated after the SBOM lands so that it covers the
+    # SBOM too. A manifest that omits an artifact in the same release is a
+    # manifest an adopter cannot use to check the release.
+    - name: Re-hash with the SBOM included
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd dist
+        rm -f SHA256SUMS
+        sha256sum * > SHA256SUMS
+        cat SHA256SUMS
+
+    - name: Attest build provenance
+      uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+      with:
+        # Everything the release carries, including the module zip — the
+        # artifact an external build actually consumes, and the one ADR-0014
+        # recorded as unattested while the linter was attested.
+        subject-path: dist/*
+
+    # The version comes from mise.toml like every other tool. Left unpinned,
+    # this installed whatever was newest when a tag happened to be pushed — and
+    # the newest had changed the signing flags, so the release failed with no
+    # commit in this repository to point at (B-008).
+    - name: Resolve pinned cosign version
+      id: cosign-pin
+      shell: bash
+      run: echo "version=$(scripts/tool-version.sh cosign)" >> "$GITHUB_OUTPUT"
+
+    - name: Install cosign
+      uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      with:
+        cosign-release: v${{ steps.cosign-pin.outputs.version }}
+
+    # Keyless: the identity is the workflow, bound by the OIDC token. No private
+    # key to leak and no key custody to get wrong.
+    #
+    # A bundle rather than a bare .sig — it carries the signature, the signing
+    # certificate and the transparency-log entry together. cosign v3 makes this
+    # the only supported output; `--output-signature` is accepted and then
+    # ignored, which is how this step once failed while looking like it had run.
+    - name: Sign the checksum manifest
+      shell: bash
+      run: cosign sign-blob --yes --bundle dist/SHA256SUMS.bundle dist/SHA256SUMS

@@ -1,7 +1,7 @@
 ---
 id: ADR-0039
 title: Applications are released as signed binaries, through one signing path rather than two
-status: Proposed
+status: Accepted
 date: 2026-08-07
 deciders:
   - "@FabioCaffarello"
@@ -14,6 +14,12 @@ superseded_by: []
 > **Proposed, not accepted.** `.github/**` is approval-gated and no workflow is
 > touched by this ADR. It is the last slice of M11 and the decision is the
 > human's.
+
+> **Accepted by @FabioCaffarello on 2026-08-12**, and implemented by
+> [ADR-0047](0047-a-release-carries-what-the-module-publishes.md), which also
+> records what building it found: the workflow was publishing `fdoslint` under
+> every library tag, so the single signing path this ADR asked for had to be
+> parameterised by the *module* rather than by a hardcoded binary.
 
 ## Context
 
