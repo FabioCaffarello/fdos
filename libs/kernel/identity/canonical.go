@@ -294,20 +294,43 @@ func (rs Ruleset) Fold(c Claim) Claim {
 	return Claim{scheme: c.scheme, value: folded}
 }
 
-// CanonicalSeed returns the seed [Derive] will hash for this claim under this
+// CanonicalSeed returns the seed derivation will fold for this claim under this
 // ruleset: the per-scheme fold composed with the generic floor.
 //
 // This exists so that resolution can be made to agree with minting **by
 // construction** rather than by argument. Comparing folded claims alone is not
 // enough: `ticker` has no rule, so "PETR4" and "PETR4 " fold to themselves and
-// compare unequal — while Derive folds whitespace generically and assigns them
-// one identity. Matching on the seed closes that gap, because it is literally
-// what Derive hashes.
+// compare unequal — while derivation folds whitespace generically and assigns
+// them one identity. Matching on the seed closes that gap, because it is what
+// derivation folds.
 //
 // The invariant it buys (ADR-0033): two claims resolve to the same identity if
 // and only if minting them under the same kind would derive the same identity.
+//
+// **This stays the legible `SCHEME:VALUE` form and is not the hash pre-image**
+// (ADR-0040). It is recorded verbatim as a derivation parameter, and a framed
+// pre-image there would put length-prefixed binary in an audit trail that exists
+// to be read. [Ruleset.CanonicalPreimage] is the injective form, and the two are
+// not interchangeable: this one collides for claims that differ only in where the
+// scheme ends, which is why comparison must use the other.
 func (rs Ruleset) CanonicalSeed(c Claim) string {
 	return canonicaliseSeed(rs.Fold(c).String())
+}
+
+// CanonicalPreimage returns the injective form of a claim under this ruleset:
+// what [DeriveFromClaim] hashes, minus the kind.
+//
+// Two claims share this value if and only if minting them under the same kind
+// derives one identifier — which is the property resolution needs and
+// [Ruleset.CanonicalSeed] cannot provide, because a flattened `scheme:value`
+// cannot distinguish `("ticker", "x:y")` from `("ticker:x", "y")`.
+//
+// The kind is deliberately absent: this is only ever compared against another of
+// itself, for claims already known to share a kind. Nothing may parse it — it is
+// a comparison key, not a rendering.
+func (rs Ruleset) CanonicalPreimage(c Claim) string {
+	folded := rs.Fold(c)
+	return frame(tagClaimSeed, canonicaliseSeed(folded.Scheme()), canonicaliseSeed(folded.String()))
 }
 
 // canonicalisationVersion versions the ruleset below.

@@ -81,9 +81,24 @@ type ID struct {
 	value string
 }
 
-// namespace is the FDOS root, itself a UUIDv5 over a fixed string. Constant so
-// that identifier derivation is reproducible across processes and years.
-var namespace = mustParseUUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+// namespace is the FDOS root, recorded by ADR-0040. Constant so that identifier
+// derivation is reproducible across processes and years.
+//
+// A UUIDv4 from a CSPRNG, and it must stay one. RFC 9562 §6.6 requires exactly
+// that of a custom namespace — "These custom Namespace ID values MUST NOT use
+// the logic above; instead, generating a UUIDv4 or UUIDv7 Namespace ID value is
+// RECOMMENDED" — and forbids the derived form.
+//
+// It replaces `6ba7b810-9dad-11d1-80b4-00c04fd430c8`, which was the **registered
+// DNS namespace** from RFC 9562 §6.6 sitting behind a comment claiming it was
+// "the FDOS root, itself a UUIDv5 over a fixed string". Both halves were wrong:
+// every FDOS identity shared a namespace with every DNS-named UUIDv5 in
+// existence, and the method the comment described is the one the RFC forbids.
+//
+// Nothing can detect an edit to a random constant, so this is rung 6 and the
+// ADR's immutability is the guard. A different FDOS root namespace appearing
+// anywhere is a defect, not a newer value.
+var namespace = mustParseUUID("2b0f57e7-1fb1-4b00-811c-8dd92cc8170b")
 
 // Derive assigns the identifier for an entity at first observation.
 //
@@ -103,7 +118,47 @@ func Derive(kind Kind, seed string) (ID, error) {
 	if canonical == "" {
 		return ID{}, ErrEmptySeed
 	}
-	return ID{kind: kind, value: uuidV5(namespace, kind.String()+":"+canonical)}, nil
+	return ID{kind: kind, value: uuidV5(namespace, frame(tagEntitySeed, kind.String(), canonical))}, nil
+}
+
+// DeriveFromClaim assigns the identifier for an entity from a claim, keeping the
+// claim's two parts separate all the way into the hash.
+//
+// The reason this exists rather than callers passing `claim.String()` to
+// [Derive]: a flattened claim has already lost the boundary between scheme and
+// value, and no framing downstream can recover it. Measured, with the old
+// rendering, `claim("ticker", "x:y")` and `claim("ticker:x", "y")` derived one
+// identifier — two different claims, one identity, in an append-only ledger.
+//
+// Callers must fold the claim through a [Ruleset] first if a per-scheme rule
+// applies (ADR-0033): canonicalisation is applied before derivation, never
+// inside it.
+//
+// **What gets canonicalised is unchanged, deliberately.** The pre-image carries
+// the joined `scheme:value` form exactly as [canonicaliseSeed] has always folded
+// it, plus the scheme as a separate framed component whose only job is to make
+// the boundary recoverable. Canonicalising the two halves independently would
+// have been simpler and wrong: it strips a *leading* space from a value, which
+// today survives as an internal separator, and stripping it is a decision about
+// whether `" PETR4"` and `"PETR4"` name one instrument. That is a merge, and
+// ADR-0033 records that `ticker` carries no rule precisely because no standard
+// can answer it. Framing must not smuggle in a canonicalisation change.
+func DeriveFromClaim(kind Kind, c Claim) (ID, error) {
+	if !kind.Valid() {
+		return ID{}, fmt.Errorf("%w: %d", ErrUnknownKind, kind)
+	}
+	if c.IsZero() {
+		return ID{}, ErrEmptySeed
+	}
+	scheme := canonicaliseSeed(c.Scheme())
+	joined := canonicaliseSeed(c.String())
+	if scheme == "" || joined == "" {
+		return ID{}, ErrEmptySeed
+	}
+	return ID{
+		kind:  kind,
+		value: uuidV5(namespace, frame(tagClaimSeed, kind.String(), scheme, joined)),
+	}, nil
 }
 
 // MustDerive is Derive for constants and tests.
