@@ -11,10 +11,22 @@
 #
 # Four rules, over the parts of that document a machine can decide:
 #
-#   G1  every module row names the module's newest tag
+#   G1  a released, unchanged module's row names its newest tag
 #   G2  every published module has a row, or is documented in its own section
 #   G3  the governance corpus row names the newest ecosystem tag
 #   G4  every published libs/contracts tag has a version-history row
+#
+# G1 applies only to modules whose source matches their newest tag, and that is
+# a correction rather than a nicety. Stated as "every row names the newest tag"
+# (ADR-0045) it made the release ritual impossible: the registry update lands in
+# the commit that gets tagged, so during that pull request the row names a
+# version no tag has yet. The rule as written failed there, and would then have
+# forced the row to be updated *after* tagging — reddening `main` on every
+# release, which is the exact property ADR-0044 refused for `pin-check` R4.
+#
+# So the split is the same one, for the same reason: check what is settled, and
+# let a release in flight declare where it is going. A module with unreleased
+# changes may name a version above its newest tag; one without may not.
 #
 # Deliberately *not* checked: the per-package `version` column in the Published
 # table. That column records the version in which a package last changed, which
@@ -83,10 +95,31 @@ while IFS= read -r row; do
 
   if [ -z "$newest" ]; then
     fail "${module}: listed at ${version}, but no tag exists for it"
-  elif [ "$version" != "v${newest}" ]; then
-    fail "${module}: registry says ${version}, newest tag is v${newest}"
-    note "  | \`${module}\` | \`v${newest}\` | no | no |"
+    continue
   fi
+
+  [ "$version" = "v${newest}" ] && continue
+
+  # Unreleased changes mean a release is in flight, and the row is allowed to
+  # name where it is going — but only forwards. A row *behind* the newest tag is
+  # the stale case this check exists for, in either state.
+  #
+  # The diff is tag-to-working-tree, not tag-to-HEAD. In CI they are the same;
+  # locally they are not, and comparing against HEAD would tell an author
+  # editing a module that it has no unreleased changes.
+  if [ -n "$(git diff --name-only "${module}/v${newest}" -- "$module" 2>/dev/null)" ]; then
+    higher="$(printf '%s\n%s\n' "${version#v}" "$newest" | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)"
+    if [ "$higher" = "${version#v}" ]; then
+      printf '  %-20s %-9s declares the release in flight (tagged v%s)\n' "$module" "$version" "$newest"
+      continue
+    fi
+    fail "${module}: registry says ${version}, below its newest tag v${newest}"
+    note "  | \`${module}\` | \`v${newest}\` | no | no |"
+    continue
+  fi
+
+  fail "${module}: registry says ${version}, newest tag is v${newest}"
+  note "  | \`${module}\` | \`v${newest}\` | no | no |"
 done < <(grep -E '^\| `libs/[a-z-]+` \| `v[0-9]+\.[0-9]+\.[0-9]+` \|' "$REGISTRY" || true)
 
 # --- G2: every published module is described somewhere -----------------------

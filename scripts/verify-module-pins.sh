@@ -97,7 +97,7 @@ while IFS= read -r module; do
   if [ -z "$own_tag" ]; then
     unreleased=true
     state="never released"
-  elif [ -n "$(git diff --name-only "${module}/v${own_tag}" HEAD -- "$module" 2>/dev/null)" ]; then
+  elif [ -n "$(git diff --name-only "${module}/v${own_tag}" -- "$module" 2>/dev/null)" ]; then
     unreleased=true
     state="changed since v${own_tag}"
   else

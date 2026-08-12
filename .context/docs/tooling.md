@@ -68,6 +68,8 @@ without pushing, and drifts from what developers actually execute.
 | `make pin-check` | First-party pins name published versions; a changed module pins current |
 | `make registry-check` | The contract registry describes the tags that exist |
 | `make release-plan` | The tag chain this change implies, in order (plans; does not publish) |
+| `make release-prepare` | Set a module's registry row to the version about to be released |
+| `make release-tag` | Create a release tag after six preconditions hold (dry run unless `PUBLISH=1`) |
 | `make affected-preflight` | vet, lint and test over affected modules only — **not** the gate |
 | `make adr-check` | Decision log well-formed; supersession bidirectional |
 | `make rfc-check` | RFC set well-formed; an Accepted RFC produced ADRs |
@@ -118,8 +120,10 @@ unreviewed change to the dependency graph.
 | `verify-tool-checksums.sh` | §9, ADR-0043 — downloaded artifacts are identified by digest | 3 |
 | `verify-workspace.sh` | §11, ADR-0044 — the tree is consistent with itself, not only resolvable | 3 |
 | `verify-module-pins.sh` | §11, ADR-0044 — a changed module pins what its siblings released | 3 |
-| `verify-registry.sh` | §11, ADR-0024, ADR-0045 — the registry matches the published tags | 3 |
-| `release-plan.sh` | nothing — orders the release chain a change implies (ADR-0045) | — |
+| `verify-registry.sh` | §11, ADR-0024, ADR-0046 — the registry matches the published tags | 3 |
+| `release-plan.sh` | nothing — orders the release chain a change implies (ADR-0046) | — |
+| `release-prepare.sh` | nothing — sets the registry row for a release in flight | — |
+| `release-tag.sh` | nothing — refuses to tag unless six preconditions hold (ADR-0046) | — |
 | `affected-preflight.sh` | nothing — advisory fast failure over affected modules | — |
 | `verify-directory-contracts.sh` | §10 — declared architectural boundaries | 2–3 |
 | `verify-adr.sh` | §14 — append-only decision log | 3 |

@@ -37,7 +37,7 @@ endef
 
 .PHONY: help bootstrap hooks doctor verify verify-timings affected ci-summary ci-stats \
 	toolchain-check toolchain-checksum-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
-	context-check agent-contract-check workspace-check pin-check registry-check release-plan affected-preflight proto-check proto-gen proto-lint proto-breaking consumer-check \
+	context-check agent-contract-check workspace-check pin-check registry-check release-plan release-prepare release-tag affected-preflight proto-check proto-gen proto-lint proto-breaking consumer-check \
 	fmt fmt-check vet lint test analyze repro-check tidy tidy-check build clean \
 	secrets-check secrets-check-staged vuln-check commit-msg-check commit-msg-check-file
 
@@ -98,6 +98,14 @@ affected-preflight: ## Run vet, lint and test over affected modules only (not th
 # question three milestones answered by hand (ADR-0045).
 release-plan: ## Print the release chain this change implies, in order
 	@$(SCRIPTS_DIR)/release-plan.sh $(BASE)
+
+release-prepare: ## Set a module's registry row to the version about to be released
+	@MODULE="$(MODULE)" VERSION="$(VERSION)" $(SCRIPTS_DIR)/release-prepare.sh
+
+# Dry run unless PUBLISH is set. A tag here is immutable by ruleset, so a tag on
+# a commit that cannot release is permanent garbage — B-008 is fourteen of them.
+release-tag: ## Create a release tag, after checking it is safe to (PUBLISH=1 to push)
+	@MODULE="$(MODULE)" VERSION="$(VERSION)" PUBLISH="$(PUBLISH)" $(SCRIPTS_DIR)/release-tag.sh
 
 # ---------------------------------------------------------------------------
 # Governance
