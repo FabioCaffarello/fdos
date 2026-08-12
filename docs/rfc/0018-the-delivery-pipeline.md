@@ -1,7 +1,7 @@
 ---
 id: RFC-0018
 title: The delivery pipeline — what the gate cannot see, and the release chain nobody computes
-status: Draft
+status: Accepted
 date: 2026-08-12
 authors:
   - "@FabioCaffarello"
@@ -412,6 +412,10 @@ divergence is visible as a choice rather than an oversight.
 
 ## Open questions
 
+> **All four are answered below**, in the ADRs named. They are left in their
+> original wording because the answers only make sense against the questions as
+> they were asked.
+
 1. **Does the first-party pin check fail the gate, or only report?** The
    sharpest question here and the reason it is an RFC. Failing makes an
    in-progress multi-module change impossible to commit half-done — which is
@@ -436,7 +440,14 @@ divergence is visible as a choice rather than an oversight.
    residue in the tag namespace, which `libs/release-smoke` already
    demonstrates.
 
-Resolved by: @FabioCaffarello, in the ADRs this RFC produces.
+Resolved by: @FabioCaffarello, in the ADRs this RFC produced.
+
+| # | Answer | Where |
+|---|---|---|
+| 1 | **Fails** — but split. R1/R2/R3 block; R4, a released module pinning behind, reports. Thirteen such pins existed and none was a defect; blocking them would redden `main` on every tag. | ADR-0044 |
+| 2 | **No change needed.** The `prototext` fixture is parsed and compared with `proto.Equal`, not byte-compared. The concern was right when raised and had already been answered. | ADR-0044 |
+| 3 | **Printed, not committed.** `release-plan` prints the rows and `registry-check` prints the corrected row on failure; neither edits the file. A script that rewrites a document containing prose will eventually eat a paragraph. | ADR-0045 |
+| 4 | **Tagless dispatch.** The disposable tag was the proven instrument and stopped being available: ADR-0043 made tags undeletable, so every drill would leave permanent residue. | ADR-0047 |
 
 ## Consequences
 
@@ -470,3 +481,87 @@ Resolved by: @FabioCaffarello, in the ADRs this RFC produces.
 - A module existing outside the workspace without the gate saying so.
 - Moving an `apps/*` or `ecosystem/*` tag after an attestation points at it.
 - Shipping a version table that disagrees with the tags it claims to describe.
+
+---
+
+## What execution changed, recorded after the fact
+
+This section was written when the last phase merged. An RFC that only records
+what was planned is a plan; this is what it cost to be right and where it was
+wrong.
+
+### The phases, and what each produced
+
+| Phase | ADR | Held as planned? |
+|---|---|---|
+| 0 — instrument | none | yes |
+| 1 — pinning gaps and tag ruleset | ADR-0043 | yes |
+| 2 — workspace view | ADR-0044 | yes, with the R3/R4 split the plan did not anticipate |
+| 3 — affected is the release graph | ADR-0045 | **no** — one rule was wrong |
+| 4 — publishing is dispatched | ADR-0046 | yes, and it corrected Phase 3 |
+| 5 — attest what is consumed | ADR-0047, ADR-0039 accepted | **no** — the defect was larger than the plan knew |
+| 6 — drift reported | ADR-0048 | yes, minus one item that was already done |
+
+### Four things the plan got wrong
+
+**Its own headline number.** The Motivation quoted 103s as the CI duration; it
+was the second-fastest of twelve, and a 279s run landed on this RFC's own pull
+request. Corrected in `f103bab`, before any phase was built. One sample
+presented as a constant is what an unmeasured pipeline invites, and it happened
+inside the document arguing for measurement.
+
+**Phase 3 shipped a rule that forbade the thing it protected.** `registry-check`
+G1 was stated as "every module row names its module's newest tag". The registry
+update belongs in the commit being tagged, so during a release pull request the
+row names a version no tag has yet — and G1 failed it. The other order reddens
+`main` for the whole window, which is the property Phase 2 had refused four
+hours earlier for a different rule. ADR-0046 supersedes ADR-0045 to fix it.
+
+**Phase 5's defect was not the one the plan named.** The plan said the
+`libs/contracts` zip was unattested while `fdoslint` was — true, and the smaller
+half. Reading what was actually published showed **every library tag was
+publishing `fdoslint` binaries** with a signed manifest describing them: real
+signatures over the wrong artifact, in twenty releases. That is worse than an
+unattested module, and no amount of reasoning about the workflow would have
+found it. `gh release view` did.
+
+**Phase 6 had an item that was already done.** [#67](https://github.com/FabioCaffarello/fdos/issues/67)
+option B — a job so the platform-sensitive gate runs early — duplicates `verify`,
+which already runs `make test -race` with `CGO_ENABLED=1` on `ubuntu-latest` for
+every pull request. Declined with the measurement rather than built.
+
+### What stayed declined
+
+The three things this RFC refused in §Alternatives were never revisited: no
+affected-pruned gate, no job matrix, no dependency bot. The gate grew by roughly
+two seconds locally against a 114s CI median, which is the trade §Consequences
+said it was making.
+
+### What the gate cost, before and after
+
+| | Median CI run | Range | Checks |
+|---|---|---|---|
+| before Phase 0 | 129s | 96–279, bimodal | 19 |
+| after Phase 6 | **106s** | 92–269, still bimodal | **23** |
+
+Four checks were added and the median went *down* by 23s, which is not a
+claim about the checks: it is cache behaviour, and the range shows the
+distribution did not change shape.
+
+The distribution is still bimodal and the cause is now recorded per run rather
+than inferred: `make ci-summary` writes the build-cache state, and the first
+slow run after it landed reported `Build cache: miss`.
+
+### Still open
+
+- `examples/ingest/ingest`, a tracked 7.3 MB binary, is still tracked, and is
+  now known to be silently overwritten by an ordinary `go build ./...`
+  ([#79](https://github.com/FabioCaffarello/fdos/issues/79)).
+- Twenty published releases still carry `fdoslint` under other modules' tags.
+  They are history attached to immutable tags and nothing marks them
+  (ADR-0047).
+- `release.yml`'s last two steps — `gh release create` and the tag trigger —
+  are still exercised only by releasing (ADR-0047).
+- `lefthook` drops the `commit-msg` argument inside a linked worktree, so every
+  commit in this work was made with `--no-verify` and verified afterwards with
+  `make commit-msg-check` ([#109](https://github.com/FabioCaffarello/fdos/issues/109)).

@@ -12,6 +12,8 @@ superseded_by: []
 
 # ADR-0046 — The release chain is planned by a command and published by a dispatched act
 
+> Phase 4 of [RFC-0018](../rfc/0018-the-delivery-pipeline.md), which also carries the Phase 3 correction.
+
 > **Supersedes [ADR-0045](0045-the-affected-graph-is-the-release-graph.md).**
 > Not because it was wrong in substance — everything it decided is restated
 > below — but because one of its rules, stated as written, made the release it
