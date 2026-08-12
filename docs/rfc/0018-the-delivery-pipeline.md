@@ -44,14 +44,32 @@ against a clean `main`:
 | `adr-immutability-check` | 1.5s | `analyze` | 1.3s |
 | `adr-check` | 1.1s | remaining twelve | < 1s each |
 
-**Total 25s locally. In CI, 103s** — checkout 6s, toolchain 14s, `make verify`
-~83s — across eight modules and thirty-six published tags.
+**Total 25s locally.** In CI, across the last twelve successful `verify` runs,
+over eight modules and thirty-six published tags:
 
-That measurement is the load-bearing one in this document, because it removes
-the problem everybody assumes a pipeline has. **CI time is not a problem, and a
-plan that spent its effort making it smaller would be optimising eighty seconds
-while the expensive failures went untouched.** The four below are the expensive
-ones.
+```
+96 103 114 115 126 128 129 130 134    220 255 279     (seconds)
+min 96    median 129    max 279
+```
+
+**The distribution is bimodal, and the gap is the finding.** Nine runs sit
+between 96s and 134s; three sit between 220s and 279s, which is 2.9× the
+fastest. The plausible cause is the Go build cache restored by `setup-go`
+hitting or missing, and *plausible* is as far as this document can honestly go —
+nothing records which.
+
+That measurement says two things rather than one. **CI time is not a problem**,
+so a plan spending its effort on the median would be optimising two minutes
+while the expensive failures went untouched. And **the repository cannot
+currently distinguish a slow run from a degrading one**, which is why Phase 0 is
+instrumentation and comes first.
+
+A methodological note, because it is the same failure this RFC is about: an
+earlier draft of this section quoted 103s as *the* CI figure. That was a real
+measurement of a real run, and it was the second-fastest of twelve. One sample
+presented as a constant is what an unmeasured pipeline invites, and it survived
+until a 279s run happened to land on this RFC's own pull request. The four
+failures below are the expensive ones.
 
 ### 1. The gate cannot see a multi-module change
 
@@ -156,10 +174,15 @@ gate costs.
   not inline YAML.
 - A weekly job publishing p50/p95 duration and failure rate of recent `verify`
   runs as an issue.
+- **Cache hit or miss recorded per run.** The 2.9× spread in §Motivation is
+  attributed to the build cache by inference, not by evidence, and the whole
+  "there is room to grow the gate" argument rests on knowing which mode a run
+  was in.
 
 **Why first.** It is what tells you when the "CI time is not a problem"
-conclusion above has expired, and it is the only honest trigger for the job
-matrix this RFC declines to build today.
+conclusion above has expired, it is the only honest trigger for the job matrix
+this RFC declines to build today, and it is what would have stopped this
+document's own first draft from quoting one sample as a constant.
 
 ### Phase 1 — Close the pinning gaps
 
@@ -291,8 +314,9 @@ also makes `CONTRIBUTING.md`'s existing sentence true rather than aspirational.
 - **No versioning policy for applications.** ADR-0039 explicitly left it open
   and this does not close it.
 - **No job matrix over modules.** Declined on arithmetic, not principle: fixed
-  per-job setup is ~20s against a serial `make verify` of ~83s. Phase 0 exists
-  to say when that inverts.
+  per-job setup is ~20s against a median serial run of 129s, and the runs that
+  actually hurt are the cache-miss ones a matrix would multiply rather than
+  divide. Phase 0 exists to say when that inverts.
 - **No change to what `verify` covers as the required check.** Every phase adds
   to the gate or runs beside it; none narrows it.
 
@@ -328,12 +352,14 @@ and the one most reviewers would expect. Rejected twice over: ADR-0014 already
 decided it — *"under-reporting affectedness ships a broken module, and the
 failure is silent"* — and the measurement says there is no problem to solve.
 Reopening it would need a superseding ADR and would be trading a real
-correctness property for eighty seconds.
+correctness property for two minutes.
 
 **A job matrix over modules now.** Would cut wall-clock without narrowing
 coverage, and preserves a single required check through an aggregating job.
 Rejected on arithmetic today rather than on principle: eight jobs at ~20s of
-fixed setup each cost more than the 83s they would parallelise. It becomes
+fixed setup each cost more than the 129s median they would parallelise, and the
+279s tail is a cache miss — which a matrix pays once per job rather than once
+per run, making the worst case worse rather than better. It becomes
 correct at some point and Phase 0 is what will detect that point.
 
 **Dependabot or Renovate for actions and modules.** The standard answer to
@@ -426,9 +452,10 @@ Resolved by: @FabioCaffarello, in the ADRs this RFC produces.
 ### What becomes harder
 
 - **The gate grows.** A workspace build and three new checks add time to
-  something currently measured at 83s in CI, and Phase 0 exists partly to keep
-  that visible. This RFC trades gate time for coverage deliberately, having
-  established there is room.
+  something whose median CI run is 129s and whose worst is 279s, and Phase 0
+  exists partly to keep that visible. This RFC trades gate time for coverage
+  deliberately, having established there is room — and the bimodality means the
+  trade should be judged against the tail rather than the median.
 - **In-progress cross-module work may become uncommittable** if open question 1
   resolves to *fail*. That is the cost of the mechanism, not a side effect of
   it.
