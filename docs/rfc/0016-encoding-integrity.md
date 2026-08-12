@@ -1,13 +1,26 @@
 ---
 id: RFC-0016
 title: Every encoding that outlives a process is injective, ordered and versioned
-status: Draft
+status: Accepted
 date: 2026-08-11
 authors:
   - "@FabioCaffarello"
 ---
 
 # RFC-0016 — Every encoding that outlives a process is injective, ordered and versioned
+
+> **Accepted**, recorded by
+> [ADR-0040](../adr/0040-encoding-integrity-and-the-fdos-root-namespace.md),
+> which settles the open questions below. **Route B** is accepted for the
+> rounding context — `precision` keeps its meaning and a `scale` concept is added
+> beside it, so this is a minor bump and `fdos.kernel.v2` is not opened. The FDOS
+> root namespace is the constant `2b0f57e7-1fb1-4b00-811c-8dd92cc8170b`. A store
+> whose encoding version is unknown is refused rather than guessed, the
+> value-change class is recorded narrowly without amending ADR-0024, and item 9
+> travels with the decision rather than splitting out.
+>
+> One question stays genuinely open and is carried into that ADR's Notes: the
+> mechanism for recording the **`Fold` seed** (item 4).
 
 ## Summary
 
