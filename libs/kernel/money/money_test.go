@@ -3,6 +3,7 @@ package money_test
 import (
 	"errors"
 	"math/rand"
+	"strings"
 	"testing"
 
 	"pgregory.net/rapid"
@@ -280,4 +281,106 @@ func repeat(s string, n int) string {
 		out = append(out, s...)
 	}
 	return string(out)
+}
+
+// "Round to the cent" was inexpressible until now, and that is the defect
+// ADR-0040 closed. Precision is a significant-digit budget: one context yields
+// three different decimal places for 1/3, 1000/3 and 0.001/3, so it cannot say
+// what a currency's minor units require.
+//
+// ISO 4217 publishes those minor units per currency — 0 for JPY, 3 for KWD, 4 for
+// CLF — and Council Regulation (EC) No 1103/97 Article 5 requires rounding to the
+// sub-unit. Each case below is one of those, which is why they are currencies
+// rather than arbitrary numbers.
+func TestQuantizeRoundsToACurrencysMinorUnits(t *testing.T) {
+	for _, tc := range []struct {
+		name, amount, currency, want string
+		scale                        int32
+		mode                         money.RoundingMode
+		inexact                      bool
+	}{
+		{"BRL to the cent", "10.567", "BRL", "10.57", 2, money.RoundingModeHalfEven, true},
+		{"JPY has no minor unit", "1234.62", "JPY", "1235", 0, money.RoundingModeHalfEven, true},
+		{"KWD has three", "1.23456", "KWD", "1.235", 3, money.RoundingModeHalfEven, true},
+		{"already at scale is exact", "10.50", "BRL", "10.50", 2, money.RoundingModeHalfEven, false},
+		{"trailing zeros are added, not implied", "10.5", "BRL", "10.50", 2, money.RoundingModeHalfEven, false},
+		{"negative scale rounds to tens", "1236", "BRL", "1240", -1, money.RoundingModeHalfEven, true},
+		{"half-up and half-even differ", "10.565", "BRL", "10.57", 2, money.RoundingModeHalfUp, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rc := money.MustRoundingContext(20, tc.mode).WithScale(tc.scale)
+			got, inexact, err := money.MustParse(tc.amount, tc.currency).Quantize(rc)
+			if err != nil {
+				t.Fatalf("quantize: %v", err)
+			}
+			if got.String() != tc.want {
+				t.Errorf("%s at scale %d = %s, want %s", tc.amount, tc.scale, got, tc.want)
+			}
+			if inexact != tc.inexact {
+				t.Errorf("inexact = %v, want %v; a rounding nobody is told about is unauditable",
+					inexact, tc.inexact)
+			}
+		})
+	}
+}
+
+// A context with no scale cannot quantize, and must say so rather than pick one.
+// Defaulting a scale would be the privileged default ADR-0008 forbids, and here
+// it would additionally be a guess about a currency.
+func TestQuantizeRefusesAContextWithoutAScale(t *testing.T) {
+	rc := money.MustRoundingContext(10, money.RoundingModeHalfEven)
+	if _, _, err := money.MustParse("1.005", "BRL").Quantize(rc); !errors.Is(err, money.ErrNoScale) {
+		t.Fatalf("want ErrNoScale, got %v", err)
+	}
+
+	// And presence is not the same as zero: scale 0 is a real instruction.
+	whole, _, err := money.MustParse("1.6", "JPY").Quantize(rc.WithScale(0))
+	if err != nil {
+		t.Fatalf("scale 0: %v", err)
+	}
+	if whole.String() != "2" {
+		t.Errorf("scale 0 gave %s, want 2 — zero is JPY, not an unset field", whole)
+	}
+}
+
+// The trap ADR-0040 named: quantize is total on scale and *partial* on precision.
+// The decimal specification raises Invalid Operation when the quantized
+// coefficient would exceed precision, and the specification's own example is
+// 35236450.6 to two places at precision 9.
+//
+// It must surface as a domain error. A NaN a caller could propagate is the same
+// failure the exact context had before its conditions were trapped: an arithmetic
+// condition nobody is told about becomes a wrong number.
+func TestQuantizeRefusesWhatPrecisionCannotHold(t *testing.T) {
+	rc := money.MustRoundingContext(9, money.RoundingModeHalfEven).WithScale(2)
+
+	got, _, err := money.MustParse("35236450.6", "BRL").Quantize(rc)
+	if !errors.Is(err, money.ErrInexact) {
+		t.Fatalf("quantize returned (%s, %v); want ErrInexact — a NaN a caller can propagate "+
+			"is a wrong number with no trace of having been one", got, err)
+	}
+	if !strings.Contains(err.Error(), "precision 9") {
+		t.Errorf("the error does not name the precision that bound: %v", err)
+	}
+
+	// The same amount fits once precision is sized for it, which is what a
+	// caller must do rather than lowering the scale.
+	roomy := money.MustRoundingContext(20, money.RoundingModeHalfEven).WithScale(2)
+	if _, _, err := money.MustParse("35236450.6", "BRL").Quantize(roomy); err != nil {
+		t.Errorf("precision 20 should hold 35236450.60: %v", err)
+	}
+}
+
+// The context renders into derivation records, so its rendering is a hash
+// pre-image. A context without a scale must render exactly as it did before the
+// field existed, or every derivation that never used a scale would move address
+// for a cosmetic reason.
+func TestARoundingContextWithoutAScaleRendersUnchanged(t *testing.T) {
+	rc := money.MustRoundingContext(10, money.RoundingModeHalfEven)
+	if got := rc.String(); got != "precision=10,mode=half_even" {
+		t.Errorf("rendered %q; adding the scale field moved a pre-image it should not touch", got)
+	}
+	if got := rc.WithScale(2).String(); got != "precision=10,mode=half_even,scale=2" {
+		t.Errorf("a context with a scale rendered %q", got)
+	}
 }

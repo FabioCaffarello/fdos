@@ -239,6 +239,53 @@ func (m Money) Div(q Quantity, rc RoundingContext) (result Money, inexact bool, 
 	return Money{amount: out, currency: m.currency}, res.Inexact(), nil
 }
 
+// ErrNoScale is returned by Quantize when the context fixes no decimal places.
+//
+// A Quantize without a scale has nothing to round to, and defaulting one would
+// be the privileged default ADR-0008 forbids — here it would additionally be a
+// guess about a currency.
+var ErrNoScale = errors.New("money: rounding context fixes no scale")
+
+// Quantize rounds the amount to the decimal places the context fixes.
+//
+// **This is the money operation.** Rounding to a currency's minor units is what
+// ISO 4217 publishes and what Council Regulation (EC) No 1103/97 Article 5
+// requires; a significant-digit budget cannot express it, which is why the
+// context carries both concepts (ADR-0040). Reach for this rather than for
+// [Money.Div]'s precision when the question is "how many cents".
+//
+// The returned bool reports whether the result was inexact, matching Div, so a
+// caller that must record rounding in a derivation (ADR-0010) can tell.
+//
+// **Precision still binds, and that is a domain error rather than a NaN.** The
+// decimal specification makes quantize total on scale and *partial* on
+// precision: it raises Invalid Operation when the quantized coefficient would
+// exceed the context's precision, so `35236450.6` to two places fails at
+// precision 9. Callers must size precision from the largest amount they will
+// hold times the currency's minor units. Letting that surface as a NaN a caller
+// could propagate is the trap this signature exists to close — the same trap the
+// exact context had before its conditions were trapped.
+func (m Money) Quantize(rc RoundingContext) (result Money, inexact bool, err error) {
+	scale, ok := rc.Scale()
+	if !ok {
+		return Money{}, false, ErrNoScale
+	}
+
+	// apd takes the target *exponent*, which is the negated scale: two decimal
+	// places is exponent -2.
+	var out apd.Decimal
+	res, err := rc.apdContext().Quantize(&out, &m.amount, -scale)
+	if err != nil {
+		if res.InvalidOperation() {
+			return Money{}, false, fmt.Errorf(
+				"%w: %s cannot be held at scale %d within precision %d",
+				ErrInexact, m, scale, rc.Precision())
+		}
+		return Money{}, false, err
+	}
+	return Money{amount: out, currency: m.currency}, res.Inexact(), nil
+}
+
 // exactly runs an exact-context operation and gives precision loss the sentinel
 // ErrInexact already documents — "returned when an operation would silently lose
 // precision without a RoundingContext to say how".
