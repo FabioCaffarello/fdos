@@ -1,0 +1,38 @@
+# SHA-256 digests for the toolchain artifacts CI downloads by URL.
+#
+# mise.toml pins versions. A version is not a digest: GitHub release assets can
+# be deleted and re-uploaded under the same tag, so `gitleaks_8.30.0_linux_x64`
+# names an artifact that can change without any commit here. That is the same
+# argument ADR-0014 makes for pinning actions by commit SHA, applied to the two
+# build inputs it left on version alone and recorded as an open gap:
+#
+#   "The gitleaks install is pinned by version, not by checksum. Every other
+#    build input is digest-pinned; this one is not, and stating it is better
+#    than implying coverage."
+#
+# Format, one artifact per line:
+#
+#   <tool> <version> <platform> <sha256>
+#
+# `<tool>` matches the key in mise.toml. `<platform>` is the token that appears
+# in the download URL, which differs per project and is not normalised here —
+# inventing a canonical spelling would mean translating it back at the point of
+# use, and a translation table is a second thing to get wrong.
+#
+# Only the platforms CI actually downloads are listed. Recording digests for
+# artifacts nothing fetches would be coverage nobody verifies.
+#
+# `make toolchain-checksum-check` fails when a URL-installed tool has no entry
+# for its pinned version, so bumping a version in mise.toml without recording
+# the new digest is a build failure rather than a silent loss of the pin.
+#
+# To add or update an entry, verify against the artifact rather than against the
+# project's published manifest alone — the manifest and the binary come from the
+# same place, so a matching manifest proves transport integrity and nothing more:
+#
+#   curl -fsSL -o /tmp/a "<url>" && shasum -a 256 /tmp/a
+#
+# Both entries below were produced that way.
+
+gitleaks 8.30.0 linux_x64 79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e
+buf 1.68.4 Linux-x86_64 0c12ca1ca1a5741c122eb74f3556ae7fa66277a7d563223ca01fc6f52e9d47e1

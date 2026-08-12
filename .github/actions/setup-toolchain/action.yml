@@ -62,14 +62,23 @@ runs:
         args: --help
         only-new-issues: false
 
+    # The digest is resolved before the download and compared before anything is
+    # extracted or made executable. Verifying afterwards would mean the artifact
+    # had already been unpacked into a directory on PATH, which is most of what
+    # an attacker needed.
+    #
+    # Expected digests come from tool-checksums.txt through one parser, exactly
+    # as versions come from mise.toml through one parser. CI declares neither.
     - name: Install gitleaks
       shell: bash
       env:
         VERSION: ${{ steps.pins.outputs.gitleaks }}
       run: |
         set -euo pipefail
+        expected="$(scripts/tool-checksum.sh gitleaks linux_x64)"
         curl -fsSL -o /tmp/gitleaks.tar.gz \
           "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+        printf '%s  /tmp/gitleaks.tar.gz\n' "$expected" | sha256sum -c -
         tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
         gitleaks version
 
@@ -79,7 +88,8 @@ runs:
         VERSION: ${{ steps.pins.outputs.buf }}
       run: |
         set -euo pipefail
-        curl -fsSL -o /usr/local/bin/buf \
-          "https://github.com/bufbuild/buf/releases/download/v${VERSION}/buf-Linux-x86_64"
-        chmod +x /usr/local/bin/buf
+        expected="$(scripts/tool-checksum.sh buf Linux-x86_64)"
+        curl -fsSL -o /tmp/buf "https://github.com/bufbuild/buf/releases/download/v${VERSION}/buf-Linux-x86_64"
+        printf '%s  /tmp/buf\n' "$expected" | sha256sum -c -
+        install -m 0755 /tmp/buf /usr/local/bin/buf
         buf --version

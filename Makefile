@@ -36,7 +36,7 @@ define FOR_EACH_MODULE
 endef
 
 .PHONY: help bootstrap hooks doctor verify verify-timings affected ci-summary ci-stats \
-	toolchain-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
+	toolchain-check toolchain-checksum-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
 	context-check agent-contract-check proto-check proto-gen proto-lint proto-breaking consumer-check \
 	fmt fmt-check vet lint test analyze repro-check tidy tidy-check build clean \
 	secrets-check secrets-check-staged vuln-check commit-msg-check commit-msg-check-file
@@ -72,7 +72,7 @@ hooks: ## Install the git hooks (lefthook)
 # the `setup-toolchain` precedent (B-008): a second copy of what the gate
 # contains is the copy that drifts, and the drifted one is never the one being
 # watched.
-VERIFY_TARGETS := toolchain-check contracts-check adr-check adr-immutability-check \
+VERIFY_TARGETS := toolchain-check toolchain-checksum-check contracts-check adr-check adr-immutability-check \
                   rfc-check constitution-check action-pinning-check context-check \
                   agent-contract-check proto-check secrets-check tidy-check \
                   fmt-check vet lint test analyze vuln-check repro-check
@@ -92,6 +92,9 @@ affected: ## Print the modules affected by the current change
 
 toolchain-check: ## Assert the installed toolchain matches the pins in mise.toml
 	@$(SCRIPTS_DIR)/toolchain-check.sh
+
+toolchain-checksum-check: ## Assert every URL-downloaded build input is pinned by digest
+	@$(SCRIPTS_DIR)/verify-tool-checksums.sh
 
 contracts-check: ## Assert every directory declares a valid architectural contract
 	@$(SCRIPTS_DIR)/verify-directory-contracts.sh

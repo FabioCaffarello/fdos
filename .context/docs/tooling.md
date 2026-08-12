@@ -23,6 +23,12 @@ scaffoldVersion: "2.0.0"
 | govulncheck | v1.6.0 | M3 (via `go run`) |
 | buf | 1.68.4 | M4 |
 
+**`gitleaks` and `buf` are additionally pinned by SHA-256 digest** in
+`tool-checksums.txt` (ADR-0043). They are the two tools CI downloads by URL, and
+a GitHub release asset can be re-uploaded under the same tag — so a version
+alone left the artifact mutable, which is the thing SHA-pinning removes for
+actions.
+
 **The Go pin tracks the patch line** (ADR-0038): a patch release carries
 security fixes and no language change, so the pin moves to the current patch
 rather than staying where it started. Expect this row to be the one that changes
@@ -56,6 +62,7 @@ without pushing, and drifts from what developers actually execute.
 | `make bootstrap` | Prepare a working copy; validate the toolchain |
 | `make verify` | Every enforcement mechanism available at this milestone |
 | `make toolchain-check` | Installed tools match the pins |
+| `make toolchain-checksum-check` | Every URL-downloaded build input is pinned by digest |
 | `make contracts-check` | Every directory declares a valid contract |
 | `make adr-check` | Decision log well-formed; supersession bidirectional |
 | `make rfc-check` | RFC set well-formed; an Accepted RFC produced ADRs |
@@ -95,6 +102,7 @@ unreviewed change to the dependency graph.
 | Script | Enforces | Rung |
 |--------|----------|------|
 | `toolchain-check.sh` | §9 — pinned, reproducible toolchain | 3 |
+| `verify-tool-checksums.sh` | §9, ADR-0043 — downloaded artifacts are identified by digest | 3 |
 | `verify-directory-contracts.sh` | §10 — declared architectural boundaries | 2–3 |
 | `verify-adr.sh` | §14 — append-only decision log | 3 |
 | `verify-rfc.sh` | §14 — design is decided before it is built | 3 |
@@ -113,6 +121,7 @@ unreviewed change to the dependency graph.
 | `ci-run-summary.sh` | nothing — records the run environment and cache state | — |
 | `ci-run-stats.sh` | nothing — duration percentiles and failure rate | — |
 | `tool-version.sh` | shared helper — the single parser for `mise.toml` pins | — |
+| `tool-checksum.sh` | shared helper — the single parser for `tool-checksums.txt` | — |
 | `affected-modules.sh` | shared helper — the Nx compensation (ADR-0004) | — |
 | `list-modules.sh` | shared helper (ADR-0004 makes commands per-module) | — |
 | `lib/frontmatter.sh` | shared helper | — |
