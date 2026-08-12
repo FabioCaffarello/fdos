@@ -187,6 +187,12 @@ pre-push. Hooks call the same `make` targets, and are explicitly bypassable: CI
 re-runs everything, so `--no-verify` costs a round trip and cannot let anything
 through.
 
+**Quote every interpolated path.** This repository lives under a path with
+spaces, so `{1}` in `lefthook.yml` and `$(MSG)` in the Makefile must be quoted.
+Unquoted, they aborted every commit made from a linked git worktree — where git
+passes an absolute message path instead of the relative `.git/COMMIT_EDITMSG`
+(#109).
+
 ## The dotcontext harness: what is bound, and what was declined
 
 The harness offers sessions, traces, sensors, artifacts, task contracts,

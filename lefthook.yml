@@ -60,13 +60,13 @@ commit-msg:
     # directly, which is the one place this file broke its own rule — and
     # `scripts/README.md` requires every script to be reachable from make.
     #
-    # `{1}` is the message file git supplies. Inside a linked git worktree
-    # lefthook drops it, the target fails loudly with `no message file given`,
-    # and the commit aborts (#109). That is the correct response to a broken
-    # harness: `make commit-msg-check` re-checks the whole branch afterwards, so
-    # a --no-verify taken to get past it is caught rather than trusted.
+    # `{1}` is quoted, and that is the whole of #109. This repository lives
+    # under a path containing spaces; in a linked worktree git passes an
+    # absolute message path rather than the relative `.git/COMMIT_EDITMSG`, and
+    # unquoted interpolation split it. Every commit from a worktree aborted, and
+    # the only way past was --no-verify, which also skips the secret scan above.
     - name: message-convention
-      run: make commit-msg-check-file MSG={1}
+      run: make commit-msg-check-file MSG="{1}"
 
 pre-push:
   parallel: false

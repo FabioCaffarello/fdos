@@ -210,7 +210,8 @@ commit-msg-check: ## Assert this branch's commit messages follow the convention
 	@$(SCRIPTS_DIR)/verify-commit-message.sh branch $(BASE)
 
 commit-msg-check-file: ## Assert one message file follows the convention (used by the commit-msg hook)
-	@$(SCRIPTS_DIR)/verify-commit-message.sh message $(MSG)
+	@$(SCRIPTS_DIR)/verify-commit-message.sh message "$(MSG)"
+
 
 vuln-check: ## Assert no known vulnerability is reachable from FDOS code
 	@$(SCRIPTS_DIR)/verify-vulns.sh
