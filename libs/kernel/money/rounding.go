@@ -74,6 +74,17 @@ func (r RoundingMode) apdRounder() (apd.Rounder, error) {
 type RoundingContext struct {
 	precision uint32
 	mode      RoundingMode
+
+	// scale is decimal places, and hasScale is its presence. Two fields rather
+	// than a pointer because a RoundingContext is a value that gets copied into
+	// derivation records, and a pointer would make two contexts that agree
+	// compare unequal.
+	//
+	// Presence matters and is not pedantry: absent means "no scale constraint",
+	// and `scale = 0` means round to whole units — which is JPY, not a
+	// placeholder (ADR-0040).
+	scale    int32
+	hasScale bool
 }
 
 // NewRoundingContext builds a context. Both arguments are required, which is
@@ -101,14 +112,46 @@ func MustRoundingContext(precision uint32, mode RoundingMode) RoundingContext {
 }
 
 // Precision returns the significant digits the context allows.
+//
+// Significant digits, governing intermediates — not decimal places. The two are
+// different concepts and this type now carries both, which is the answer every
+// mature decimal system reached independently (ADR-0040). For a result rounded
+// to a currency's minor units, see [RoundingContext.WithScale] and
+// [Money.Quantize].
 func (rc RoundingContext) Precision() uint32 { return rc.precision }
+
+// WithScale returns a copy of the context that also fixes decimal places.
+//
+// A method rather than a second constructor: precision and mode stay required,
+// and a scale is an addition to a context that was already valid without one.
+// Negative rounds to tens or hundreds, which is as legitimate as rounding to
+// cents.
+func (rc RoundingContext) WithScale(scale int32) RoundingContext {
+	rc.scale = scale
+	rc.hasScale = true
+	return rc
+}
+
+// Scale returns the decimal places the context fixes, and whether it fixes any.
+//
+// The bool is the whole point of the pair: a caller cannot mistake "no scale
+// constraint" for "round to whole units", because zero is a real answer.
+func (rc RoundingContext) Scale() (int32, bool) { return rc.scale, rc.hasScale }
 
 // Mode returns the rounding mode.
 func (rc RoundingContext) Mode() RoundingMode { return rc.mode }
 
 // String renders the context for a derivation record parameter.
+//
+// The scale appears only when present, so a context without one renders exactly
+// as it did before this field existed. That keeps a derivation address stable
+// across the addition for every caller that does not use a scale — and this
+// string is the pre-image, so a cosmetic change here moves real addresses.
 func (rc RoundingContext) String() string {
-	return fmt.Sprintf("precision=%d,mode=%s", rc.precision, rc.mode)
+	if !rc.hasScale {
+		return fmt.Sprintf("precision=%d,mode=%s", rc.precision, rc.mode)
+	}
+	return fmt.Sprintf("precision=%d,mode=%s,scale=%d", rc.precision, rc.mode, rc.scale)
 }
 
 func (rc RoundingContext) apdContext() *apd.Context {
