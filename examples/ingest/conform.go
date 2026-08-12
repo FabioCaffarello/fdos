@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	ingestv1 "github.com/FabioCaffarello/fdos/libs/contracts/gen/fdos/ingest/v1"
+	"github.com/FabioCaffarello/fdos/libs/kernel/identity"
 	"github.com/FabioCaffarello/fdos/libs/kernel/temporal"
 	"github.com/FabioCaffarello/fdos/libs/ledger/adapters/clock"
 	"github.com/FabioCaffarello/fdos/libs/ledger/adapters/memory"
@@ -53,7 +54,8 @@ func Check(wire []byte) error {
 	if err != nil {
 		return fmt.Errorf("clock: %w", err)
 	}
-	ledger, err := app.NewLedger(memory.NewStore(), clock.NewSequence(at, time.Hour))
+	ledger, err := app.NewLedger(
+		memory.NewStore(), clock.NewSequence(at, time.Hour), identity.Canonicalisation())
 	if err != nil {
 		return fmt.Errorf("ledger: %w", err)
 	}
