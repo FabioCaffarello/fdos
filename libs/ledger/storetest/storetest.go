@@ -55,6 +55,9 @@ func Run(t *testing.T, newStore NewStore) {
 	t.Run("StaleReadIsRefusedAndNotApplied", func(t *testing.T) { staleReadIsRefused(t, newStore) })
 	t.Run("AnyAppendsRegardless", func(t *testing.T) { anyAppendsRegardless(t, newStore) })
 	t.Run("KnowledgeTimeCannotGoBackwards", func(t *testing.T) { knowledgeCannotGoBackwards(t, newStore) })
+	t.Run("SubSecondKnowledgeTimesOrderChronologically", func(t *testing.T) {
+		subSecondKnowledgeOrders(t, newStore)
+	})
 	t.Run("FactsReloadIntact", func(t *testing.T) { factsReloadIntact(t, newStore) })
 	t.Run("AsOfReadMatchesTheProjection", func(t *testing.T) { asOfMatchesProjection(t, newStore) })
 	t.Run("ConcurrentAppendsSerialise", func(t *testing.T) { concurrentAppendsSerialise(t, newStore) })
@@ -183,6 +186,63 @@ func knowledgeCannotGoBackwards(t *testing.T, newStore NewStore) {
 			}
 		})
 	}
+}
+
+// Case 7b. The region the suite could not reach, and the defect it hid.
+//
+// Every other case builds knowledge times from whole hours, which render as a
+// fixed-width `…T0N:00:00Z`. A store that compares *formatted* timestamps as
+// strings agrees with chronology exactly there and nowhere else: RFC3339 grants
+// string-sortability only when all times carry the same number of fractional
+// digits (RFC 3339 §5.1), and Go's RFC3339Nano strips trailing zeros, so a
+// sub-second instant renders shorter and `.` (0x2E) sorts below `Z` (0x5A).
+//
+// Measured before this case existed: the SQLite store refused an append the
+// in-memory store accepted, because `2026-…T00:00:00.000000001Z` compared as
+// *earlier* than `2026-…T00:00:00Z`. Two implementations of one port disagreeing
+// about whether time moved forward, with the shared suite green.
+//
+// A single nanosecond, deliberately: it is the smallest step the temporal type
+// admits, so it is the case a formatted comparison is most likely to get wrong,
+// and the one an as-of read has to get right.
+func subSecondKnowledgeOrders(t *testing.T, newStore NewStore) {
+	ctx := context.Background()
+
+	t.Run("a nanosecond later is later", func(t *testing.T) {
+		store := newStore(t)
+		second := time.Hour
+
+		if _, err := store.Append(
+			ctx, "acct-1", app.Any(), envelopeAfter(t, second), domain.KindObservation, claim(t, "PETR4"),
+		); err != nil {
+			t.Fatalf("seed: %v", err)
+		}
+		if _, err := store.Append(
+			ctx, "acct-1", app.Any(), envelopeAfter(t, second+time.Nanosecond),
+			domain.KindObservation, claim(t, "VALE3"),
+		); err != nil {
+			t.Fatalf("an append one nanosecond later was refused: %v — the store is comparing "+
+				"rendered timestamps rather than instants", err)
+		}
+	})
+
+	t.Run("a fraction earlier is earlier", func(t *testing.T) {
+		store := newStore(t)
+		second := time.Hour
+
+		if _, err := store.Append(
+			ctx, "acct-1", app.Any(), envelopeAfter(t, second+500*time.Millisecond),
+			domain.KindObservation, claim(t, "PETR4"),
+		); err != nil {
+			t.Fatalf("seed: %v", err)
+		}
+		_, err := store.Append(
+			ctx, "acct-1", app.Any(), envelopeAfter(t, second), domain.KindObservation, claim(t, "VALE3"))
+		if !errors.Is(err, app.ErrNonMonotonicKnowledge) {
+			t.Fatalf("an append half a second earlier was accepted (err=%v); knowledge time "+
+				"cannot go backwards", err)
+		}
+	})
 }
 
 // Case 8. Nothing is lost or altered in the round trip. For an in-memory store
@@ -352,10 +412,24 @@ func claim(t *testing.T, ticker string) domain.HoldingClaimed {
 
 // envelopeAt builds an envelope whose knowledge time is `hour` hours past the
 // epoch, so a case can order — or deliberately misorder — appends.
+//
+// Whole hours, which is convenient and was also a blind spot: every knowledge
+// time it produces renders as a fixed-width `…T0N:00:00Z` with no fractional
+// part, and that is the one region where lexicographic and chronological order
+// coincide. A store comparing formatted timestamps as strings passes every case
+// built from this helper while being wrong about any instant with a fraction.
+// Use [envelopeAfter] to reach that region.
 func envelopeAt(t *testing.T, hour int) domain.Envelope {
 	t.Helper()
+	return envelopeAfter(t, time.Duration(hour)*time.Hour)
+}
+
+// envelopeAfter builds an envelope whose knowledge time is `d` past the epoch,
+// at whatever precision `d` carries.
+func envelopeAfter(t *testing.T, d time.Duration) domain.Envelope {
+	t.Helper()
 	effective := temporal.MustAt(epoch)
-	knowledge := temporal.MustAt(epoch.Add(time.Duration(hour) * time.Hour))
+	knowledge := temporal.MustAt(epoch.Add(d))
 
 	interval, err := temporal.OpenFrom(effective)
 	if err != nil {
