@@ -78,10 +78,10 @@ that decision, **not an offer**.
 | Module | Version | Offered | Consumed externally |
 |---|---|---|---|
 | `libs/kernel` | `v0.8.0` | no | no |
-| `libs/ledger` | `v0.5.0` | no | no |
+| `libs/ledger` | `v0.7.0` | no | no |
 | `libs/kernel-wire` | `v0.2.0` | no | no |
 | `libs/ledger-wire` | `v0.4.0` | no | no |
-| `libs/ledger-sqlite` | `v0.1.0` | no | no |
+| `libs/ledger-sqlite` | `v0.2.0` | no | no |
 
 This table went stale for four milestones, and ADR-0024 calls the registry part
 of the interface rather than documentation about it — so the drift was a defect,
@@ -91,12 +91,23 @@ not untidiness. It listed `libs/kernel` at `v0.5.0` while `apps/submitd` pinned
 Nothing in the gate compares the table against the tags, which is why: the
 mechanism is rung 6 and this is what rung 6 costs.
 
-`libs/kernel/v0.8.0` is the first release under
-[ADR-0040](../adr/0040-encoding-integrity-and-the-fdos-root-namespace.md). It
-changes **every identifier the package derives** — a new root namespace and a
-framed pre-image — while adding rather than removing API. That is safe now only
-because no store exists holding an older one, and it is the class of change
-`buf breaking` cannot see, since no schema moved.
+Four releases carry
+[ADR-0040](../adr/0040-encoding-integrity-and-the-fdos-root-namespace.md), and
+each is the class of change `buf breaking` cannot see, because no schema moved:
+
+- **`libs/kernel/v0.8.0`** changes *every identifier the package derives* — a new
+  root namespace and a framed pre-image — while adding rather than removing API.
+- **`libs/ledger/v0.6.0`** stops flattening a claim when it mints and resolves,
+  which closed the collision the framing made closable.
+- **`libs/ledger/v0.7.0`** adds the sub-second case to the shared store suite.
+- **`libs/ledger-sqlite/v0.2.0`** stores temporal columns as integer nanoseconds
+  and records the format in `PRAGMA user_version`. **It refuses a database written
+  by `v0.1.0`**, which is the only breaking change in the set and is deliberate:
+  a store this build cannot order is one it must not answer an as-of query from.
+
+All four are safe now only because no store exists holding an older identifier,
+and `v0.1.0` of the store being published means that safety is unverifiable
+rather than guaranteed.
 
 **They carry no compatibility promise across versions.** A consumer importing
 one is depending on FDOS's internal structure rather than on its contract: a
