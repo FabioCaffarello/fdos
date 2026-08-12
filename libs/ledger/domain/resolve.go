@@ -43,12 +43,18 @@ var mintMethod = mustMethod("ledger.MintFor", "1")
 // are two claims — but *resolution* is where sameness is decided, and ADR-0033
 // gives that decision a stated, versioned rule.
 //
-// Matching on the seed rather than on the folded claim is what makes resolution
-// agree with minting by construction: the seed is exactly what `identity.Derive`
-// hashes, so two claims resolve together precisely when they would mint
-// together.
+// Matching on the canonical **pre-image** rather than on the folded claim is what
+// makes resolution agree with minting by construction: it is exactly what
+// `identity.DeriveFromClaim` hashes, minus the kind, so two claims resolve
+// together precisely when they would mint together.
+//
+// The pre-image rather than the legible seed, since ADR-0040: a flattened
+// `scheme:value` cannot distinguish `("ticker", "x:y")` from `("ticker:x", "y")`,
+// so matching on it answered one claim with the other's identity. Those two must
+// move together with [MintFor] — resolving by pre-image while minting from a
+// flattened seed would break the invariant in the direction that mints twice.
 func resolves(minted EntityMinted, claim identity.Claim, rules identity.Ruleset) bool {
-	return rules.CanonicalSeed(minted.BornFrom) == rules.CanonicalSeed(claim)
+	return rules.CanonicalPreimage(minted.BornFrom) == rules.CanonicalPreimage(claim)
 }
 
 // Resolve finds the identity a claim refers to, reading the ledger.
@@ -201,7 +207,12 @@ func MintFor(
 	if claim.IsZero() {
 		return explained.Value[EntityMinted]{}, fmt.Errorf("%w: claim is unset", ErrEmptyType)
 	}
-	id, err := identity.Derive(kind, rules.Fold(claim).String())
+	// DeriveFromClaim rather than Derive over a flattened claim (ADR-0040): a
+	// caller that joins the scheme and the value itself has already lost the
+	// boundary between them, and no framing downstream can recover it. Measured,
+	// the flattened form gave claim("ticker", "x:y") and claim("ticker:x", "y")
+	// one identifier.
+	id, err := identity.DeriveFromClaim(kind, rules.Fold(claim))
 	if err != nil {
 		return explained.Value[EntityMinted]{}, err
 	}
