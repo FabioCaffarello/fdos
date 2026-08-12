@@ -1,0 +1,26 @@
+{
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": [
+        "refs/tags/libs/*/v*",
+        "refs/tags/apps/*/v*",
+        "refs/tags/ecosystem/*"
+      ]
+    }
+  },
+  "enforcement": "active",
+  "name": "release-tags",
+  "rules": [
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
+    {
+      "type": "update"
+    }
+  ],
+  "target": "tag"
+}

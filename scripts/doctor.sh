@@ -117,6 +117,29 @@ else
   ok "GOPROXY" "${GOPROXY:-default}"
 fi
 
+# --- protection settings ------------------------------------------------------
+#
+# Repository state, not files: someone can change a ruleset in the UI with no
+# commit here and nothing would notice. This is the only place that looks, and
+# it is here rather than in CI because reading rulesets needs an admin-scoped
+# token that ADR-0014 declined to grant a workflow (ADR-0048).
+
+printf '\n%s\n' "Protection settings"
+if ruleset_out="$("${ROOT}/scripts/verify-rulesets.sh" 2>&1)"; then
+  ok "rulesets" "live protection matches .github/rulesets"
+else
+  case "$ruleset_out" in
+    *"gh is not installed"*|*"admin scope"*|*"returned nothing"*)
+      printf '  %s %-30s %s\n' "-" "rulesets" "not readable — nothing was verified"
+      hint "gh auth login, then make ruleset-check"
+      ;;
+    *)
+      bad "rulesets" "live protection has drifted from .github/rulesets"
+      hint "make ruleset-check   # shows the diff"
+      ;;
+  esac
+fi
+
 # --- what this change touches ------------------------------------------------
 #
 # The affected graph was built as the compensation for choosing make over Nx

@@ -7,10 +7,12 @@
 #
 # Two jobs, because they answer different questions:
 #
-#   stats    how long the gate takes and how often it fails, from the forge's
-#            own record of completed runs — including queue time, which is what
-#            a person waiting on the gate actually experiences
-#   timings  what each individual check costs, which only running them reveals
+#   stats      how long the gate takes and how often it fails, from the forge's
+#              own record of completed runs — including queue time, which is what
+#              a person waiting on the gate actually experiences
+#   timings    what each individual check costs, which only running them reveals
+#   freshness  which pinned actions have moved on upstream — reported as an
+#              issue comment, never applied (ADR-0014, ADR-0048)
 #
 # Both invoke `make` and hold no logic of their own (ADR-0014).
 #
@@ -59,6 +61,29 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           STATS_ISSUE: "112"
         run: make ci-stats LIMIT=100
+
+  # ADR-0014 accepted that pinned actions would lag and named the mitigation:
+  # "the scheduled supply-chain workflow plus deliberate review". The scheduled
+  # workflow existed and checked the freshness of nothing. This is that half,
+  # built — and it reports only. A bot that opened pull requests would close the
+  # gap with less code and contradict the decision it is implementing.
+  freshness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+      issues: write # append to the telemetry log
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: make action-freshness
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FRESHNESS_ISSUE: "112"
+        run: make action-freshness
 
   timings:
     runs-on: ubuntu-latest

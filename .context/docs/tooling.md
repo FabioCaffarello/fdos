@@ -89,6 +89,8 @@ without pushing, and drifts from what developers actually execute.
 | `make verify-timings` | The gate with a stopwatch — what each check costs |
 | `make ci-summary` | The run environment and build-cache state |
 | `make ci-stats` | Duration percentiles and failure rate of recent gate runs |
+| `make action-freshness` | Which pinned actions have moved on upstream — reports, never applies |
+| `make ruleset-check` | Live branch, tag and environment protection matches `.github/rulesets` |
 | `make affected` | Print the modules a change affects — the same graph `release-plan` orders |
 | `make doctor` | Diagnose this working copy and name the fix for each problem |
 | `make proto-check` | Contract surface: lint, format, breaking, pinning, drift, FDOS schema rules |
@@ -144,6 +146,8 @@ unreviewed change to the dependency graph.
 | `verify-timings.sh` | nothing — reports what each gate check costs | — |
 | `ci-run-summary.sh` | nothing — records the run environment and cache state | — |
 | `ci-run-stats.sh` | nothing — duration percentiles and failure rate | — |
+| `action-freshness.sh` | nothing — reports lagging action pins (ADR-0048) | — |
+| `verify-rulesets.sh` | §9, ADR-0048 — live protection matches what is committed | 3 locally, 6 in CI |
 | `tool-version.sh` | shared helper — the single parser for `mise.toml` pins | — |
 | `tool-checksum.sh` | shared helper — the single parser for `tool-checksums.txt` | — |
 | `affected-modules.sh` | shared helper — the Nx compensation (ADR-0004) | — |

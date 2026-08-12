@@ -25,10 +25,10 @@ Forge configuration for FDOS. Governed by ADR-0014.
 | Workflow | Trigger | Runs |
 |----------|---------|------|
 | `verify.yml` | every push to `main`, every pull request | `make affected-preflight` (advisory), `make verify`, then `make ci-summary` |
-| `supply-chain.yml` | pull requests, weekly schedule | dependency review; scheduled vulnerability and secret scans |
+| `supply-chain.yml` | weekly schedule | scheduled vulnerability and secret scans |
 | `release.yml` | tags matching `libs/*/v*` and `apps/*/v*` | `make release-artifacts`, then the shared `release-evidence` action |
 | `release-rehearse.yml` | manual dispatch | the whole release path against a published tag, stopping before publication |
-| `ci-telemetry.yml` | weekly schedule, manual dispatch | `make ci-stats`, `make verify-timings` |
+| `ci-telemetry.yml` | weekly schedule, manual dispatch | `make ci-stats`, `make action-freshness`, `make verify-timings` |
 | `release-prepare.yml` | manual dispatch | `make release-prepare`, then opens the pull request |
 | `release-tag.yml` | manual dispatch | `make release-tag` — the only job that may write a tag |
 
