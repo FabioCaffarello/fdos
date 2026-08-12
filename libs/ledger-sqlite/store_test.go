@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -424,4 +425,111 @@ func envelopeAt(t *testing.T, hour int) domain.Envelope {
 		t.Fatal(err)
 	}
 	return envelope
+}
+
+// A store written under the old encoding is refused, and the refusal names the
+// migration (ADR-0040).
+//
+// Version zero is the case that needs care, and it is why Open reads the table
+// as well as the pragma: a fresh file and a pre-ADR-0040 file both report zero,
+// because the marker did not exist when the older one was written. What separates
+// them is whether any fact is present.
+//
+// The alternative — opening it anyway — is not a smaller version of this. Because
+// `CREATE TABLE IF NOT EXISTS` is a no-op against an existing file and a STRICT
+// TEXT column silently coerces an integer, a mixed store would answer as-of
+// queries wrongly, forever, with no error at any point.
+func TestAStoreUnderTheOldEncodingIsRefused(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "legacy.db")
+
+	// A pre-ADR-0040 store: TEXT temporal columns, one fact, no version marker.
+	raw := openRaw(t, path)
+	for _, stmt := range []string{
+		`CREATE TABLE facts (
+			stream TEXT NOT NULL, sequence INTEGER NOT NULL,
+			effective_from TEXT NOT NULL, knowledge TEXT NOT NULL,
+			encoded BLOB NOT NULL, PRIMARY KEY (stream, sequence)) STRICT`,
+		`INSERT INTO facts VALUES ('acct-1', 1, '2026-03-01T00:00:00Z', '2026-03-01T01:00:00Z', x'00')`,
+	} {
+		if _, err := raw.Exec(stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var version int
+	if err := raw.QueryRow(`PRAGMA user_version`).Scan(&version); err != nil {
+		t.Fatal(err)
+	}
+	if version != 0 {
+		t.Fatalf("fixture reports user_version %d; the case under test is zero", version)
+	}
+	if err := raw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := sqlitestore.Open(path)
+	if !errors.Is(err, sqlitestore.ErrEncodingVersion) {
+		t.Fatalf("Open returned %v; want ErrEncodingVersion — a store this build cannot order "+
+			"must not answer an as-of query", err)
+	}
+	if !strings.Contains(err.Error(), "user_version") {
+		t.Errorf("the refusal does not name the migration: %v", err)
+	}
+}
+
+// An empty file at version zero is a *new* store, not a legacy one, and must
+// open — otherwise the guard would refuse every first run.
+func TestAFreshStoreClaimsTheCurrentEncoding(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "fresh.db")
+	store := open(t, path)
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	raw := openRaw(t, path)
+	defer func() { _ = raw.Close() }()
+
+	var version int
+	if err := raw.QueryRow(`PRAGMA user_version`).Scan(&version); err != nil {
+		t.Fatal(err)
+	}
+	if version != 2 {
+		t.Errorf("a fresh store reports user_version %d, want 2; without the marker the next "+
+			"build cannot tell this file from a legacy one", version)
+	}
+
+	// Reopening must be idempotent rather than tripping the guard.
+	reopened := open(t, path)
+	if err := reopened.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// The columns hold integers, not renderings. Asserted through the stored type
+// because that is the property the index depends on: a TEXT column would sort
+// lexicographically however carefully the Go side compares.
+func TestTemporalColumnsAreStoredAsIntegers(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "typed.db")
+	store := open(t, path)
+	if _, err := store.Append(
+		context.Background(), "acct-1", app.Any(), envelopeAt(t, 1), domain.KindObservation, claim(t, "PETR4"),
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	raw := openRaw(t, path)
+	defer func() { _ = raw.Close() }()
+
+	for _, column := range []string{"effective_from", "knowledge"} {
+		var kind string
+		if err := raw.QueryRow(
+			`SELECT typeof(` + column + `) FROM facts WHERE stream = 'acct-1'`).Scan(&kind); err != nil {
+			t.Fatal(err)
+		}
+		if kind != "integer" {
+			t.Errorf("%s is stored as %s, want integer", column, kind)
+		}
+	}
 }
