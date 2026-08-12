@@ -16,12 +16,18 @@ scaffoldVersion: "2.0.0"
 
 | Tool | Pin | Required from |
 |------|-----|---------------|
-| go | 1.26.2 | M0 |
+| go | 1.26.5 | M0 |
 | golangci-lint | 2.12.2 | M2 |
 | lefthook | 2.1.8 | M3 |
 | gitleaks | 8.30.0 | M3 |
 | govulncheck | v1.6.0 | M3 (via `go run`) |
 | buf | 1.68.4 | M4 |
+
+**The Go pin tracks the patch line** (ADR-0038): a patch release carries
+security fixes and no language change, so the pin moves to the current patch
+rather than staying where it started. Expect this row to be the one that changes
+most often, and expect a stale local toolchain to fail `toolchain-check` rather
+than to be tolerated.
 
 **`mise` itself is not a prerequisite.** `scripts/toolchain-check.sh` parses
 `mise.toml` directly and validates whatever is on `PATH`, so the pin is enforced
