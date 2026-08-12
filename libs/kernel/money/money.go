@@ -161,7 +161,9 @@ func (m Money) Add(other Money) (Money, error) {
 		return Money{}, err
 	}
 	var out apd.Decimal
-	if _, err := exactContext().Add(&out, &m.amount, &other.amount); err != nil {
+	if err := exactly(&out, func(c *apd.Context, o *apd.Decimal) (apd.Condition, error) {
+		return c.Add(o, &m.amount, &other.amount)
+	}); err != nil {
 		return Money{}, err
 	}
 	return Money{amount: out, currency: m.currency}, nil
@@ -173,7 +175,9 @@ func (m Money) Sub(other Money) (Money, error) {
 		return Money{}, err
 	}
 	var out apd.Decimal
-	if _, err := exactContext().Sub(&out, &m.amount, &other.amount); err != nil {
+	if err := exactly(&out, func(c *apd.Context, o *apd.Decimal) (apd.Condition, error) {
+		return c.Sub(o, &m.amount, &other.amount)
+	}); err != nil {
 		return Money{}, err
 	}
 	return Money{amount: out, currency: m.currency}, nil
@@ -204,7 +208,9 @@ func (m Money) Cmp(other Money) (int, error) {
 // result carries the sum of the operands' scales.
 func (m Money) Mul(q Quantity) (Money, error) {
 	var out apd.Decimal
-	if _, err := exactContext().Mul(&out, &m.amount, &q.amount); err != nil {
+	if err := exactly(&out, func(c *apd.Context, o *apd.Decimal) (apd.Condition, error) {
+		return c.Mul(o, &m.amount, &q.amount)
+	}); err != nil {
 		return Money{}, err
 	}
 	return Money{amount: out, currency: m.currency}, nil
@@ -233,6 +239,26 @@ func (m Money) Div(q Quantity, rc RoundingContext) (result Money, inexact bool, 
 	return Money{amount: out, currency: m.currency}, res.Inexact(), nil
 }
 
+// exactly runs an exact-context operation and gives precision loss the sentinel
+// ErrInexact already documents — "returned when an operation would silently lose
+// precision without a RoundingContext to say how".
+//
+// Without this the trap surfaces an apd condition, which a caller can neither
+// match with errors.Is nor act on without parsing a string. ADR-0008 requires
+// the loss to be *signalled*, and a signal nothing can receive is not one.
+// Failures that are not precision loss — overflow, invalid operation, division
+// by zero — pass through untouched so they keep their own meaning.
+func exactly(out *apd.Decimal, op func(*apd.Context, *apd.Decimal) (apd.Condition, error)) error {
+	res, err := op(exactContext(), out)
+	if err == nil {
+		return nil
+	}
+	if res.Inexact() || res.Rounded() {
+		return fmt.Errorf("%w: %w", ErrInexact, err)
+	}
+	return err
+}
+
 func (m Money) assertSameCurrency(other Money) error {
 	if m.currency != other.currency {
 		return fmt.Errorf("%w: %s vs %s", ErrCurrencyMismatch, m.currency, other.currency)
@@ -243,9 +269,26 @@ func (m Money) assertSameCurrency(other Money) error {
 // exactContext refuses to round. Any operation that would need to is an error
 // rather than a silent approximation — the caller must reach for Div with a
 // RoundingContext and say what it wants.
+//
+// Inexact and Rounded are trapped, and that is the whole point of the type.
+// Without them this context inherited apd.BaseContext's rounding — half-up — and
+// silently discarded a unit past maxPrecision: `10^96 + 1` compared equal to
+// `10^96` with a nil error. That contradicted ADR-0008 twice, since it requires
+// that "precision loss is signalled and recorded in the computation trace" and
+// that no rounding mode be privileged.
+//
+// Rounded is trapped alongside Inexact even though no measured case fires it
+// alone. It can in principle fire when digits are discarded without changing the
+// value, which in this system is still a loss: trailing zeros are significant
+// because they record the precision of the value (fdos.kernel.v1.Decimal).
+//
+// No rounding mode is set, deliberately. With both conditions trapped the mode
+// is unreachable, and choosing one here would be the privileged default ADR-0008
+// forbids.
 func exactContext() *apd.Context {
 	c := apd.BaseContext.WithPrecision(maxPrecision)
-	c.Traps = apd.InvalidOperation | apd.DivisionByZero | apd.Overflow | apd.Underflow
+	c.Traps = apd.InvalidOperation | apd.DivisionByZero | apd.Overflow |
+		apd.Underflow | apd.Inexact | apd.Rounded
 	return c
 }
 
