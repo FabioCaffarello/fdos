@@ -130,10 +130,24 @@ copyleft dependency — that is a manual audit, and it was performed by hand for
 the SQLite driver (ADR-0035) precisely because nothing else would have.
 
 **Branch protection, required checks and the merge queue are GitHub settings,
-not files.** They cannot be enforced from this repository.
-`docs/branch-protection.md` records the intended configuration and says openly
-that it is a checklist. Raising it to a mechanism needs an admin-scoped token in
+not files.** They cannot be *authored* from this repository, and
+`docs/branch-protection.md` records the intended configuration as a checklist.
+Raising that authoring step to a mechanism would need an admin-scoped token in
 CI, which is a worse risk than the one it solves (ADR-0014).
+
+**They are, however, applied.** Two rulesets are active on this repository:
+`main` (branch) and `release-tags` (tag). The `main` ruleset blocks deletion and
+non-fast-forward pushes, requires linear history, permits **squash only**
+(ADR-0020), and requires the `verify` check with a **strict** policy — so a pull
+request must be rebased onto current `main` before it can merge, and every merge
+invalidates the branch behind it. Approving reviews are **not** required
+(`required_approving_review_count: 0`), so the gate is the check, not a human.
+
+Practical consequence for an agent: merging a queue of pull requests is serial.
+Rebase, wait for `verify`, merge, repeat. A status that was green a minute ago
+may be pending again after a rebase, and a merge attempted on the stale status
+fails with *"the base branch policy prohibits the merge"* rather than with
+anything about the branch being behind.
 
 The gitleaks install step downloads a release tarball by version but does not
 verify a checksum. Every other build input is digest-pinned; this one is not,

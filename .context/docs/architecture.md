@@ -40,8 +40,8 @@ itself has no ADR yet.
 | Directory | Role |
 |-----------|------|
 | `libs/` | Reusable libraries. One independent Go module per subdirectory. |
-| `apps/` | Deployable applications. Composition roots only. Empty. |
-| `docs/` | Constitution, ADRs, RFCs, and the register of blocked work. Authoritative record. |
+| `apps/` | Deployable applications. Composition roots only. Holds `submitd`, the submission service (ADR-0037). |
+| `docs/` | Constitution, ADRs, RFCs, and the register of blocked work. Authoritative record. `docs/proposals/` is the exception: audit source material, **accepted by nothing**, and an ADR governs wherever it disagrees. |
 | `deploy/` | Deployment topology. Empty until there is something to deploy. |
 | `examples/` | Executable demonstrations of the public contract surface, and the conformance kit a third-party producer runs. |
 | `scripts/` | Enforcement mechanisms, invoked through `make`. |

@@ -71,8 +71,29 @@ tempted to add a `ticker` rule is proposing a merge, and merges are recorded as
 nothing verifies it, so the boundary is the process boundary. Rung 6, recorded
 as such, and adjacent to D2.
 
-There is still **no application** — `apps/` is empty, and a composition root
-needs something to compose.
+### What M10 and M11 shipped
+
+**Facts are durable.** `libs/ledger-sqlite` is the event store ADR-0034
+specified: the store assigns the sequence, because that is where writes
+serialise, and an append carries the caller's `Expectation` so a stale read
+cannot append silently.
+
+**There is an application.** `apps/submitd` is the first composition root
+(ADR-0037, which supersedes ADR-0029's "never a service" clause): it accepts a
+`fdos.ingest.v1.HoldingClaimSubmission` over HTTP and calls
+`AcceptHoldingClaim`. It is the only production caller of any use case.
+
+Two consequences an agent must not misread:
+
+- **It admits claims and mints nothing.** Every fact `submitd` stores is an
+  unresolved claim, because no caller invokes `MintIdentity`. The mint loop's
+  *decision* is made and implemented (ADR-0033); what is missing is a caller.
+- **The listener does not answer D2.** It binds loopback by default and requires
+  an explicit `-callers-are-authenticated` assertion to bind anywhere else.
+  `apps/submitd/server.go` says so in as many words: *"This is not an answer to
+  D2… It is a refusal to answer it by accident."* An agent adding a route, or
+  minting from one, would be answering an open decision by accident — which is
+  the thing that guard exists to prevent.
 
 An agent asked to add a **second** bounded context, a canonical type, or a
 message on the published contract surface should ask which ADR sequences it
@@ -83,7 +104,7 @@ What exists today, and is enforced:
 
 ```sh
 make analyze   # nofloat · nondet · impurity · layering
-make verify    # the full gate — 18 checks; exactly what CI runs (ADR-0014)
+make verify    # the full gate — 19 checks; exactly what CI runs (ADR-0014)
 ```
 
 A `time.Now()` or a `float64` in a domain package fails the build, by name.
