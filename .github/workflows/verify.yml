@@ -49,7 +49,19 @@ jobs:
       # cannot drift — and both workflows use one definition of "the toolchain",
       # so they cannot drift from each other either (B-008).
       - name: Set up the toolchain
+        id: toolchain
         uses: ./.github/actions/setup-toolchain
 
       - name: make verify
         run: make verify
+
+      # Records what this run ran on. The gate's duration is bimodal — 87s to
+      # 279s across twenty runs — and the cache was the plausible cause with
+      # nothing recording it, so the explanation could never be confirmed or
+      # killed. `if: always()` because a failed run's environment is the one
+      # most worth having (RFC-0018 Phase 0).
+      - name: make ci-summary
+        if: always()
+        env:
+          TOOLCHAIN_CACHE_HIT: ${{ steps.toolchain.outputs.cache-hit }}
+        run: make ci-summary

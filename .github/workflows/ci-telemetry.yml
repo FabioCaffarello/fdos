@@ -1,0 +1,90 @@
+# What the pipeline costs, measured on a schedule.
+#
+# This enforces nothing and gates nothing. It exists because nothing here could
+# say what `make verify` costs or why one run took 3.2x another, and RFC-0018
+# had to assemble that distribution by hand — its first draft then quoted a
+# single run as though it were a constant (Phase 0, issue #101).
+#
+# Two jobs, because they answer different questions:
+#
+#   stats    how long the gate takes and how often it fails, from the forge's
+#            own record of completed runs — including queue time, which is what
+#            a person waiting on the gate actually experiences
+#   timings  what each individual check costs, which only running them reveals
+#
+# Both invoke `make` and hold no logic of their own (ADR-0014).
+#
+# Every action is pinned to a full commit SHA.
+
+name: ci-telemetry
+
+on:
+  schedule:
+    # Monday morning, after the supply-chain scan rather than beside it: two
+    # scheduled workflows contending for a runner make each one's duration a
+    # measurement of the other.
+    - cron: "41 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-telemetry
+  cancel-in-progress: false
+
+env:
+  GOWORK: "off"
+
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+      actions: read # read the run history this reports on
+      issues: write # append to the telemetry log
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The issue number is written here rather than held as a repository
+      # variable on purpose. A variable is repository state nobody diffs, which
+      # is the failure docs/branch-protection.md already names for rulesets; a
+      # number in a reviewed file is greppable and changes with a commit.
+      - name: make ci-stats
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATS_ISSUE: "112"
+        run: make ci-stats LIMIT=100
+
+  timings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The gate reads full history: ADR immutability compares against the
+          # introducing commit, and the secret scan reads every commit.
+          fetch-depth: 0
+
+      - name: Set up the toolchain
+        id: toolchain
+        uses: ./.github/actions/setup-toolchain
+
+      # Runs the same checks `verify` runs, from the same $(VERIFY_TARGETS)
+      # variable, one at a time with a stopwatch. It is a real gate run: if a
+      # check fails, this fails. A timing report that stayed green while the
+      # gate was red would be a stopwatch on a broken clock.
+      - name: make verify-timings
+        run: make verify-timings
+
+      - name: make ci-summary
+        if: always()
+        env:
+          TOOLCHAIN_CACHE_HIT: ${{ steps.toolchain.outputs.cache-hit }}
+        run: make ci-summary

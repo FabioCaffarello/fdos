@@ -71,6 +71,9 @@ without pushing, and drifts from what developers actually execute.
 | `make vuln-check` | No known vulnerability reachable from FDOS code (`govulncheck`) |
 | `make hooks` | Install the git hooks (`lefthook`) |
 | `make commit-msg-check` | This branch's commit subjects follow the convention — not in `verify` |
+| `make verify-timings` | The gate with a stopwatch — what each check costs |
+| `make ci-summary` | The run environment and build-cache state |
+| `make ci-stats` | Duration percentiles and failure rate of recent gate runs |
 | `make affected` | Print the modules a change affects |
 | `make doctor` | Diagnose this working copy and name the fix for each problem |
 | `make proto-check` | Contract surface: lint, format, breaking, pinning, drift, FDOS schema rules |
@@ -106,6 +109,9 @@ unreviewed change to the dependency graph.
 | `verify-vulns.sh` | §14 — no reachable vulnerability | 3 |
 | `verify-commit-message.sh` | §14 — commit subject convention | 4 |
 | `verify-proto.sh` | §2, §6, §7, §11 — the contract surface cannot change silently | 3 |
+| `verify-timings.sh` | nothing — reports what each gate check costs | — |
+| `ci-run-summary.sh` | nothing — records the run environment and cache state | — |
+| `ci-run-stats.sh` | nothing — duration percentiles and failure rate | — |
 | `tool-version.sh` | shared helper — the single parser for `mise.toml` pins | — |
 | `affected-modules.sh` | shared helper — the Nx compensation (ADR-0004) | — |
 | `list-modules.sh` | shared helper (ADR-0004 makes commands per-module) | — |
