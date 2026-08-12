@@ -45,9 +45,28 @@ reproduced by running code, not by reading it.
 | 4 | `explained.go:209` consumes a `Fold` seed that `:222` never records | Two folds with different seeds and different answers produce one identical trace |
 | 5 | `libs/ledger-sqlite/store.go:200` compares knowledge times as RFC3339 strings; `temporal.go:78` formats with `RFC3339Nano`, which omits trailing zeros | `.` (0x2E) sorts below `Z` (0x5A), so any sub-second instant compares as *earlier* than the whole second it follows. The memory store (`memory/store.go:85`) uses `!incoming.After(last)` and disagrees |
 | 6 | `store.go:188` derives the next sequence from `COUNT(*)`; `store.go:138` discards the stored `sequence` on load | After one deleted row: refs silently re-point to different content, **and** the stream becomes permanently unappendable (`UNIQUE constraint failed`). Both measured |
-| 7 | `money.go:246-250` traps neither `apd.Inexact` nor `apd.Rounded`, and `BaseContext` rounds half-up | The context named `exact` silently discards a unit at 96 significant digits. Measured: `10^96 + 1 == 10^96`, error `nil` |
+| 7 | `money.go:246-250` traps neither `apd.Inexact` nor `apd.Rounded`, and `BaseContext` rounds half-up | The context named `exact` silently discards a unit at 96 significant digits. Measured: `10^96 + 1 == 10^96`, error `nil`. **This contradicts ADR-0008's decision text twice over** — see below |
 | 8 | `rounding.go:103` — `precision` is significant digits, and there is no `Quantize` anywhere in `libs/kernel/money` | "Round to the cent" is inexpressible. One context yields three different decimal places for `1/3`, `1000/3`, `0.001/3` |
 | 9 | Zero `reserved` field-number declarations exist anywhere in `libs/contracts/proto/` | A field deletion plus number reuse is undetectable by `buf breaking` |
+
+**Defect 7 is not a design improvement; it is an accepted decision not being
+honoured.** ADR-0008's Decision says, in two separate sentences:
+
+> "**There is no default rounding context** and no privileged mode — the correct
+> choice is jurisdiction- and instrument-specific, and a default is exactly how
+> that decision goes unexamined. **Precision loss is signalled and recorded in the
+> computation trace.**"
+
+`exactContext()` violates both. It inherits `apd.BaseContext`'s rounding, which
+is half-up — a privileged default mode, chosen by omission, in the one context
+whose name promises no rounding at all. And because neither `apd.Inexact` nor
+`apd.Rounded` is trapped, the loss is **neither signalled nor recorded**. Worse,
+`Add`, `Sub` and `Mul` all route through this context (`money.go:164`, `:176`,
+`:207`; `quantity.go:70`, `:82`) — the three operations ADR-0008 and
+`money.proto:51-52` both describe as *exact*.
+
+So this item is a correctness repair against an accepted ADR, not a proposal, and
+it should not be sequenced behind the design questions in the rest of this RFC.
 
 Constitution principles at stake, read against the honest §15 table:
 
@@ -287,13 +306,38 @@ message RoundingContext {
 
 `precision` carries **no field comment**, and the eight-line message comment
 above it (`money.proto:51-58`) never says significant digits or decimal places
-either. Only Go commits: `rounding.go:103` documents significant digits and
-`rounding.go:124` passes it to `apd.WithPrecision`.
+either. Nor does **ADR-0008**, which created the type: it specifies the shape as
+`{precision, mode}` (`:46`) and says nothing about the unit. Only Go commits —
+`rounding.go:103` documents significant digits and `rounding.go:124` passes it to
+`apd.WithPrecision`.
 
-So the *published* meaning is **absent, not wrong** — which cuts directly for the
-additive route. Adding a scale field contradicts nothing any consumer was ever
-told; redefining `precision` changes something only Go and its callers ever
-knew, while still paying the full price of a major version.
+So the *published* meaning is **absent, not wrong**, in the contract *and* in the
+decision record. Adding a scale field contradicts nothing any consumer or any ADR
+was ever told; redefining `precision` changes something only Go and its callers
+ever knew, while still paying the full price of a major version.
+
+**And the additive route answers a question ADR-0008 deliberately left open.**
+That ADR's Notes read: *"Open, deliberately: **per-currency scale constraints at
+construction**; whether a distinct `Rate` type earns its keep; maximum supported
+precision…"* — and RFC-0002's open questions name the exact example this RFC's
+prior art rediscovered independently: *"Should `Money` carry a scale constraint
+per currency (**JPY 0 decimals, USD 2**), enforced at construction? It catches
+real errors but conflicts with intermediate values that legitimately need more
+precision."*
+
+So Route B is not a new concept bolted on. It is the recorded open item, and the
+tension RFC-0002 anticipated is exactly the precision-versus-scale interaction
+the decimal specification resolves: **context precision governs intermediates,
+scale governs the result.** Both are needed, which is why RFC-0002 could not
+choose between them.
+
+**One thing Route B must not be mistaken for.** ADR-0008 *rejected* integer minor
+units as the **representation** — "the scale is implicit and therefore easy to get
+wrong across boundaries", plus overflow on high-notional low-denomination amounts
+(`:85-86`, RFC-0002 `:142-145`). Adding an explicit scale *constraint* to an
+arbitrary-precision decimal is the opposite move: it makes scale explicit rather
+than implicit, and changes no representation. The accepting ADR should say so, so
+that nothing here reads as reopening a rejected alternative.
 
 Two routes, and they cost an order of magnitude apart:
 
@@ -908,10 +952,14 @@ Each names who resolves it. None is resolved here.
    the accepting ADR by a **human**, not produced by a session. It is the one
    value in this RFC that can never be changed again without repeating the whole
    migration.
-5. **Whether item 6 leaves this RFC.** It implements ADR-0034 rather than
-   exploring a design, and it is on the critical path for the first queryable
-   answer. Splitting it into its own ADR now would unblock the read path
-   sooner. **Human**, on sequencing grounds.
+5. **Which items leave this RFC as straight repairs.** Two of the nine explore no
+   design at all — they implement accepted decisions the code does not honour:
+   **item 6** (ADR-0034 already assigns sequence assignment to the store and
+   records it at rung 1) and **item 7** (ADR-0008 already requires that precision
+   loss be signalled and that no rounding mode be privileged). Both are on the
+   critical path for a first queryable answer, and splitting them into their own
+   ADR now would unblock the read path sooner than the design questions here can
+   be settled. **Human**, on sequencing grounds.
 
 ## Consequences
 
