@@ -64,6 +64,8 @@ without pushing, and drifts from what developers actually execute.
 | `make toolchain-check` | Installed tools match the pins |
 | `make toolchain-checksum-check` | Every URL-downloaded build input is pinned by digest |
 | `make contracts-check` | Every directory declares a valid contract |
+| `make workspace-check` | The tree compiles against its own source, not only published versions |
+| `make pin-check` | First-party pins name published versions; a changed module pins current |
 | `make adr-check` | Decision log well-formed; supersession bidirectional |
 | `make rfc-check` | RFC set well-formed; an Accepted RFC produced ADRs |
 | `make constitution-check` | Every principle appears in the §15 enforcement table |
@@ -87,7 +89,15 @@ without pushing, and drifts from what developers actually execute.
 | `make proto-gen` | Regenerate Go from the proto schemas |
 | `make clean` | Remove build output |
 
-**`GOWORK=off` on every Go target.** This is the load-bearing half of ADR-0004:
+**`GOWORK=off` on every Go target, and one target that deliberately does not.**
+`make workspace-check` compiles each module against its siblings' *source*
+(ADR-0044) — the other half, added because the `GOWORK=off` runs resolve siblings
+from the proxy and so cannot see a cross-module break until a tag makes it
+somebody's problem. It sets `GOWORK` to an explicit path rather than inheriting
+it, because CI exports `GOWORK=off` for the whole workflow, and it proves the
+workspace is live before trusting its own results.
+
+The `GOWORK=off` runs are the load-bearing half of ADR-0004:
 it forces module resolution through published versions instead of local
 workspace paths. Without it the open-core boundary silently stops being
 verified, with nothing to indicate that it has stopped. `go.work` exists only
@@ -103,6 +113,8 @@ unreviewed change to the dependency graph.
 |--------|----------|------|
 | `toolchain-check.sh` | §9 — pinned, reproducible toolchain | 3 |
 | `verify-tool-checksums.sh` | §9, ADR-0043 — downloaded artifacts are identified by digest | 3 |
+| `verify-workspace.sh` | §11, ADR-0044 — the tree is consistent with itself, not only resolvable | 3 |
+| `verify-module-pins.sh` | §11, ADR-0044 — a changed module pins what its siblings released | 3 |
 | `verify-directory-contracts.sh` | §10 — declared architectural boundaries | 2–3 |
 | `verify-adr.sh` | §14 — append-only decision log | 3 |
 | `verify-rfc.sh` | §14 — design is decided before it is built | 3 |

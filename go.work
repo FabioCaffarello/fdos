@@ -8,5 +8,6 @@ use (
 	./libs/kernel
 	./libs/kernel-wire
 	./libs/ledger
+	./libs/ledger-sqlite
 	./libs/ledger-wire
 )

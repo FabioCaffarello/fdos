@@ -414,6 +414,20 @@ func (f failingStore) Append(
 	return domain.Ref{}, f.err
 }
 
+// The region opens and the operations inside it fail, rather than the region
+// itself failing to open. That keeps this double substituting for storage
+// rather than for a decision: the failure still surfaces from Load or Append,
+// which is where it surfaced before ADR-0041 moved mutual exclusion into the
+// port.
+//
+// This method is the reason the double was invisible. `apps/submitd` pinned
+// `libs/ledger v0.7.0` while `v0.8.0` added `Serialise`, so the gate compiled
+// this file against an interface that no longer existed — which is exactly the
+// blast radius ADR-0041's release note said no mechanism here could see.
+func (f failingStore) Serialise(ctx context.Context, name string, fn func(context.Context, app.Store) error) error {
+	return fn(ctx, f)
+}
+
 // A 4xx reason quotes the submission, so a caller chooses part of what this
 // service says back. That is a taint path `gosec` was right to flag.
 //

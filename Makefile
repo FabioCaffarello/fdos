@@ -37,7 +37,7 @@ endef
 
 .PHONY: help bootstrap hooks doctor verify verify-timings affected ci-summary ci-stats \
 	toolchain-check toolchain-checksum-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
-	context-check agent-contract-check proto-check proto-gen proto-lint proto-breaking consumer-check \
+	context-check agent-contract-check workspace-check pin-check proto-check proto-gen proto-lint proto-breaking consumer-check \
 	fmt fmt-check vet lint test analyze repro-check tidy tidy-check build clean \
 	secrets-check secrets-check-staged vuln-check commit-msg-check commit-msg-check-file
 
@@ -74,8 +74,8 @@ hooks: ## Install the git hooks (lefthook)
 # watched.
 VERIFY_TARGETS := toolchain-check toolchain-checksum-check contracts-check adr-check adr-immutability-check \
                   rfc-check constitution-check action-pinning-check context-check \
-                  agent-contract-check proto-check secrets-check tidy-check \
-                  fmt-check vet lint test analyze vuln-check repro-check
+                  agent-contract-check proto-check pin-check secrets-check tidy-check \
+                  fmt-check vet workspace-check lint test analyze vuln-check repro-check
 
 verify: $(VERIFY_TARGETS) ## Run every enforcement mechanism available at this milestone
 	@printf '\nAll checks passed.\n'
@@ -119,6 +119,19 @@ context-check: ## Assert documentation describes the repository that exists
 
 agent-contract-check: ## Assert agent playbooks declare a valid prompt contract
 	@$(SCRIPTS_DIR)/verify-agent-contracts.sh
+
+# The other half of FOR_EACH_MODULE, and deliberately not a replacement for it.
+#
+# Those runs use GOWORK=off so each module resolves standalone from the proxy —
+# ADR-0004's discipline, and the property a consumer with no workspace depends
+# on. This one compiles every module against its siblings' *source*, which is
+# the only way the gate can see a cross-module break before a tag makes it
+# somebody's problem (ADR-0044).
+workspace-check: ## Assert the tree compiles against its own source, not only against published versions
+	@$(SCRIPTS_DIR)/verify-workspace.sh
+
+pin-check: ## Assert first-party pins name published versions, and a changed module pins current
+	@$(SCRIPTS_DIR)/verify-module-pins.sh
 
 # ---------------------------------------------------------------------------
 # Contracts
