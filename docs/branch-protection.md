@@ -47,7 +47,15 @@ blocks merges for the wrong reason.
 
 ## `release-tags` — tag ruleset
 
-Applies to `refs/tags/libs/*/v*`.
+Applies to `refs/tags/libs/*/v*`, `refs/tags/apps/*/v*` and
+`refs/tags/ecosystem/*` (ADR-0043).
+
+It covered `libs/*` alone until the other two were checked against the live API
+and found unprotected. `apps/*/v*` matters because ADR-0039 proposes attesting
+build provenance against those tags. `ecosystem/*` mattered already: four such
+tags existed, all movable, and `fdos-connectors` vendors the governance corpus
+pinned to `ecosystem/v0.1.0` and **byte-compares it** — so another repository's
+comparison anchor could have been changed from here with nothing reporting it.
 
 | Rule | Why |
 |------|-----|
