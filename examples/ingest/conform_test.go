@@ -111,6 +111,25 @@ func TestEveryRefusal(t *testing.T) {
 // The fixtures are committed so a producer in another language has something to
 // compare bytes against. This keeps them honest: if the shape changes, the
 // committed fixture stops matching what the worked producer emits.
+//
+// **The wire fixture is byte-compared; the textproto one is not, and cannot be.**
+// `prototext` output is destabilised on purpose —
+// `google.golang.org/protobuf/internal/detrand` is "seeded by the program binary
+// itself" and "ensur[es] that the output is unstable across different builds" —
+// so a byte-compared textproto fixture passes only for the build that produced
+// it. It disagreed between the workspace and `GOWORK=off`, and a dependency bump
+// moved which of the two won. Regenerating it would only move that again.
+//
+// So the textproto is validated by **parsing it and comparing the message**,
+// which is the property it actually needs to carry: a producer in another
+// language reads it to learn the shape, and a reader that round-trips to an equal
+// message has learned the right shape whatever the whitespace. The wire fixture
+// keeps the byte comparison, because `proto.Marshal` of a fixed message is stable
+// for a fixed binary and it is what a foreign producer diffs.
+//
+// This is the same class of defect as the derivation pre-image RFC-0016 named:
+// protobuf serialization is documented as not canonical, so nothing may assume
+// its bytes are.
 func TestFixturesMatchTheWorkedProducer(t *testing.T) {
 	submission := build()
 
@@ -118,28 +137,44 @@ func TestFixturesMatchTheWorkedProducer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	text, err := prototext.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(submission)
+
+	wirePath := filepath.Join("testdata", "conforming.bin")
+	got, err := os.ReadFile(wirePath)
 	if err != nil {
-		t.Fatalf("prototext: %v", err)
+		if os.IsNotExist(err) && os.Getenv("UPDATE_FIXTURES") != "" {
+			if wErr := os.WriteFile(wirePath, wire, 0o644); wErr != nil {
+				t.Fatalf("write %s: %v", wirePath, wErr)
+			}
+		} else {
+			t.Fatalf("read %s: %v (run with UPDATE_FIXTURES=1 to create)", wirePath, err)
+		}
+	} else if string(got) != string(wire) {
+		t.Errorf("%s is stale — the submission shape changed. Re-create with UPDATE_FIXTURES=1 "+
+			"and review the diff.", wirePath)
 	}
 
-	for name, want := range map[string][]byte{
-		"conforming.bin":       wire,
-		"conforming.textproto": text,
-	} {
-		path := filepath.Join("testdata", name)
-		got, rErr := os.ReadFile(path)
-		if rErr != nil {
-			if os.IsNotExist(rErr) && os.Getenv("UPDATE_FIXTURES") != "" {
-				if wErr := os.WriteFile(path, want, 0o644); wErr != nil {
-					t.Fatalf("write %s: %v", path, wErr)
-				}
-				continue
+	textPath := filepath.Join("testdata", "conforming.textproto")
+	text, err := os.ReadFile(textPath)
+	if err != nil {
+		if os.IsNotExist(err) && os.Getenv("UPDATE_FIXTURES") != "" {
+			rendered, mErr := prototext.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(submission)
+			if mErr != nil {
+				t.Fatalf("prototext: %v", mErr)
 			}
-			t.Fatalf("read %s: %v (run with UPDATE_FIXTURES=1 to create)", path, rErr)
+			if wErr := os.WriteFile(textPath, rendered, 0o644); wErr != nil {
+				t.Fatalf("write %s: %v", textPath, wErr)
+			}
+			return
 		}
-		if string(got) != string(want) {
-			t.Fatalf("%s is stale — the submission shape changed. Re-create with UPDATE_FIXTURES=1 and review the diff.", path)
-		}
+		t.Fatalf("read %s: %v (run with UPDATE_FIXTURES=1 to create)", textPath, err)
+	}
+
+	var parsed ingestv1.HoldingClaimSubmission
+	if uErr := prototext.Unmarshal(text, &parsed); uErr != nil {
+		t.Fatalf("%s does not parse as a HoldingClaimSubmission: %v", textPath, uErr)
+	}
+	if !proto.Equal(&parsed, submission) {
+		t.Errorf("%s describes a different submission than the worked producer emits. "+
+			"Re-create with UPDATE_FIXTURES=1 and review the diff.", textPath)
 	}
 }
