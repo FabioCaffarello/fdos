@@ -49,6 +49,17 @@ TYPES="feat|fix|docs|chore|refactor|test|build|perf|ci|revert"
 SUBJECT_HARD_LIMIT=72
 SUBJECT_GUIDELINE=50
 
+# GitHub appends ` (#NNN)` to a squashed subject, after every check has passed.
+# Measured over forty landed commits: nine exceeded 72 characters and only two
+# would have without the suffix — so seven violations of this repository's own
+# rule were produced by the forge, on subjects that were compliant when written
+# and that nobody can now amend (#111).
+#
+# So an authored subject is budgeted against 72 minus the suffix. Eight
+# characters covers ` (#9999)`; at five digits this becomes nine, and the check
+# will say so rather than quietly start passing violations.
+SUFFIX_RESERVE=8
+
 # Character count, not byte count, and not at the mercy of the ambient locale.
 #
 # `${#subject}` counts characters under a UTF-8 locale and *bytes* under C. FDOS
@@ -89,11 +100,30 @@ check_subject() {
     return 1
   fi
 
-  local length
+  local length limit landed
   length="$(char_length "$subject")"
-  if [ "$length" -gt "$SUBJECT_HARD_LIMIT" ]; then
-    printf 'commit-msg: subject is %d characters, limit is %d%s\n' \
-      "$length" "$SUBJECT_HARD_LIMIT" "$origin" >&2
+
+  # A subject that already carries the suffix has landed: it is measured as it
+  # is. One that does not is about to acquire one, and is measured against what
+  # it will become.
+  if printf '%s' "$subject" | grep -qE ' \(#[0-9]+\)$'; then
+    landed=true
+    limit="$SUBJECT_HARD_LIMIT"
+  else
+    landed=false
+    limit=$((SUBJECT_HARD_LIMIT - SUFFIX_RESERVE))
+  fi
+
+  if [ "$length" -gt "$limit" ]; then
+    if [ "$landed" = true ]; then
+      printf 'commit-msg: subject is %d characters, limit is %d%s\n' \
+        "$length" "$SUBJECT_HARD_LIMIT" "$origin" >&2
+    else
+      printf 'commit-msg: subject is %d characters; the limit is %d because squash\n' \
+        "$length" "$limit" >&2
+      printf '  merge appends " (#NNNN)" after every check has passed, and %d + %d > %d%s\n' \
+        "$length" "$SUFFIX_RESERVE" "$SUBJECT_HARD_LIMIT" "$origin" >&2
+    fi
     printf '  got: %s\n' "$subject" >&2
     return 1
   fi

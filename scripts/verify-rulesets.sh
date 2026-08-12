@@ -110,7 +110,10 @@ EOF
 for file in "${COMMITTED}"/*.json; do
   [ -f "$file" ] || continue
   name="$(basename "$file" .json)"
-  case "$name" in environment-*) continue ;; esac
+  # Only ruleset files are expected to appear in the rulesets endpoint. The
+  # environment and the repository merge settings live elsewhere and are checked
+  # below — without this the check reported drift against itself.
+  case "$name" in environment-*|repository-*) continue ;; esac
   case " ${seen} " in
     *" ${name} "*) ;;
     *)
@@ -136,6 +139,35 @@ if [ -f "$env_file" ]; then
     failures=$((failures + 1))
   fi
   rm -f /tmp/env-diff.$$
+fi
+
+# The repository's merge settings, which `docs/branch-protection.md` documents as
+# "squash merge only" and nothing checked. They were not: merge commits and
+# rebase merges were both enabled, and a rebase merge lands a subject without the
+# ` (#NNN)` suffix — which is half of why the landed-subject rule was
+# unpredictable (#111, ADR-0049).
+merge_file="${COMMITTED}/repository-merge.json"
+if [ -f "$merge_file" ]; then
+  live_merge="$(
+    gh api "repos/${REPO}" 2>/dev/null | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+keys=("allow_squash_merge","allow_merge_commit","allow_rebase_merge",
+      "squash_merge_commit_title","squash_merge_commit_message","delete_branch_on_merge")
+print(json.dumps({k:d[k] for k in keys},indent=2,sort_keys=True))
+' || true
+  )"
+  if [ -z "$live_merge" ]; then
+    printf '  merge settings: not readable\n' >&2
+    failures=$((failures + 1))
+  elif diff -u "$merge_file" <(printf '%s\n' "$live_merge") > /tmp/merge-diff.$$ 2>&1; then
+    printf '  %-22s matches\n' "merge settings"
+  else
+    printf '  merge settings: live settings differ from %s\n' "$merge_file" >&2
+    sed 's/^/      /' /tmp/merge-diff.$$ >&2
+    failures=$((failures + 1))
+  fi
+  rm -f /tmp/merge-diff.$$
 fi
 
 if [ "$failures" -gt 0 ]; then
