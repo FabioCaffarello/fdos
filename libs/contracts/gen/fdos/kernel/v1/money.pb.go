@@ -217,9 +217,30 @@ func (x *Quantity) GetUnit() string {
 // does this total differ from the sum of its parts by 0.01" always has an
 // answer (ADR-0010, ADR-0012).
 type RoundingContext struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Precision     uint32                 `protobuf:"varint,1,opt,name=precision,proto3" json:"precision,omitempty"`
-	Mode          RoundingMode           `protobuf:"varint,2,opt,name=mode,proto3,enum=fdos.kernel.v1.RoundingMode" json:"mode,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Significant digits, governing intermediates. This is what apd's context
+	// precision means and what it has always meant here; it is stated now because
+	// it never was, in this file or in ADR-0008, and only Go ever committed to it.
+	Precision uint32       `protobuf:"varint,1,opt,name=precision,proto3" json:"precision,omitempty"`
+	Mode      RoundingMode `protobuf:"varint,2,opt,name=mode,proto3,enum=fdos.kernel.v1.RoundingMode" json:"mode,omitempty"`
+	// Decimal places, governing the result. Negative rounds to tens or hundreds,
+	// which is as legitimate as rounding to cents.
+	//
+	// Separate from `precision` because money's rounding target is an absolute
+	// scale published per currency, not a digit budget: ISO 4217 gives 0 minor
+	// units for JPY, 3 for KWD, 4 for CLF and none at all for precious metals, and
+	// Council Regulation (EC) No 1103/97 Article 5 *requires* rounding to the
+	// sub-unit. A significant-digit budget cannot express any of them (ADR-0040).
+	//
+	// Both are needed rather than one replacing the other, which is the answer
+	// every mature decimal system reached independently — IEEE 754-2008 has
+	// precision and quantum, Java has precision() and scale(), Python has context
+	// precision and quantize().
+	//
+	// **Explicitly optional**, and it is the first optional field on this surface.
+	// Absent means "no scale constraint", which must stay distinguishable from
+	// `scale = 0` — and 0 is not a placeholder here, it is JPY.
+	Scale         *int32 `protobuf:"zigzag32,3,opt,name=scale,proto3,oneof" json:"scale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -268,6 +289,13 @@ func (x *RoundingContext) GetMode() RoundingMode {
 	return RoundingMode_ROUNDING_MODE_UNSPECIFIED
 }
 
+func (x *RoundingContext) GetScale() int32 {
+	if x != nil && x.Scale != nil {
+		return *x.Scale
+	}
+	return 0
+}
+
 var File_fdos_kernel_v1_money_proto protoreflect.FileDescriptor
 
 const file_fdos_kernel_v1_money_proto_rawDesc = "" +
@@ -278,10 +306,12 @@ const file_fdos_kernel_v1_money_proto_rawDesc = "" +
 	"\bcurrency\x18\x02 \x01(\tR\bcurrency\"O\n" +
 	"\bQuantity\x12/\n" +
 	"\x06amount\x18\x01 \x01(\v2\x17.fdos.kernel.v1.DecimalR\x06amount\x12\x12\n" +
-	"\x04unit\x18\x02 \x01(\tR\x04unit\"a\n" +
+	"\x04unit\x18\x02 \x01(\tR\x04unit\"\x86\x01\n" +
 	"\x0fRoundingContext\x12\x1c\n" +
 	"\tprecision\x18\x01 \x01(\rR\tprecision\x120\n" +
-	"\x04mode\x18\x02 \x01(\x0e2\x1c.fdos.kernel.v1.RoundingModeR\x04mode*\xc7\x01\n" +
+	"\x04mode\x18\x02 \x01(\x0e2\x1c.fdos.kernel.v1.RoundingModeR\x04mode\x12\x19\n" +
+	"\x05scale\x18\x03 \x01(\x11H\x00R\x05scale\x88\x01\x01B\b\n" +
+	"\x06_scale*\xc7\x01\n" +
 	"\fRoundingMode\x12\x1d\n" +
 	"\x19ROUNDING_MODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ROUNDING_MODE_HALF_EVEN\x10\x01\x12\x19\n" +
@@ -331,6 +361,7 @@ func file_fdos_kernel_v1_money_proto_init() {
 		return
 	}
 	file_fdos_kernel_v1_decimal_proto_init()
+	file_fdos_kernel_v1_money_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

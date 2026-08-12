@@ -57,6 +57,29 @@ enum RoundingMode {
 // does this total differ from the sum of its parts by 0.01" always has an
 // answer (ADR-0010, ADR-0012).
 message RoundingContext {
+  // Significant digits, governing intermediates. This is what apd's context
+  // precision means and what it has always meant here; it is stated now because
+  // it never was, in this file or in ADR-0008, and only Go ever committed to it.
   uint32 precision = 1;
+
   RoundingMode mode = 2;
+
+  // Decimal places, governing the result. Negative rounds to tens or hundreds,
+  // which is as legitimate as rounding to cents.
+  //
+  // Separate from `precision` because money's rounding target is an absolute
+  // scale published per currency, not a digit budget: ISO 4217 gives 0 minor
+  // units for JPY, 3 for KWD, 4 for CLF and none at all for precious metals, and
+  // Council Regulation (EC) No 1103/97 Article 5 *requires* rounding to the
+  // sub-unit. A significant-digit budget cannot express any of them (ADR-0040).
+  //
+  // Both are needed rather than one replacing the other, which is the answer
+  // every mature decimal system reached independently — IEEE 754-2008 has
+  // precision and quantum, Java has precision() and scale(), Python has context
+  // precision and quantize().
+  //
+  // **Explicitly optional**, and it is the first optional field on this surface.
+  // Absent means "no scale constraint", which must stay distinguishable from
+  // `scale = 0` — and 0 is not a placeholder here, it is JPY.
+  optional sint32 scale = 3;
 }
