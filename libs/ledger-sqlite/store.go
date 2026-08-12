@@ -229,6 +229,116 @@ func assertEncoding(db *sql.DB) error {
 // Close releases the database.
 func (s *Store) Close() error { return s.db.Close() }
 
+// querier is what Load and Append need: the connection, or a region's
+// transaction.
+//
+// Both `*sql.DB` and `*sql.Tx` satisfy it, which is the whole point — the same
+// statements run inside a serialised region and outside one, so there is no
+// second implementation of an append to drift from the first.
+type querier interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
+// Serialise runs fn holding this database's write lock (ADR-0041).
+//
+// # The lock is the transaction
+//
+// `BEGIN IMMEDIATE` takes SQLite's write lock at the statement rather than at
+// the first write, and holds it until commit or rollback. So a region is a
+// transaction held open across fn, and the caller's clock read happens inside
+// it — which is what closes the window ADR-0036 closed for one process and
+// could not close for two.
+//
+// # `name` is ignored, and that is the honest answer rather than a shortcut
+//
+// SQLite has one writer per *database*, not per stream. There is no per-name
+// lock to take, so a region over `acct-1` excludes a writer to `acct-2` as well.
+// ADR-0041 records this as the cost that ADR-0042's per-stream advisory locks
+// exist to pay down. The parameter stays in the signature because the port has
+// it and a second engine uses it; pretending it were honoured here would be
+// worse than ignoring it visibly.
+//
+// # Why this serialises processes, which a mutex could not
+//
+// The lock is the file's, so it is held against every process that has the
+// database open, not only every goroutine in this one. Measured before this
+// existed: 128 concurrent admissions to one stream admitted 128 from a single
+// process and 106 from sixteen, and what kept the number as high as it was is
+// this same lock being taken by Append — just too late to cover the clock read.
+//
+// # SetMaxOpenConns(1) makes misuse a deadlock rather than a stale read
+//
+// fn must use the Store it is given. Reaching past it to the outer Store would
+// ask for a second connection, and there is only one — so the mistake hangs
+// instead of silently reading outside the region. Hence [regional], whose
+// methods run on this transaction and whose Serialise refuses.
+func (s *Store) Serialise(
+	ctx context.Context,
+	name string,
+	fn func(context.Context, app.Store) error,
+) (err error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("sqlite: begin region on %s: %w", name, err)
+	}
+	// sql.ErrTxDone is the expected outcome after a successful commit and is the
+	// only rollback error that means nothing went wrong.
+	defer func() {
+		if rerr := tx.Rollback(); rerr != nil && !errors.Is(rerr, sql.ErrTxDone) {
+			err = errors.Join(err, rerr)
+		}
+	}()
+
+	// Returned unwrapped. A caller must still be able to tell ErrStaleRead —
+	// *re-read and try again* — from a bug, and ADR-0034 made them distinct
+	// errors precisely so nobody retries the bug forever.
+	if fnErr := fn(ctx, regional{tx: tx}); fnErr != nil {
+		return fnErr
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("sqlite: commit region on %s: %w", name, err)
+	}
+	return nil
+}
+
+// regional is the store inside a region: every statement on the region's
+// transaction.
+//
+// It holds the transaction rather than the Store, so there is no field through
+// which a caller could reach the connection and deadlock against the region
+// holding it.
+type regional struct{ tx *sql.Tx }
+
+// Load reads through the region's transaction, so it sees the region's own
+// uncommitted appends — which a caller that appends and then re-reads requires.
+func (r regional) Load(ctx context.Context, name string) (domain.Stream, error) {
+	return loadFrom(ctx, r.tx, name)
+}
+
+// Append records a fact without a transaction of its own; the region is one.
+func (r regional) Append(
+	ctx context.Context,
+	name string,
+	expect app.Expectation,
+	envelope domain.Envelope,
+	kind domain.Kind,
+	payload domain.Payload,
+) (domain.Ref, error) {
+	return appendWithin(ctx, r.tx, name, expect, envelope, kind, payload)
+}
+
+// Serialise refuses: this store is already inside a region.
+//
+// SQLite has no nested transactions, so the honest alternatives are to ignore
+// the nesting — leaving a caller believing it holds a lock it does not — or to
+// wait for the single connection the outer region is holding, which never
+// returns. An error is neither.
+func (regional) Serialise(context.Context, string, func(context.Context, app.Store) error) error {
+	return app.ErrNestedSerialise
+}
+
 // ErrGap is returned when a stream's stored sequences are not 1..N contiguous.
 //
 // An append-only stream whose sequence is assigned by the store (ADR-0034) has
@@ -257,8 +367,18 @@ var ErrGap = errors.New("sqlite: stream has a sequence gap")
 // checked instead of assumed. The sequence is stored twice, in the column and
 // inside the encoded fact's own ref, and both are compared: they cannot
 // disagree unless the row was written by something other than Append.
-func (s *Store) Load(ctx context.Context, name string) (loaded domain.Stream, err error) {
-	rows, err := s.db.QueryContext(ctx,
+func (s *Store) Load(ctx context.Context, name string) (domain.Stream, error) {
+	return loadFrom(ctx, s.db, name)
+}
+
+// loadFrom is Load against either the connection or a region's transaction.
+//
+// A read inside a region must go through that region's transaction. Reading
+// past it would take a second connection — and with SetMaxOpenConns(1) there is
+// no second connection, so it would not read stale data, it would deadlock
+// against the region holding the only one.
+func loadFrom(ctx context.Context, q querier, name string) (loaded domain.Stream, err error) {
+	rows, err := q.QueryContext(ctx,
 		`SELECT sequence, encoded FROM facts WHERE stream = ? ORDER BY sequence`, name)
 	if err != nil {
 		return domain.Stream{}, fmt.Errorf("sqlite: load %s: %w", name, err)
@@ -354,10 +474,37 @@ func (s *Store) Append(
 		}
 	}()
 
+	ref, err = appendWithin(ctx, tx, name, expect, envelope, kind, payload)
+	if err != nil {
+		return domain.Ref{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return domain.Ref{}, fmt.Errorf("sqlite: commit %s: %w", name, err)
+	}
+	return ref, nil
+}
+
+// appendWithin is the append itself, with no transaction of its own.
+//
+// Split out because a region already holds one. Nesting a second would either
+// be ignored — SQLite has no nested transactions — or, with SetMaxOpenConns(1),
+// wait forever for the connection the region is holding.
+//
+// Every check that decides the append stays inside whichever transaction is
+// passed, which is what ADR-0034 moved here in the first place.
+func appendWithin(
+	ctx context.Context,
+	q querier,
+	name string,
+	expect app.Expectation,
+	envelope domain.Envelope,
+	kind domain.Kind,
+	payload domain.Payload,
+) (ref domain.Ref, err error) {
 	var length int64
 	var highest sql.NullInt64
 	var lastKnowledge sql.NullInt64
-	err = tx.QueryRowContext(ctx,
+	err = q.QueryRowContext(ctx,
 		`SELECT COUNT(*), MAX(sequence), MAX(knowledge) FROM facts WHERE stream = ?`, name).
 		Scan(&length, &highest, &lastKnowledge)
 	if err != nil {
@@ -412,14 +559,11 @@ func (s *Store) Append(
 		return domain.Ref{}, fmt.Errorf("sqlite: %w", err)
 	}
 
-	if _, err := tx.ExecContext(ctx,
+	if _, err := q.ExecContext(ctx,
 		`INSERT INTO facts (stream, sequence, effective_from, knowledge, encoded) VALUES (?, ?, ?, ?, ?)`,
 		name, ref.Sequence, nanos(envelope.Coordinates().Effective().From()), nanos(knowledge), encoded,
 	); err != nil {
 		return domain.Ref{}, fmt.Errorf("sqlite: insert %s: %w", name, err)
-	}
-	if err := tx.Commit(); err != nil {
-		return domain.Ref{}, fmt.Errorf("sqlite: commit %s: %w", name, err)
 	}
 	return ref, nil
 }

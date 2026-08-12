@@ -617,8 +617,12 @@ func TestASecondProcessOpensWhileAFirstIsWriting(t *testing.T) {
 	}
 }
 
-// helperEnv names the database a child process should open.
-const helperEnv = "FDOS_SQLITE_CONCURRENT_OPEN"
+// helperEnv names the database a child process should open, and helperMode says
+// what to do with it. Both empty means this process is the parent.
+const (
+	helperEnv  = "FDOS_SQLITE_CONCURRENT_OPEN"
+	helperMode = "FDOS_SQLITE_HELPER_MODE"
+)
 
 // TestMain runs the child body when the environment marks this process as one.
 //
@@ -628,6 +632,9 @@ func TestMain(m *testing.M) {
 	path := os.Getenv(helperEnv)
 	if path == "" {
 		os.Exit(m.Run())
+	}
+	if os.Getenv(helperMode) == "region" {
+		os.Exit(helperAppendsInsideARegion(path))
 	}
 	os.Exit(helperOpensTheDatabase(path))
 }
@@ -644,7 +651,7 @@ func helperOpensTheDatabase(path string) int {
 	// error is discarded rather than reported.
 	//nolint:errcheck // the refusal is the expected outcome; the lock it takes is the point
 	_, _ = store.Append(
-		context.Background(), "acct-1", app.Any(), helperEnvelope(),
+		context.Background(), "acct-1", app.Any(), helperEnvelope(1),
 		domain.KindObservation, helperClaim())
 	if err := store.Close(); err != nil {
 		fmt.Fprintf(os.Stderr, "close: %v\n", err)
@@ -666,13 +673,13 @@ func helperClaim() domain.HoldingClaimed {
 	}
 }
 
-func helperEnvelope() domain.Envelope {
+func helperEnvelope(hour int) domain.Envelope {
 	effective := temporal.MustAt(epoch)
 	interval, err := temporal.OpenFrom(effective)
 	if err != nil {
 		panic(err)
 	}
-	coordinates, err := temporal.Assign(interval, temporal.MustAt(epoch.Add(time.Hour)))
+	coordinates, err := temporal.Assign(interval, temporal.MustAt(epoch.Add(time.Duration(hour)*time.Hour)))
 	if err != nil {
 		panic(err)
 	}
@@ -691,4 +698,114 @@ func helperEnvelope() domain.Envelope {
 		panic(err)
 	}
 	return envelope
+}
+
+// Writers in separate processes, each inside a region, do not refuse each other
+// (ADR-0041).
+//
+// # The case the whole decision is for
+//
+// ADR-0036 closed the clock-read/append window with a lock table inside
+// `app.Ledger`, which covers goroutines and stops at the process boundary.
+// RFC-0015 §2 said so and left it open. Measured before ADR-0041, with each
+// process holding its own Ledger over one database: 128 concurrent admissions
+// to one stream admitted 128 from one process, 127 from two, 106 from sixteen.
+//
+// Here each child reads the stream and appends inside `Serialise`, and every
+// child must land its fact on its only attempt. `AtLength` is what makes that a
+// measurement rather than an assertion: a child whose read is invalidated by
+// another process is refused with ErrStaleRead and exits non-zero.
+//
+// # Why processes and not goroutines, again
+//
+// The same reason as TestASecondProcessOpensWhileAFirstIsWriting, and it is
+// worth repeating because the goroutine version of *that* test passed against
+// the defect it existed to catch. A `sync.Mutex` serialises goroutines whether
+// or not the store does anything, so a goroutine version of this would pass
+// against a store with no region at all. Only separate processes distinguish a
+// database lock from an in-memory one.
+func TestSerialisedWritersInSeparateProcessesDoNotRefuseEachOther(t *testing.T) {
+	if os.Getenv(helperEnv) != "" {
+		return // the child body runs from TestMain
+	}
+
+	path := filepath.Join(t.TempDir(), "ledger.db")
+	seed := open(t, path)
+	if err := seed.Close(); err != nil {
+		t.Fatalf("seed close: %v", err)
+	}
+
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatalf("executable: %v", err)
+	}
+
+	const writers = 6
+	var wg sync.WaitGroup
+	failures := make([]error, writers)
+	for i := range writers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			cmd := exec.Command(self,
+				"-test.run=TestSerialisedWritersInSeparateProcessesDoNotRefuseEachOther")
+			cmd.Env = append(os.Environ(), helperEnv+"="+path, helperMode+"=region")
+			if out, cmdErr := cmd.CombinedOutput(); cmdErr != nil {
+				failures[i] = fmt.Errorf("%w: %s", cmdErr, out)
+			}
+		}()
+	}
+	wg.Wait()
+	for i, failure := range failures {
+		if failure != nil {
+			t.Fatalf("writer %d landed no fact on its only attempt: %v", i, failure)
+		}
+	}
+
+	// Every writer landed, and the sequences are 1..N with no gap — the second
+	// half matters because a region that let two processes compute one sequence
+	// would satisfy the count while losing a fact.
+	reopened := open(t, path)
+	stream, err := reopened.Load(context.Background(), "acct-1")
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if stream.Len() != writers {
+		t.Fatalf("stream holds %d facts, want %d", stream.Len(), writers)
+	}
+	for i, f := range stream.Facts() {
+		if want := uint64(i + 1); f.Ref().Sequence != want { //nolint:gosec // i is a slice index
+			t.Fatalf("fact %d carries sequence %d, want %d", i, f.Ref().Sequence, want)
+		}
+	}
+}
+
+// helperAppendsInsideARegion is the child: one read-then-append inside one
+// region, one attempt, no retry.
+func helperAppendsInsideARegion(path string) int {
+	store, err := sqlitestore.Open(path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "open: %v\n", err)
+		return 1
+	}
+	defer func() { _ = store.Close() }()
+
+	err = store.Serialise(context.Background(), "acct-1",
+		func(ctx context.Context, s app.Store) error {
+			// An absent stream is length zero: nothing to have gone stale.
+			length := 0
+			if stream, loadErr := s.Load(ctx, "acct-1"); loadErr == nil {
+				length = stream.Len()
+			} else if !errors.Is(loadErr, app.ErrStreamNotFound) {
+				return loadErr
+			}
+			_, appendErr := s.Append(ctx, "acct-1", app.AtLength(length),
+				helperEnvelope(length+1), domain.KindObservation, helperClaim())
+			return appendErr
+		})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "region: %v\n", err)
+		return 1
+	}
+	return 0
 }
