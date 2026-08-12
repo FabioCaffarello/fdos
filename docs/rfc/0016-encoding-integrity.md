@@ -356,12 +356,18 @@ condition that is not trapped becomes a wrong number instead of a refusal.
 independent reasons, both worth stating because either alone would be easy to
 lose:
 
-1. **Scope.** ADR-0025 decides that `libs/contracts` "is the only module FDOS
-   offers to code outside this repository", and that `libs/kernel`,
-   `libs/ledger`, `libs/kernel-wire` and `libs/ledger-wire` "carry **no
-   compatibility promise across versions**". ADR-0024's seven-step process
-   governs the contract surface. A Go-API change in the kernel is therefore
-   outside it by decision, not by omission.
+1. **Scope, and the scoping word is in Tier 0.** ADR-0024 introduces its
+   seven-step process as an application of E7, and E7 reads: *"Every breaking
+   **contract** change carries an RFC, a deprecation window, an N-1
+   compatibility period, and a tracked migration issue in every consuming
+   repository"* (`invariants.md:48-51`). ADR-0025 then settles what is and is not
+   a contract: `libs/contracts` "is the only module FDOS offers to code outside
+   this repository", while `libs/kernel`, `libs/ledger`, `libs/kernel-wire` and
+   `libs/ledger-wire` "carry **no compatibility promise across versions**". It
+   even names these change classes — "a rename, a constructor signature, an
+   unexported field — none of which changes any contract" — and draws the
+   consequence: "FDOS can refactor the kernel and ledger freely." A Go-API change
+   in the kernel is outside the process **by decision, not by omission**.
 2. **Fact.** `fdos-connectors` imports `libs/contracts` and nothing else — no
    `libs/kernel`, no `libs/ledger`, no `-wire` module — so every Go-API change
    in this set is invisible to it at compile time.
@@ -559,6 +565,63 @@ iteration produces **zero diagnostics** — exit 0. The analysers catch direct
 syntactic forms only. That is not this RFC's subject and must not be fixed
 quietly inside it; it is noted so that nothing here is read as evidence the
 determinism mechanisms are stronger than they are.
+
+### The gate cannot see a multi-module change, which is what this one is
+
+Measured, and it changes how the work must be **sequenced** rather than what it
+is. `FOR_EACH_MODULE` (`Makefile:30-36`) runs every module with `GOWORK=off`, so
+siblings resolve through **published versions from the module cache**:
+
+```
+cd libs/ledger && GOWORK=off go list -f '{{.Dir}}' .../libs/kernel/identity
+→ /…/go/pkg/mod/…/fdos/libs/kernel@v0.7.0/identity
+```
+
+So while `libs/kernel` is being edited, `make verify` compiles `libs/ledger`,
+`libs/kernel-wire`, `libs/ledger-wire`, `libs/ledger-sqlite` and `apps/submitd`
+against **kernel v0.7.0 from the cache**. A kernel signature change is
+compile-checked only inside `libs/kernel` itself, and its blast radius surfaces
+one tag at a time: kernel → {kernel-wire, ledger} → {ledger-wire, ledger-sqlite}
+→ submitd. `libs/ledger-sqlite` is absent from `go.work` entirely, so even a
+workspace build never sees its source against local siblings.
+
+This is deliberate — `GOWORK=off` is ADR-0004's discipline and it is what proves
+each module resolves standalone. But it means **a change of exactly this shape is
+the one the gate is least able to evaluate.** The accepting ADR must therefore
+state a release order, and the implementation should carry a root-level
+`go build ./...` — which *does* use the workspace — as a pre-flight no current
+target runs.
+
+`explained.Fold` is the only guaranteed compile break in the set: the seed is
+`B any` at `explained.go:197-204` and never reaches the pre-image at `:222-224`,
+so no fix for defect 4 can hide behind the current signature.
+
+### Two live defects this RFC surfaces and does not own
+
+Both were found while establishing the above, and both are the same class as the
+blind conformance generator — an enforcement claim that is **false right now**.
+
+1. **`examples/ingest` does not compile.** Verified:
+   `./conform.go:56:50: not enough arguments in call to app.NewLedger — have
+   (*memory.Store, *clock.Sequence), want (app.Store, app.Clock,
+   identity.Ruleset)`. The break came from ADR-0033's added `identity.Ruleset`
+   parameter, not from this work. It is invisible because
+   `scripts/list-modules.sh` is `find libs apps -name go.mod`, excluding
+   `examples/` by construction — so ADR-0037's enforcement row claiming *"A
+   producer can check its own conformance | rung 3 | `examples/ingest` — the kit
+   runs in CI and restates no rules, calling the real admission path"* is not
+   true today. It is also one of only two production call sites of
+   `AcceptHoldingClaim`.
+2. **The contract registry is stale, and ADR-0024 calls it "part of the
+   interface", not documentation about it.** `contracts.md:34-36` lists the
+   `fdos.*.v1` packages at `v0.3.0` while `apps/submitd/go.mod:6` pins
+   `libs/contracts v0.5.0`; `contracts.md:80` lists `libs/kernel` at `v0.5.0`
+   while `submitd` pins `v0.7.0`; and `libs/ledger-sqlite` — published, imported
+   and tagged — is not in the registry at all.
+
+Neither is caused by this RFC and neither should be repaired silently inside it.
+Both are named because M12a's sequencing depends on the first and its release
+step depends on the second.
 
 ## Alternatives
 
