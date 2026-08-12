@@ -78,7 +78,7 @@ that decision, **not an offer**.
 | Module | Version | Offered | Consumed externally |
 |---|---|---|---|
 | `libs/kernel` | `v0.8.0` | no | no |
-| `libs/ledger` | `v0.7.0` | no | no |
+| `libs/ledger` | `v0.8.0` | no | no |
 | `libs/kernel-wire` | `v0.2.0` | no | no |
 | `libs/ledger-wire` | `v0.4.0` | no | no |
 | `libs/ledger-sqlite` | `v0.2.0` | no | no |
@@ -108,6 +108,26 @@ each is the class of change `buf breaking` cannot see, because no schema moved:
 All four are safe now only because no store exists holding an older identifier,
 and `v0.1.0` of the store being published means that safety is unverifiable
 rather than guaranteed.
+
+**`libs/ledger/v0.8.0`** carries
+[ADR-0041](../adr/0041-the-write-path-serialises-in-the-store.md): `app.Store`
+gains `Serialise`, and the write path reads the clock inside it.
+
+It is the same invisible class as the four above, and worse in one respect —
+this one **breaks every implementation of `app.Store`**, including any out of
+tree, and no mechanism here can see it. `buf breaking` cannot, because no schema
+moved. `make verify` cannot, because `FOR_EACH_MODULE` runs `GOWORK=off` and
+resolves siblings from the proxy, so `libs/ledger-sqlite` is compiled against
+the *previous* release of this module and passes
+([#79](https://github.com/FabioCaffarello/fdos/issues/79)). A workspace build is
+what says otherwise, and `make verify` does not run one.
+
+So this release is deliberately published into a tree that does not build as a
+workspace. That is step one of ADR-0041's release sequence rather than an
+accident: `libs/ledger-sqlite` cannot implement the method until this version is
+resolvable on the proxy, and the conformance suite that defines what the method
+means ships inside this module. **The next release closes it, and until then the
+gap is here in writing rather than in somebody's build.**
 
 **They carry no compatibility promise across versions.** A consumer importing
 one is depending on FDOS's internal structure rather than on its contract: a
