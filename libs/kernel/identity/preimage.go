@@ -1,9 +1,6 @@
 package identity
 
-import (
-	"encoding/binary"
-	"strings"
-)
+import "github.com/FabioCaffarello/fdos/libs/kernel/internal/framing"
 
 // The framed pre-image, accepted by ADR-0040.
 //
@@ -43,36 +40,8 @@ const (
 	tagClaimSeed tag = "fdos.identity.claim-seed.v1"
 )
 
-// frame renders a tag and its components as an injective byte string.
-//
-// Each component is preceded by its length as a fixed-width big-endian uint64.
-// Fixed width because a variable-length count is itself ambiguous; big-endian so
-// that the encoding sorts the way the numbers do, which costs nothing here and
-// is the property the storage encodings need.
-//
-// The tag is framed like any other component rather than trusted to be
-// unambiguous, so a future tag that is a prefix of another cannot collide.
+// frame delegates to the one canonical encoding (ADR-0040). It exists as a
+// thin local name so the tag type above stays typed at the call sites.
 func frame(t tag, components ...string) string {
-	var b strings.Builder
-
-	// The exact size, so the builder never reallocates: eight bytes of length
-	// per component plus the tag, and then the bytes themselves.
-	size := 8 + len(t)
-	for _, c := range components {
-		size += 8 + len(c)
-	}
-	b.Grow(size)
-
-	write := func(s string) {
-		var length [8]byte
-		binary.BigEndian.PutUint64(length[:], uint64(len(s)))
-		b.Write(length[:])
-		b.WriteString(s)
-	}
-
-	write(string(t))
-	for _, c := range components {
-		write(c)
-	}
-	return b.String()
+	return framing.Frame(string(t), components...)
 }
