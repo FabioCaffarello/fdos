@@ -61,6 +61,10 @@ func Run(t *testing.T, newStore NewStore) {
 	t.Run("FactsReloadIntact", func(t *testing.T) { factsReloadIntact(t, newStore) })
 	t.Run("AsOfReadMatchesTheProjection", func(t *testing.T) { asOfMatchesProjection(t, newStore) })
 	t.Run("ConcurrentAppendsSerialise", func(t *testing.T) { concurrentAppendsSerialise(t, newStore) })
+	t.Run("SerialiseRemovesTheRetry", func(t *testing.T) { serialiseRemovesTheRetry(t, newStore) })
+	t.Run("NestedSerialiseIsRefused", func(t *testing.T) { nestedSerialiseIsRefused(t, newStore) })
+	t.Run("SerialiseReturnsTheCallbacksError", func(t *testing.T) { serialiseReturnsTheError(t, newStore) })
+	t.Run("SerialiseDoesNotAppendOnItsOwn", func(t *testing.T) { serialiseAppendsNothing(t, newStore) })
 }
 
 // Case 1. The defect the M10 gate measured: `Ref` is {stream, sequence} and a
@@ -463,4 +467,142 @@ func asOf(t *testing.T, hour int) temporal.AsOf {
 		t.Fatal(err)
 	}
 	return a
+}
+
+// Case 12. What `Serialise` buys, stated as the difference from case 11
+// (ADR-0041).
+//
+// Case 11 has eight writers retrying up to 200 times each, and passes. That is
+// the honest picture of the port *without* a region: every writer computes what
+// it will append from something it read, the read goes stale, and the append is
+// refused. Retrying works and hides that the ledger refuses most of the traffic
+// it was built to accept — measured at 3 to 9 admitted of 32 before ADR-0036,
+// and 106 of 128 across sixteen processes before this decision.
+//
+// Here every writer gets **one attempt**. The knowledge time each appends is
+// computed from the stream's length read inside its own region, which is the
+// analogue of reading the clock: two writers that read the same length compute
+// the same instant, and the second is refused as non-monotonic. So a store that
+// does not serialise fails this immediately, and no amount of retrying is
+// involved in passing it.
+func serialiseRemovesTheRetry(t *testing.T, newStore NewStore) {
+	ctx, store := context.Background(), newStore(t)
+
+	const writers = 8
+	var wg sync.WaitGroup
+	errs := make(chan error, writers)
+
+	for i := range writers {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			err := store.Serialise(ctx, "acct-1", func(ctx context.Context, s app.Store) error {
+				// Read-then-append, the shape the region exists to make atomic.
+				// An absent stream is length zero: nothing to have gone stale.
+				length := 0
+				if stream, err := s.Load(ctx, "acct-1"); err == nil {
+					length = stream.Len()
+				} else if !errors.Is(err, app.ErrStreamNotFound) {
+					return err
+				}
+				_, err := s.Append(ctx, "acct-1", app.AtLength(length),
+					envelopeAt(t, length+1), domain.KindObservation, claim(t, fmt.Sprintf("T%d", n)))
+				return err
+			})
+			if err != nil {
+				errs <- fmt.Errorf("writer %d landed no fact on its only attempt: %w", n, err)
+			}
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Error(err)
+	}
+
+	stream, err := store.Load(ctx, "acct-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stream.Len() != writers {
+		t.Fatalf("stream holds %d facts, want %d", stream.Len(), writers)
+	}
+	// Sequences 1..N with no gap is the same integrity property case 1 asserts,
+	// re-checked here because a region that let two writers compute one sequence
+	// would satisfy the count above while losing a fact.
+	for i, f := range stream.Facts() {
+		if want := uint64(i + 1); f.Ref().Sequence != want { //nolint:gosec // i is a slice index
+			t.Fatalf("fact %d carries sequence %d, want %d", i, f.Ref().Sequence, want)
+		}
+	}
+}
+
+// Case 13. Entering a region from inside one is refused rather than hung.
+//
+// The honest outcome of nesting is a deadlock against a lock the caller already
+// holds, and a deadlock is a hang with no message — in a suite, a timeout with
+// no cause. An implementation is required to say so instead.
+func nestedSerialiseIsRefused(t *testing.T, newStore NewStore) {
+	ctx, store := context.Background(), newStore(t)
+
+	err := store.Serialise(ctx, "acct-1", func(ctx context.Context, s app.Store) error {
+		return s.Serialise(ctx, "acct-1", func(context.Context, app.Store) error {
+			t.Error("a nested region ran; it must be refused")
+			return nil
+		})
+	})
+	if !errors.Is(err, app.ErrNestedSerialise) {
+		t.Fatalf("nested Serialise returned %v, want ErrNestedSerialise", err)
+	}
+}
+
+// Case 14. The callback's error survives the trip out.
+//
+// A store that wrapped errors opaquely would break every caller's ability to
+// tell ErrStaleRead — *re-read and try again* — from a bug, which ADR-0034 made
+// a distinct error precisely so a caller would not retry the bug forever.
+func serialiseReturnsTheError(t *testing.T, newStore NewStore) {
+	ctx, store := context.Background(), newStore(t)
+
+	sentinel := errors.New("storetest: the callback said no")
+	err := store.Serialise(ctx, "acct-1", func(context.Context, app.Store) error { return sentinel })
+	if !errors.Is(err, sentinel) {
+		t.Fatalf("Serialise returned %v, which does not wrap the callback's error", err)
+	}
+
+	// And a real one from inside, so the path a caller actually hits is covered
+	// rather than only a sentinel that never touched the store.
+	if _, seedErr := store.Append(ctx, "acct-1", app.Any(),
+		envelopeAt(t, 1), domain.KindObservation, claim(t, "PETR4")); seedErr != nil {
+		t.Fatal(seedErr)
+	}
+	err = store.Serialise(ctx, "acct-1", func(ctx context.Context, s app.Store) error {
+		_, appendErr := s.Append(ctx, "acct-1", app.AtLength(99),
+			envelopeAt(t, 2), domain.KindObservation, claim(t, "VALE3"))
+		return appendErr
+	})
+	if !errors.Is(err, app.ErrStaleRead) {
+		t.Fatalf("Serialise returned %v, want it to wrap ErrStaleRead", err)
+	}
+}
+
+// Case 15. A region that appends nothing appends nothing.
+//
+// Obvious, and the reason to assert it is not. An implementation binding the
+// region to a transaction has somewhere to accidentally commit an empty one, or
+// to create the stream as a side effect of being asked to serialise against its
+// name — which would make "we know nothing" and "we hold nothing" the same
+// answer, the distinction ADR-0022 turns on.
+func serialiseAppendsNothing(t *testing.T, newStore NewStore) {
+	ctx, store := context.Background(), newStore(t)
+
+	if err := store.Serialise(ctx, "acct-1", func(context.Context, app.Store) error {
+		return nil
+	}); err != nil {
+		t.Fatalf("empty region: %v", err)
+	}
+
+	if _, err := store.Load(ctx, "acct-1"); !errors.Is(err, app.ErrStreamNotFound) {
+		t.Fatalf("after an empty region the stream loaded with %v, want ErrStreamNotFound", err)
+	}
 }

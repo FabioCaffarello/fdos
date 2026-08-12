@@ -324,6 +324,26 @@ func (r *racingStore) Load(ctx context.Context, name string) (domain.Stream, err
 	return r.inner.Load(ctx, name)
 }
 
+// Serialise deliberately serialises nothing.
+//
+// ADR-0041 moved the write region into the store, and a store that honoured it
+// here would close the very window this test opens. That is the right outcome
+// for a writer inside the region and the wrong one for this test, because the
+// intruder stands in for a writer that is **not** in it — another process
+// before ADR-0041, or a caller of a store that implements the port badly.
+//
+// `Expectation` is what catches that writer, and it has to keep working when
+// the region does not. A test whose competing write were serialised away would
+// prove the region works and say nothing about the precondition, which is what
+// it exists to hold (ADR-0034).
+func (r *racingStore) Serialise(
+	ctx context.Context,
+	_ string,
+	fn func(context.Context, app.Store) error,
+) error {
+	return fn(ctx, r)
+}
+
 func (r *racingStore) Append(
 	ctx context.Context,
 	name string,

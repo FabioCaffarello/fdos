@@ -27,12 +27,6 @@ type Ledger struct {
 	store Store
 	clock Clock
 	rules identity.Ruleset
-
-	// writes serialises the clock read with the append, per stream (ADR-0036).
-	// Not injected: it is an invariant of this type rather than a policy a
-	// composition root chooses, and a caller that could supply a no-op could
-	// disable a correctness property from outside.
-	writes streamLocks
 }
 
 // NewLedger wires the application service.
@@ -44,13 +38,18 @@ type Ledger struct {
 // (ADR-0033). `identity.Canonicalisation()` is what a caller almost always
 // wants; being made to name it is the point.
 //
-// # Construct one per process, not one per request
+// # Constructing more than one is now safe, and was not
 //
-// The returned Ledger owns the lock table that serialises writes to a stream
-// (ADR-0036). Two Ledgers over one store share nothing, so concurrent writers
-// holding different instances are exactly as unserialised as they were before
-// that decision. Nothing detects it: the symptom is a legitimate append refused
-// with ErrNonMonotonicKnowledge, which reads like clock skew.
+// This paragraph used to warn that two Ledgers over one store share no lock, so
+// writers holding different instances were unserialised with no symptom beyond
+// a legitimate append refused as though the clock had skewed. **That warning is
+// obsolete, and it was never enough.** It asked a composition root to guarantee
+// something a composition root cannot: two *processes* over one store could not
+// share a Ledger however carefully anyone wired it.
+//
+// ADR-0041 moved the region into the store, which is the only thing every
+// writer can see. Serialisation is now a property of what you pass in rather
+// than of how many of these you make.
 func NewLedger(store Store, clock Clock, rules identity.Ruleset) (*Ledger, error) {
 	if store == nil || clock == nil {
 		return nil, errors.New("app: ledger needs a store and a clock")
@@ -87,33 +86,38 @@ type ObserveHoldingCommand struct {
 // This is the only place knowledge time is produced, and it comes from the
 // injected clock rather than from the caller or from `time.Now()`.
 func (l *Ledger) ObserveHolding(ctx context.Context, cmd ObserveHoldingCommand) (domain.Ref, error) {
-	defer l.writes.hold(cmd.Stream)()
+	var ref domain.Ref
+	err := l.store.Serialise(ctx, cmd.Stream, func(ctx context.Context, s Store) error {
+		coordinates, err := temporal.Assign(cmd.Effective, l.clock.Now())
+		if err != nil {
+			return fmt.Errorf("assign coordinates: %w", err)
+		}
 
-	coordinates, err := temporal.Assign(cmd.Effective, l.clock.Now())
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("assign coordinates: %w", err)
-	}
+		prov, err := provenance.Observed(cmd.Source, cmd.CollectedAt, cmd.Interpreter, cmd.Confidence)
+		if err != nil {
+			return fmt.Errorf("provenance: %w", err)
+		}
 
-	prov, err := provenance.Observed(cmd.Source, cmd.CollectedAt, cmd.Interpreter, cmd.Confidence)
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("provenance: %w", err)
-	}
+		envelope, err := domain.NewEnvelope(coordinates, prov, cmd.References)
+		if err != nil {
+			return fmt.Errorf("envelope: %w", err)
+		}
 
-	envelope, err := domain.NewEnvelope(coordinates, prov, cmd.References)
+		// Any(): this observation is stated by its caller and depends on nothing
+		// read from the stream, so there is nothing that can have gone stale.
+		ref, err = s.Append(ctx, cmd.Stream, Any(), envelope, domain.KindObservation,
+			domain.HoldingObserved{
+				Account:    cmd.Account,
+				Instrument: cmd.Instrument,
+				Quantity:   cmd.Quantity,
+			})
+		if err != nil {
+			return fmt.Errorf("append: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return domain.Ref{}, fmt.Errorf("envelope: %w", err)
-	}
-
-	// Any(): this observation is stated by its caller and depends on nothing
-	// read from the stream, so there is nothing that can have gone stale.
-	ref, err := l.store.Append(ctx, cmd.Stream, Any(), envelope, domain.KindObservation,
-		domain.HoldingObserved{
-			Account:    cmd.Account,
-			Instrument: cmd.Instrument,
-			Quantity:   cmd.Quantity,
-		})
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("append: %w", err)
+		return domain.Ref{}, err
 	}
 	return ref, nil
 }
@@ -144,49 +148,51 @@ type CorrectFactCommand struct {
 
 // CorrectFact appends a correction as a new fact. Nothing is mutated.
 func (l *Ledger) CorrectFact(ctx context.Context, cmd CorrectFactCommand) (domain.Ref, error) {
-	// Held across the read as well as the write: this correction is built from a
-	// fact read out of the stream, so serialising only the append would leave the
-	// read it depends on unprotected.
-	defer l.writes.hold(cmd.Stream)()
+	var ref domain.Ref
+	// The region covers the read as well as the write: this correction is built
+	// from a fact read out of the stream, so serialising only the append would
+	// leave the read it depends on unprotected.
+	err := l.store.Serialise(ctx, cmd.Stream, func(ctx context.Context, s Store) error {
+		stream, err := s.Load(ctx, cmd.Stream)
+		if err != nil {
+			return err
+		}
+		corrected, err := stream.Get(cmd.Corrects)
+		if err != nil {
+			return fmt.Errorf("correct: %w", err)
+		}
+		if !cmd.Kind.Valid() {
+			return fmt.Errorf("%w: %d", domain.ErrUnknownKind, cmd.Kind)
+		}
 
-	stream, err := l.store.Load(ctx, cmd.Stream)
-	if err != nil {
-		return domain.Ref{}, err
-	}
-	corrected, err := stream.Get(cmd.Corrects)
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("correct: %w", err)
-	}
-	if !cmd.Kind.Valid() {
-		return domain.Ref{}, fmt.Errorf("%w: %d", domain.ErrUnknownKind, cmd.Kind)
-	}
+		// The correction is in force over exactly the interval the corrected fact
+		// was, so it cannot be narrower and silently fail to apply.
+		effective := corrected.Envelope().Coordinates().Effective()
 
-	// The correction is in force over exactly the interval the corrected fact
-	// was, so it cannot be narrower and silently fail to apply.
-	effective := corrected.Envelope().Coordinates().Effective()
+		coordinates, err := temporal.Assign(effective, l.clock.Now())
+		if err != nil {
+			return err
+		}
+		prov, err := provenance.Observed(cmd.Source, cmd.CollectedAt, cmd.Interpreter, cmd.Confidence)
+		if err != nil {
+			return err
+		}
+		envelope, err := domain.NewEnvelope(coordinates, prov, nil)
+		if err != nil {
+			return err
+		}
 
-	coordinates, err := temporal.Assign(effective, l.clock.Now())
-	if err != nil {
-		return domain.Ref{}, err
-	}
-	prov, err := provenance.Observed(cmd.Source, cmd.CollectedAt, cmd.Interpreter, cmd.Confidence)
-	if err != nil {
-		return domain.Ref{}, err
-	}
-	envelope, err := domain.NewEnvelope(coordinates, prov, nil)
-	if err != nil {
-		return domain.Ref{}, err
-	}
-
-	// AtLength: this correction was built from a fact read out of the stream,
-	// and its effective interval was taken from that fact. If the stream moved,
-	// the read is stale.
-	ref, err := l.store.Append(ctx, cmd.Stream, AtLength(stream.Len()), envelope,
-		domain.KindObservation, domain.FactCorrected{
-			Corrects: cmd.Corrects,
-			Kind:     cmd.Kind,
-			Reason:   cmd.Reason,
-		})
+		// AtLength: this correction was built from a fact read out of the stream,
+		// and its effective interval was taken from that fact. If the stream moved,
+		// the read is stale.
+		ref, err = s.Append(ctx, cmd.Stream, AtLength(stream.Len()), envelope,
+			domain.KindObservation, domain.FactCorrected{
+				Corrects: cmd.Corrects,
+				Kind:     cmd.Kind,
+				Reason:   cmd.Reason,
+			})
+		return err
+	})
 	if err != nil {
 		return domain.Ref{}, err
 	}
@@ -267,8 +273,11 @@ type AcceptHoldingClaimCommand struct {
 // enforced — because there was no admission point to enforce it at. This is
 // that point.
 func (l *Ledger) AcceptHoldingClaim(ctx context.Context, cmd AcceptHoldingClaimCommand) (domain.Ref, error) {
-	defer l.writes.hold(cmd.Stream)()
-
+	// Validated before the region rather than inside it. A malformed submission
+	// is refused on its own terms and never needed exclusive access to anything,
+	// so making it queue behind a legitimate writer would spend the one
+	// serialised resource on traffic that cannot succeed — from a caller who is
+	// unauthenticated while D2 is open.
 	if err := cmd.Source.CheckContentAddress(); err != nil {
 		return domain.Ref{}, fmt.Errorf("admission: %w", err)
 	}
@@ -277,34 +286,41 @@ func (l *Ledger) AcceptHoldingClaim(ctx context.Context, cmd AcceptHoldingClaimC
 			domain.ErrIncompleteEnvelope)
 	}
 
-	coordinates, err := temporal.Assign(cmd.Effective, l.clock.Now())
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("assign coordinates: %w", err)
-	}
+	var ref domain.Ref
+	err := l.store.Serialise(ctx, cmd.Stream, func(ctx context.Context, s Store) error {
+		coordinates, err := temporal.Assign(cmd.Effective, l.clock.Now())
+		if err != nil {
+			return fmt.Errorf("assign coordinates: %w", err)
+		}
 
-	prov, err := provenance.Observed(cmd.Source, cmd.CollectedAt, cmd.Interpreter, cmd.Confidence)
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("provenance: %w", err)
-	}
+		prov, err := provenance.Observed(cmd.Source, cmd.CollectedAt, cmd.Interpreter, cmd.Confidence)
+		if err != nil {
+			return fmt.Errorf("provenance: %w", err)
+		}
 
-	envelope, err := domain.NewEnvelope(coordinates, prov, cmd.References)
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("envelope: %w", err)
-	}
+		envelope, err := domain.NewEnvelope(coordinates, prov, cmd.References)
+		if err != nil {
+			return fmt.Errorf("envelope: %w", err)
+		}
 
-	// Any(), and note that admission no longer reads the stream at all. A claim
-	// is judged on its own merits — nothing about whether it may be admitted
-	// depends on what else is in the ledger — so there is no read to go stale,
-	// and a producer's submission cannot be rejected because somebody else wrote
-	// first (ADR-0034).
-	ref, err := l.store.Append(ctx, cmd.Stream, Any(), envelope, domain.KindObservation,
-		domain.HoldingClaimed{
-			Account:    cmd.Account,
-			Instrument: cmd.Instrument,
-			Quantity:   cmd.Quantity,
-		})
+		// Any(), and note that admission no longer reads the stream at all. A claim
+		// is judged on its own merits — nothing about whether it may be admitted
+		// depends on what else is in the ledger — so there is no read to go stale,
+		// and a producer's submission cannot be rejected because somebody else wrote
+		// first (ADR-0034).
+		ref, err = s.Append(ctx, cmd.Stream, Any(), envelope, domain.KindObservation,
+			domain.HoldingClaimed{
+				Account:    cmd.Account,
+				Instrument: cmd.Instrument,
+				Quantity:   cmd.Quantity,
+			})
+		if err != nil {
+			return fmt.Errorf("append: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return domain.Ref{}, fmt.Errorf("append: %w", err)
+		return domain.Ref{}, err
 	}
 	return ref, nil
 }
@@ -392,11 +408,6 @@ type MintIdentityCommand struct {
 // the claim fact answered, and the ruleset under which the seed was
 // canonicalised.
 func (l *Ledger) MintIdentity(ctx context.Context, cmd MintIdentityCommand) (domain.Ref, error) {
-	// Held across resolve-then-append, which is the sequence AtLength exists to
-	// protect. In one process this makes the expectation unviolatable; across
-	// processes the store's check is still the guard (ADR-0036).
-	defer l.writes.hold(cmd.Stream)()
-
 	if err := cmd.Source.CheckContentAddress(); err != nil {
 		return domain.Ref{}, fmt.Errorf("mint: %w", err)
 	}
@@ -408,68 +419,79 @@ func (l *Ledger) MintIdentity(ctx context.Context, cmd MintIdentityCommand) (dom
 			domain.ErrIncompleteEnvelope)
 	}
 
-	stream, err := l.load(ctx, cmd.Stream)
+	var ref domain.Ref
+	// The region covers resolve-then-append, which is the sequence AtLength
+	// exists to protect. It now covers it across processes too, so AtLength here
+	// guards a genuine race rather than firing constantly on one nobody was
+	// running (ADR-0041).
+	err := l.store.Serialise(ctx, cmd.Stream, func(ctx context.Context, s Store) error {
+		stream, err := l.load(ctx, s, cmd.Stream)
+		if err != nil {
+			return err
+		}
+		resolvedAt := stream.Len()
+
+		knowledge := l.clock.Now()
+
+		// Resolve before minting, at the coordinate this mint would occupy. Asking
+		// at any other coordinate would answer a question nobody asked: a mint
+		// effective from a later date must not be refused because of one that is
+		// not yet in force.
+		asOf, err := temporal.NewAsOf(cmd.Effective.From(), knowledge)
+		if err != nil {
+			return fmt.Errorf("mint: %w", err)
+		}
+		existing, resolveErr := domain.Resolve(stream, cmd.Claim, l.rules, asOf)
+		switch {
+		case resolveErr == nil:
+			return fmt.Errorf("%w: %s is already %s", ErrAlreadyMinted, cmd.Claim, existing)
+		case !errors.Is(resolveErr, domain.ErrUnresolved):
+			// Any other failure is a genuine error and must not be read as "not
+			// minted yet" — that reading would mint on top of a stream it could not
+			// examine.
+			return fmt.Errorf("mint: %w", resolveErr)
+		}
+
+		var answers []string
+		if cmd.Answers.Stream != "" {
+			answers = []string{cmd.Answers.String()}
+		}
+
+		minted, err := domain.MintFor(cmd.Kind, cmd.Claim, l.rules, answers, cmd.Confidence)
+		if err != nil {
+			return fmt.Errorf("mint: %w", err)
+		}
+
+		coordinates, err := temporal.Assign(cmd.Effective, knowledge)
+		if err != nil {
+			return fmt.Errorf("assign coordinates: %w", err)
+		}
+
+		prov, err := provenance.Derived(
+			cmd.Source, cmd.CollectedAt, cmd.Interpreter, minted.Trace(), cmd.Confidence)
+		if err != nil {
+			return fmt.Errorf("provenance: %w", err)
+		}
+
+		envelope, err := domain.NewEnvelope(coordinates, prov, cmd.References)
+		if err != nil {
+			return fmt.Errorf("envelope: %w", err)
+		}
+
+		// AtLength(resolvedAt) is the whole reason Expectation exists. This resolved
+		// against the stream and found nothing; a mint that landed since may already
+		// answer the claim, and appending anyway would produce the two-mints-for-one-
+		// claim duplication ADR-0033 refuses — arriving as a race rather than as a
+		// caller error. ErrStaleRead tells the caller to resolve again.
+		ref, err = s.Append(
+			ctx, cmd.Stream, AtLength(resolvedAt), envelope, domain.KindOccurrence, minted.Value())
+		if err != nil {
+			return fmt.Errorf("append: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
 		return domain.Ref{}, err
-	}
-	resolvedAt := stream.Len()
-
-	knowledge := l.clock.Now()
-
-	// Resolve before minting, at the coordinate this mint would occupy. Asking
-	// at any other coordinate would answer a question nobody asked: a mint
-	// effective from a later date must not be refused because of one that is
-	// not yet in force.
-	asOf, err := temporal.NewAsOf(cmd.Effective.From(), knowledge)
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("mint: %w", err)
-	}
-	existing, resolveErr := domain.Resolve(stream, cmd.Claim, l.rules, asOf)
-	switch {
-	case resolveErr == nil:
-		return domain.Ref{}, fmt.Errorf("%w: %s is already %s", ErrAlreadyMinted, cmd.Claim, existing)
-	case !errors.Is(resolveErr, domain.ErrUnresolved):
-		// Any other failure is a genuine error and must not be read as "not
-		// minted yet" — that reading would mint on top of a stream it could not
-		// examine.
-		return domain.Ref{}, fmt.Errorf("mint: %w", resolveErr)
-	}
-
-	var answers []string
-	if cmd.Answers.Stream != "" {
-		answers = []string{cmd.Answers.String()}
-	}
-
-	minted, err := domain.MintFor(cmd.Kind, cmd.Claim, l.rules, answers, cmd.Confidence)
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("mint: %w", err)
-	}
-
-	coordinates, err := temporal.Assign(cmd.Effective, knowledge)
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("assign coordinates: %w", err)
-	}
-
-	prov, err := provenance.Derived(
-		cmd.Source, cmd.CollectedAt, cmd.Interpreter, minted.Trace(), cmd.Confidence)
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("provenance: %w", err)
-	}
-
-	envelope, err := domain.NewEnvelope(coordinates, prov, cmd.References)
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("envelope: %w", err)
-	}
-
-	// AtLength(resolvedAt) is the whole reason Expectation exists. This resolved
-	// against the stream and found nothing; a mint that landed since may already
-	// answer the claim, and appending anyway would produce the two-mints-for-one-
-	// claim duplication ADR-0033 refuses — arriving as a race rather than as a
-	// caller error. ErrStaleRead tells the caller to resolve again.
-	ref, err := l.store.Append(
-		ctx, cmd.Stream, AtLength(resolvedAt), envelope, domain.KindOccurrence, minted.Value())
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("append: %w", err)
 	}
 	return ref, nil
 }
@@ -479,8 +501,12 @@ func (l *Ledger) MintIdentity(ctx context.Context, cmd MintIdentityCommand) (dom
 // A stream that has never been written and a stream with no facts are the same
 // thing to a writer: there is nothing to have gone stale, and the store creates
 // it on first append.
-func (l *Ledger) load(ctx context.Context, name string) (domain.Stream, error) {
-	stream, err := l.store.Load(ctx, name)
+//
+// It takes the store rather than reading `l.store`, because its callers run
+// inside a serialised region and the store scoped to that region is the one
+// that can see it (ADR-0041).
+func (l *Ledger) load(ctx context.Context, s Store, name string) (domain.Stream, error) {
+	stream, err := s.Load(ctx, name)
 	if err == nil {
 		return stream, nil
 	}
@@ -521,56 +547,61 @@ func (l *Ledger) ObserveClaimedHolding(
 	ctx context.Context,
 	cmd ObserveClaimedHoldingCommand,
 ) (domain.Ref, error) {
-	// Held across the read: the derivation below is built from facts in this
-	// stream, at a coordinate that must not move underneath it.
-	defer l.writes.hold(cmd.Stream)()
+	var ref domain.Ref
+	// The region covers the read: the derivation below is built from facts in
+	// this stream, at a coordinate that must not move underneath it.
+	err := l.store.Serialise(ctx, cmd.Stream, func(ctx context.Context, s Store) error {
+		stream, err := s.Load(ctx, cmd.Stream)
+		if err != nil {
+			return err
+		}
+		claimed, err := stream.Get(cmd.Claim)
+		if err != nil {
+			return fmt.Errorf("observe: %w", err)
+		}
 
-	stream, err := l.store.Load(ctx, cmd.Stream)
+		observed, err := domain.DeriveHoldingObserved(stream, claimed, l.rules, cmd.AsOf)
+		if err != nil {
+			return err
+		}
+
+		// The observation is in force over exactly the interval the claim was. A
+		// derivation does not know something the evidence did not.
+		effective := claimed.Envelope().Coordinates().Effective()
+		coordinates, err := temporal.Assign(effective, l.clock.Now())
+		if err != nil {
+			return err
+		}
+
+		prov, err := provenance.Derived(
+			cmd.Source,
+			cmd.CollectedAt,
+			cmd.Interpreter,
+			observed.Trace(),
+			observed.Record().Confidence(),
+		)
+		if err != nil {
+			return fmt.Errorf("provenance: %w", err)
+		}
+
+		envelope, err := domain.NewEnvelope(coordinates, prov, claimed.Envelope().References())
+		if err != nil {
+			return fmt.Errorf("envelope: %w", err)
+		}
+
+		// AtLength: the derivation named the mints visible in this stream, and its
+		// content address depends on them. A mint appended since could change which
+		// identity the claim resolves to, so the derivation must be redone rather
+		// than recorded against a stream it no longer describes.
+		ref, err = s.Append(ctx, cmd.Stream, AtLength(stream.Len()), envelope,
+			domain.KindObservation, observed.Value())
+		if err != nil {
+			return fmt.Errorf("append: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
 		return domain.Ref{}, err
-	}
-	claimed, err := stream.Get(cmd.Claim)
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("observe: %w", err)
-	}
-
-	observed, err := domain.DeriveHoldingObserved(stream, claimed, l.rules, cmd.AsOf)
-	if err != nil {
-		return domain.Ref{}, err
-	}
-
-	// The observation is in force over exactly the interval the claim was. A
-	// derivation does not know something the evidence did not.
-	effective := claimed.Envelope().Coordinates().Effective()
-	coordinates, err := temporal.Assign(effective, l.clock.Now())
-	if err != nil {
-		return domain.Ref{}, err
-	}
-
-	prov, err := provenance.Derived(
-		cmd.Source,
-		cmd.CollectedAt,
-		cmd.Interpreter,
-		observed.Trace(),
-		observed.Record().Confidence(),
-	)
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("provenance: %w", err)
-	}
-
-	envelope, err := domain.NewEnvelope(coordinates, prov, claimed.Envelope().References())
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("envelope: %w", err)
-	}
-
-	// AtLength: the derivation named the mints visible in this stream, and its
-	// content address depends on them. A mint appended since could change which
-	// identity the claim resolves to, so the derivation must be redone rather
-	// than recorded against a stream it no longer describes.
-	ref, err := l.store.Append(ctx, cmd.Stream, AtLength(stream.Len()), envelope,
-		domain.KindObservation, observed.Value())
-	if err != nil {
-		return domain.Ref{}, fmt.Errorf("append: %w", err)
 	}
 	return ref, nil
 }

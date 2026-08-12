@@ -23,11 +23,45 @@ import (
 type Store struct {
 	mu      sync.RWMutex
 	streams map[string]domain.Stream
+
+	// writes is the region Serialise hands out, per stream. Distinct from `mu`,
+	// which guards the map for the duration of a single method: a region spans a
+	// caller's clock read and its append, and holding `mu` across those would
+	// block every read of every other stream for no property gained.
+	writes streamLocks
 }
 
 // NewStore creates an empty store.
 func NewStore() *Store {
 	return &Store{streams: make(map[string]domain.Stream)}
+}
+
+// Serialise runs fn holding the write region for `name` (ADR-0041).
+//
+// For an in-memory store, "every writer holding this store" is every writer
+// that shares the process, because a second process cannot reach this map. That
+// makes the guarantee complete here rather than partial — the same sentence
+// that is a limitation for a durable adapter.
+func (s *Store) Serialise(
+	ctx context.Context,
+	name string,
+	fn func(context.Context, app.Store) error,
+) error {
+	defer s.writes.hold(name)()
+	return fn(ctx, scoped{s})
+}
+
+// scoped is this store inside a region.
+//
+// It exists to refuse a nested Serialise. Load and Append are promoted from the
+// embedded store and behave identically; only re-entry differs, and it differs
+// because the alternative is deadlocking against a lock the caller already
+// holds — a hang with no message rather than an error with one.
+type scoped struct{ *Store }
+
+// Serialise refuses: this store is already inside a region.
+func (scoped) Serialise(context.Context, string, func(context.Context, app.Store) error) error {
+	return app.ErrNestedSerialise
 }
 
 // Load returns a stream, or app.ErrStreamNotFound.
