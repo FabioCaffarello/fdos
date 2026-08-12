@@ -117,11 +117,19 @@ gh api repos/FabioCaffarello/fdos/rulesets/<id>
 gh api repos/FabioCaffarello/fdos/environments/release
 ```
 
-**Nothing checks that the live rulesets match this document.** They are
-repository state, not files: someone can change them in the UI with no commit
-here and nothing would notice. A check calling the API and diffing against
-committed JSON is feasible but needs a token in CI, which is the risk ADR-0014
-declined. Recorded as an open gap in ADR-0020 rather than solved badly.
+**`make ruleset-check` now does this** (ADR-0048). `.github/rulesets/` holds the
+normalised definition of each ruleset and of the `release` environment; the check
+fetches the live settings, normalises both sides identically and diffs.
+
+It runs **locally and deliberately not in CI**. Reading rulesets needs an
+admin-scoped token, which ADR-0014 declined to grant a workflow and ADR-0020
+recorded as an open gap — but that objection is about CI, not about checking.
+From a maintainer's own authenticated CLI it needs no new credential. `make
+doctor` invokes it, because a check nobody runs is not a check.
+
+So it is rung 3 when a maintainer runs it and rung 6 from CI's perspective, and
+the committed JSON can be updated to match a drift instead of the drift being
+reverted — only the review of that commit can tell those apart.
 
 If the API output disagrees with this document, the repository settings are what
 actually gate merges — assume the document is stale and fix it.

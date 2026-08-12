@@ -266,6 +266,18 @@ ci-summary: ## Report the run environment and build-cache state
 ci-stats: ## Report duration percentiles and failure rate for recent gate runs
 	@$(SCRIPTS_DIR)/ci-run-stats.sh $(LIMIT)
 
+# Reports and never applies. ADR-0014 refused automatic pin updates; taking the
+# reporting half and leaving the applying half to a person is the only version
+# compatible with that decision (ADR-0048).
+action-freshness: ## Report which pinned actions have moved on upstream
+	@$(SCRIPTS_DIR)/action-freshness.sh
+
+# Deliberately NOT in `verify`: reading rulesets needs an admin-scoped token,
+# which ADR-0014 declined to put in CI. Run from a maintainer's own CLI it needs
+# no new credential. `make doctor` invokes it.
+ruleset-check: ## Assert live branch, tag and environment protection matches .github/rulesets
+	@$(SCRIPTS_DIR)/verify-rulesets.sh
+
 tidy: ## Tidy every module's dependencies
 	$(call FOR_EACH_MODULE,$(GO) mod tidy)
 
