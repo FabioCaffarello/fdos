@@ -111,3 +111,96 @@ func TestNewSourceDoesNotEnforceTheGrammar(t *testing.T) {
 		t.Fatalf("NewSource must accept what the grammar refuses, got %v", err)
 	}
 }
+
+// The collisions the framed pre-image exists to make unrepresentable, measured
+// on 2026-08-10 and reproduced here.
+//
+// The old rendering joined components with "\ninput=", "\nparam=" and "=", none
+// of which is safe when a component may contain them. Two structurally different
+// derivations shared the address `881ab834…`: a parameter whose value contained
+// `\nparam=b=2` produced the same bytes as two separate parameters, and the
+// inputs/parameters boundary was crossable the same way.
+//
+// A content address that two different derivations share is not an address. It is
+// what a corrected fact points at, so a collision means a correction that names
+// the wrong derivation.
+func TestADerivationAddressCannotBeForged(t *testing.T) {
+	method := mustMethod(t, "test.Method", "1")
+
+	address := func(t *testing.T, inputs []string, params []provenance.Parameter) string {
+		t.Helper()
+		d, err := provenance.NewDerivation(
+			method, inputs, params, nil, provenance.ConfidenceDerived)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return d.Ref().Hash()
+	}
+
+	t.Run("a parameter value cannot forge another parameter", func(t *testing.T) {
+		forged := address(t, nil, []provenance.Parameter{{Name: "a", Value: "1\nparam=b=2"}})
+		real := address(t, nil, []provenance.Parameter{{Name: "a", Value: "1"}, {Name: "b", Value: "2"}})
+		if forged == real {
+			t.Fatalf("one parameter carrying %q addressed the same as two real parameters (%s)",
+				"1\nparam=b=2", forged)
+		}
+	})
+
+	t.Run("an input cannot cross into the parameters", func(t *testing.T) {
+		forged := address(t, []string{"x\nparam=k=v"}, nil)
+		real := address(t, []string{"x"}, []provenance.Parameter{{Name: "k", Value: "v"}})
+		if forged == real {
+			t.Fatalf("an input carrying %q addressed the same as an input plus a parameter (%s)",
+				"x\nparam=k=v", forged)
+		}
+	})
+
+	t.Run("a name and a value cannot swap the boundary", func(t *testing.T) {
+		left := address(t, nil, []provenance.Parameter{{Name: "a", Value: "b=c"}})
+		right := address(t, nil, []provenance.Parameter{{Name: "a=b", Value: "c"}})
+		if left == right {
+			t.Fatalf("moving the = between a parameter's name and value did not change the "+
+				"address (%s)", left)
+		}
+	})
+}
+
+// Structure is part of the address, not only content. The nesting is what carries
+// this: a flat component list could not distinguish two inputs from one input and
+// one parameter, because the counts would not be encoded.
+func TestDerivationStructureIsPartOfTheAddress(t *testing.T) {
+	method := mustMethod(t, "test.Method", "1")
+
+	address := func(t *testing.T, inputs []string, params []provenance.Parameter) string {
+		t.Helper()
+		d, err := provenance.NewDerivation(method, inputs, params, nil, provenance.ConfidenceDerived)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return d.Ref().Hash()
+	}
+
+	twoInputs := address(t, []string{"a", "b"}, nil)
+	oneEach := address(t, []string{"a"}, []provenance.Parameter{{Name: "b", Value: ""}})
+	if twoInputs == oneEach {
+		t.Errorf("two inputs addressed the same as one input and one parameter (%s)", twoInputs)
+	}
+
+	// And the caller's ordering of parameters still cannot change the address,
+	// because NewDerivation sorts them. Framing must not have reintroduced
+	// order-dependence.
+	forward := address(t, nil, []provenance.Parameter{{Name: "a", Value: "1"}, {Name: "b", Value: "2"}})
+	backward := address(t, nil, []provenance.Parameter{{Name: "b", Value: "2"}, {Name: "a", Value: "1"}})
+	if forward != backward {
+		t.Errorf("parameter order changed the address: %s vs %s", forward, backward)
+	}
+}
+
+func mustMethod(t *testing.T, name, version string) provenance.Method {
+	t.Helper()
+	m, err := provenance.NewMethod(name, version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return m
+}

@@ -19,6 +19,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/FabioCaffarello/fdos/libs/kernel/internal/framing"
+
 	"github.com/FabioCaffarello/fdos/libs/kernel/temporal"
 )
 
@@ -494,30 +496,57 @@ func (d DerivationRecord) References() []ReferenceBinding {
 // Confidence returns the trustworthiness of the derived value.
 func (d DerivationRecord) Confidence() Confidence { return d.confidence }
 
-// contentAddress hashes a canonical rendering. Deterministic by construction:
-// no map iteration, no clock, no randomness — the `nondet` analyser would
-// reject any of them here.
-func (d DerivationRecord) contentAddress() string {
-	var b strings.Builder
-	b.WriteString("method=")
-	b.WriteString(d.method.String())
-	for _, in := range d.inputs {
-		b.WriteString("\ninput=")
-		b.WriteString(in)
-	}
-	for _, p := range d.parameters {
-		b.WriteString("\nparam=")
-		b.WriteString(p.Name)
-		b.WriteString("=")
-		b.WriteString(p.Value)
-	}
-	for _, r := range d.references {
-		b.WriteString("\nref=")
-		b.WriteString(r.String())
-	}
-	b.WriteString("\nconfidence=")
-	b.WriteString(d.confidence.String())
+// Pre-image tags (ADR-0040). Compile-time constants, never caller-supplied: a
+// tag is what keeps two different kinds of thing from colliding even when their
+// components are identical.
+const (
+	tagDerivation = "fdos.provenance.derivation.v1"
+	tagInputs     = "fdos.provenance.inputs.v1"
+	tagParameters = "fdos.provenance.parameters.v1"
+	tagParameter  = "fdos.provenance.parameter.v1"
+	tagReferences = "fdos.provenance.references.v1"
+)
 
-	sum := sha256.Sum256([]byte(b.String()))
+// contentAddress hashes a framed rendering. Deterministic by construction: no
+// map iteration, no clock, no randomness — the `nondet` analyser would reject
+// any of them here. Parameters and references are sorted in [NewDerivation], so
+// the caller's argument order cannot change the address.
+//
+// **Framed, not joined** (ADR-0040). The previous rendering separated components
+// with "\ninput=", "\nparam=" and "=", and none of those is safe when a component
+// may contain them. Measured: two structurally different derivations shared the
+// address `881ab834…`, because a parameter whose value contained `\nparam=b=2`
+// produced the same bytes as two separate parameters — and the inputs/parameters
+// boundary was crossable the same way. A content address that two different
+// derivations share is not an address.
+//
+// Each collection is framed into **one** component rather than being spread
+// across the outer list, and that nesting is load-bearing: a flat list could not
+// distinguish two inputs and no parameters from one input and one parameter,
+// because the counts are not part of the encoding. A parameter is framed from its
+// name and value as separate components for the same reason — that is the pair
+// the old "=" join could not keep apart.
+func (d DerivationRecord) contentAddress() string {
+	inputs := framing.Frame(tagInputs, d.inputs...)
+
+	parameters := make([]string, 0, len(d.parameters))
+	for _, p := range d.parameters {
+		parameters = append(parameters, framing.Frame(tagParameter, p.Name, p.Value))
+	}
+
+	references := make([]string, 0, len(d.references))
+	for _, r := range d.references {
+		references = append(references, r.String())
+	}
+
+	preimage := framing.Frame(tagDerivation,
+		d.method.String(),
+		inputs,
+		framing.Frame(tagParameters, parameters...),
+		framing.Frame(tagReferences, references...),
+		d.confidence.String(),
+	)
+
+	sum := sha256.Sum256([]byte(preimage))
 	return hex.EncodeToString(sum[:])
 }
