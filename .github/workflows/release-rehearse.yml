@@ -1,0 +1,103 @@
+# Run the release path without releasing anything.
+#
+# ADR-0039 named its own weak point and inherited rather than introduced it:
+#
+#   "Nothing tests a release workflow except releasing. There is no `make`
+#    target for it and this ADR does not add one; the extraction is verified by
+#    performing a release, which is a permanent tag."
+#
+# That is the condition B-008 grew in: fourteen tags whose release published
+# nothing while looking fine, discovered by nobody because a tag push gates
+# nothing. Tags are now immutable by ruleset (ADR-0043), so the residue of a
+# failed rehearsal is permanent — `libs/release-smoke/v0.0.0-rc.1` and `rc.2` are
+# still in the namespace, from the drill that proved B-008 fixed.
+#
+# So this rehearses against an **already published** version. It assembles the
+# artifacts, generates the SBOM, attests provenance and signs the manifest —
+# every step `release.yml` takes — and then stops. No tag, no GitHub release. The
+# output goes to the run's artifacts, where it can be downloaded and checked.
+#
+# What it does not cover, stated rather than implied: `gh release create`, and
+# the tag trigger itself. Those are exercised by the first real release, and this
+# reduces what that release is discovering for the first time from everything to
+# two lines.
+#
+# Every action is pinned to a full commit SHA.
+
+name: release-rehearse
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "An existing release tag to rehearse against, e.g. libs/kernel/v0.9.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-rehearse
+  cancel-in-progress: true
+
+env:
+  GOWORK: "off"
+
+jobs:
+  rehearse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+      id-token: write # keyless signing and provenance, exactly as at release
+      attestations: write
+
+    steps:
+      - name: Checkout the tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup-toolchain
+
+      # The same gate the release runs. A rehearsal that skipped it would be
+      # rehearsing a shorter play than the one being performed.
+      - name: make verify
+        run: make verify
+
+      - name: make release-artifacts
+        id: artifacts
+        env:
+          TAG: ${{ inputs.tag }}
+        run: make release-artifacts
+
+      # The same composite action release.yml uses. That is the point of the
+      # rehearsal: if this drifts from the release, there is only one definition
+      # to drift, and it drifted for both.
+      - name: Sign and attest
+        uses: ./.github/actions/release-evidence
+        with:
+          module: ${{ steps.artifacts.outputs.module }}
+
+      - name: Prove the published module is consumable
+        if: startsWith(inputs.tag, 'libs/')
+        run: make consumer-check
+
+      - name: Keep the evidence for inspection
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rehearsal-${{ github.run_id }}
+          path: dist/
+          retention-days: 7
+
+      - name: Say what was and was not exercised
+        run: |
+          set -euo pipefail
+          printf 'Rehearsed: verify, artifact assembly, SBOM, attestation, signing'
+          printf ', consumer-check.\n'
+          printf 'Not rehearsed: gh release create, and the tag push that triggers it.\n'
+          printf 'No tag was created and no release was published.\n'

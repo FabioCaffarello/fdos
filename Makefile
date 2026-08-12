@@ -107,6 +107,12 @@ release-prepare: ## Set a module's registry row to the version about to be relea
 release-tag: ## Create a release tag, after checking it is safe to (PUBLISH=1 to push)
 	@MODULE="$(MODULE)" VERSION="$(VERSION)" PUBLISH="$(PUBLISH)" $(SCRIPTS_DIR)/release-tag.sh
 
+# What a release carries is decided by what the module is, not by its tag shape.
+# The workflow used to hardcode fdoslint, so every library tag published a
+# linter and signed a manifest describing it (ADR-0047).
+release-artifacts: ## Assemble the release artifacts for one module into dist/
+	@MODULE="$(MODULE)" VERSION="$(VERSION)" $(SCRIPTS_DIR)/release-artifacts.sh
+
 # ---------------------------------------------------------------------------
 # Governance
 # ---------------------------------------------------------------------------
