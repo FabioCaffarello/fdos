@@ -81,7 +81,7 @@ that decision, **not an offer**.
 | `libs/ledger` | `v0.8.0` | no | no |
 | `libs/kernel-wire` | `v0.2.0` | no | no |
 | `libs/ledger-wire` | `v0.4.0` | no | no |
-| `libs/ledger-sqlite` | `v0.2.0` | no | no |
+| `libs/ledger-sqlite` | `v0.3.0` | no | no |
 
 This table went stale for four milestones, and ADR-0024 calls the registry part
 of the interface rather than documentation about it — so the drift was a defect,
@@ -126,8 +126,33 @@ So this release is deliberately published into a tree that does not build as a
 workspace. That is step one of ADR-0041's release sequence rather than an
 accident: `libs/ledger-sqlite` cannot implement the method until this version is
 resolvable on the proxy, and the conformance suite that defines what the method
-means ships inside this module. **The next release closes it, and until then the
-gap is here in writing rather than in somebody's build.**
+means ships inside this module.
+
+> This entry originally ended *"the next release closes it"*. **That was wrong
+> and the error is worth keeping**, because it is the shape of mistake this
+> registry exists to catch. Publishing `libs/ledger-sqlite/v0.3.0` makes the
+> gap *closable*; what closes it is `apps/submitd` and `examples/ingest`
+> adopting both pins, which is a separate step. A release enables an adoption
+> and is not one — and a registry that conflates the two would have this repo
+> believing a gap was shut while a workspace build still failed.
+
+**`libs/ledger-sqlite/v0.3.0`** is step two: it adopts `libs/ledger/v0.8.0` and
+implements `Serialise` as a `BEGIN IMMEDIATE` transaction held open across the
+caller's callback, so the clock read happens inside SQLite's write lock.
+
+It is breaking in the only way that matters here — a consumer holding
+`libs/ledger/v0.7.0` cannot use it, and nothing reports that beyond a compile
+error in their build. What it buys is measured rather than argued: with each
+process holding its own `Ledger` over one database, 128 concurrent admissions to
+one stream admitted 127 at two processes and 106 at sixteen before this, and
+**128 at every process count after**. ADR-0041 predicted exactly that, on the
+engine already shipped and with no second engine involved, which is why
+[ADR-0042](../adr/0042-postgresql-is-the-second-engine.md) is a capacity and
+topology decision rather than a correctness one.
+
+The region is per *database* rather than per stream, because SQLite has one
+writer per file. That is recorded in ADR-0041 as the cost ADR-0042's per-stream
+advisory locks exist to pay down.
 
 **They carry no compatibility promise across versions.** A consumer importing
 one is depending on FDOS's internal structure rather than on its contract: a
