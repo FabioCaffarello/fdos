@@ -11,6 +11,8 @@ superseded_by: []
 
 # ADR-0048 — Drift is reported and never applied, and protection settings are committed as files
 
+> Phase 6 of [RFC-0018](../rfc/0018-the-delivery-pipeline.md), the last of the six.
+
 ## Context
 
 Three gaps this repository had written down and not closed, and one it had

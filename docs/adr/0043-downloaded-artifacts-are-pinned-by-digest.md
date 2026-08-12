@@ -11,6 +11,8 @@ superseded_by: []
 
 # ADR-0043 — Downloaded build artifacts are pinned by digest, and release tags are protected wherever they are attested
 
+> Phase 1 of [RFC-0018](../rfc/0018-the-delivery-pipeline.md).
+
 ## Context
 
 [ADR-0014](0014-ci-runs-make-and-pins-everything.md) pinned every GitHub Action

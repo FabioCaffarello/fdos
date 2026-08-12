@@ -11,6 +11,8 @@ superseded_by: []
 
 # ADR-0044 — The gate compiles the tree as a workspace, and a module under change pins what its siblings released
 
+> Phase 2 of [RFC-0018](../rfc/0018-the-delivery-pipeline.md), and its open question 1 — whether the pin check fails or reports — resolved as *fails*.
+
 ## Context
 
 [ADR-0004](0004-module-granularity.md) makes each `libs/*` an independent module

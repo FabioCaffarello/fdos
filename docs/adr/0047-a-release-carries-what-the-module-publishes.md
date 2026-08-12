@@ -11,6 +11,8 @@ superseded_by: []
 
 # ADR-0047 — A release carries what the module publishes, and the release path is rehearsable
 
+> Phase 5 of [RFC-0018](../rfc/0018-the-delivery-pipeline.md), and the acceptance of ADR-0039.
+
 ## Context
 
 [ADR-0039](0039-applications-are-released-as-signed-binaries.md) is accepted as

@@ -12,6 +12,8 @@ superseded_by:
 
 # ADR-0045 — The affected graph is the release graph, and the registry is checked against the tags
 
+> Phase 3 of [RFC-0018](../rfc/0018-the-delivery-pipeline.md).
+
 > **Superseded by [ADR-0046](0046-publishing-a-tag-is-a-dispatched-act.md).**
 > Rule G1 below — "every module row names its module's newest tag" — makes the
 > release ritual it was written to protect unperformable: the registry update
