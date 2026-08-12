@@ -240,10 +240,16 @@ subject under 50 characters; the `commit-msg` hook hard-fails above 72 and warns
 between the two.
 
 `make commit-msg-check` runs the same check over every commit on your branch,
-without going through the hook. Use it after any `--no-verify`, and inside a
-linked git worktree, where lefthook drops the hook's argument and the commit
-aborts with `no message file given`
-([#109](https://github.com/FabioCaffarello/fdos/issues/109)).
+without going through the hook. Use it after any `--no-verify`.
+
+**A path with spaces will break a hook, and this repository has one.** The
+commit-msg hook aborted every commit made from a linked git worktree until
+`{1}` and `$(MSG)` were quoted
+([#109](https://github.com/FabioCaffarello/fdos/issues/109)): in the main
+working tree git passes the relative `.git/COMMIT_EDITMSG`, which survives
+unquoted interpolation, and in a worktree it passes an absolute path, which does
+not. The only way past the abort was `--no-verify`, which also skips the staged
+secret scan — so an unquoted variable was costing that scan on every commit.
 
 It is **not** part of `make verify`, and that is measured rather than cautious:
 GitHub's squash-merge appends ` (#NN)` to the subject, which pushes nine of the

@@ -22,6 +22,22 @@
 # makes this script reachable from `make`, which `scripts/README.md` requires of
 # every script here and this one did not satisfy.
 #
+# # A path with spaces broke this, at two layers
+#
+# The commit-msg hook aborted every commit made from a linked git worktree with
+# `no message file given` (#109). It was read as a lefthook defect and is not
+# one.
+#
+# This repository lives under `/Volumes/OWC Express 1M2/…`. In the main working
+# tree git passes the *relative* `.git/COMMIT_EDITMSG`, which has no spaces and
+# survives any amount of unquoted interpolation. In a linked worktree it passes
+# an absolute path — and `{1}` in `lefthook.yml` and `$(MSG)` in the Makefile
+# were both interpolated unquoted, so the script received `/Volumes/OWC` and
+# correctly reported that it was not a file.
+#
+# The strict failure was right the whole time. It was the diagnosis that was
+# wrong, and the fix is quotes at both layers rather than a fallback here.
+#
 # Enforcement ladder position: automated review (rung 4), see ADR-0005.
 
 set -euo pipefail
@@ -100,15 +116,15 @@ MODE="${1:-}"
 case "$MODE" in
   message)
     MESSAGE_FILE="${2:-}"
-    # Loud on purpose. A hook that calls this with no argument is broken, and
-    # falling back to "find the message myself" would hide that — which is how
-    # #109 would have gone unnoticed instead of aborting the commit.
+    # Strict on purpose. A caller that passes no argument is wired wrong, and
+    # rescuing it here would hide that.
     if [ -z "$MESSAGE_FILE" ] || [ ! -f "$MESSAGE_FILE" ]; then
       printf 'verify-commit-message: no message file given\n' >&2
       exit 2
     fi
     check_subject "$(subject_of_file "$MESSAGE_FILE")" ""
     ;;
+
 
   branch)
     base="${2:-}"
