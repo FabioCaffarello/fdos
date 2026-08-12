@@ -1,12 +1,13 @@
 ---
 id: ADR-0036
 title: Knowledge time is assigned under the stream's write lock
-status: Accepted
+status: Superseded
 date: 2026-08-07
 deciders:
   - "@FabioCaffarello"
 supersedes: []
-superseded_by: []
+superseded_by:
+  - ADR-0041
 ---
 
 # ADR-0036 — Knowledge time is assigned under the stream's write lock
