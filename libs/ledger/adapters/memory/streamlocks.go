@@ -1,4 +1,4 @@
-package app
+package memory
 
 import (
 	"hash/fnv"
@@ -17,6 +17,20 @@ const shards = 256
 
 // streamLocks serialises writes to a stream, so that reading knowledge time and
 // appending happen as one step.
+//
+// # It used to live in libs/ledger/app
+//
+// ADR-0036 put it there and ADR-0041 moved it here, unchanged in substance. The
+// rule it implements did not change — knowledge time is still assigned under
+// the stream's write lock — but the application layer is the wrong place to
+// hold a lock whose guarantee depends on how many processes the deployment
+// runs, which is an infrastructure fact leaking upward wearing a sync.Mutex
+// (Constitution §10).
+//
+// Here it is what it always was: one store's answer to Serialise, honest about
+// covering one process because this store *is* one process. A durable adapter
+// answers the same question with a database lock, and the conformance suite
+// holds both to the same definition.
 //
 // # Why this exists
 //
@@ -42,10 +56,11 @@ const shards = 256
 //
 // # What it does not do
 //
-// It serialises writers **inside one process**. Two processes against one store
-// reintroduce the gap exactly as ADR-0034 described, and the store's check
-// remains the only thing between them and a broken ordering. Nothing here should
-// be read as making a multi-writer deployment safe.
+// It serialises writers **inside one process**, which for an in-memory store is
+// every writer there is: a second process cannot reach this map at all. The
+// sentence that used to be here — warning that two processes reintroduce the
+// gap — was a warning about a durable store, and it moved to the durable store
+// with ADR-0041.
 //
 // It also does not make the wall clock finer. Monotonic means *strictly*
 // greater, so two serialised appends that read the same instant are still

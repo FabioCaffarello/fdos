@@ -40,6 +40,14 @@ var ErrStaleRead = errors.New("app: the stream changed since it was read")
 // cannot record both and pretend to know which came first.
 var ErrNonMonotonicKnowledge = errors.New("app: knowledge time is not after the stream's last")
 
+// ErrNestedSerialise is returned when a serialised region is entered from
+// inside one.
+//
+// The honest outcome of nesting is a deadlock against a lock the caller already
+// holds, and a deadlock is a hang with no message. This is the same bug
+// reported rather than suffered (ADR-0041).
+var ErrNestedSerialise = errors.New("app: already inside a serialised region")
+
 // Expectation is what a caller believes it read, carried into the append that
 // acts on it (ADR-0034).
 //
@@ -121,4 +129,43 @@ type Store interface {
 		kind domain.Kind,
 		payload domain.Payload,
 	) (domain.Ref, error)
+
+	// Serialise runs fn with exclusive write access to `name`, against every
+	// writer holding this store — in this process **or any other** (ADR-0041).
+	//
+	// # Why the port owns this and the application does not
+	//
+	// ADR-0036 put a lock table in `app.Ledger`, which serialises writers that
+	// share the process and nothing else. Measured with each process holding its
+	// own Ledger over one SQLite file: 128 concurrent admissions to one stream
+	// admit 128 from a single process, 127 from two, 106 from sixteen. What kept
+	// the two-process number high was SQLite's single-writer file lock — the
+	// property a client/server engine removes — not anything the application
+	// did.
+	//
+	// The store is the only thing every writer can see, so it is the only place
+	// a lock can mean what ADR-0036 said it meant.
+	//
+	// # What belongs inside fn
+	//
+	// The clock read. That is the whole point: the window this closes is between
+	// reading knowledge time and appending it, so a reading taken outside the
+	// region is a reading that can go stale before it lands.
+	//
+	// Envelope construction stays where it is. `domain.NewEnvelope` is still
+	// what builds one, in the layer that defines what well-formed means — only
+	// the mutual exclusion moved, which is the entire difference between this
+	// and "the store assigns knowledge time", rejected by ADR-0034 and again by
+	// RFC-0015.
+	//
+	// # The Store passed to fn
+	//
+	// This store, scoped to the region. Use it rather than the outer one: an
+	// implementation may bind the region to a transaction, and the outer store
+	// is not in it. Calling Serialise on it returns ErrNestedSerialise.
+	//
+	// The error fn returns is returned here, wrapped only in ways that keep
+	// errors.Is working — a caller must still be able to tell ErrStaleRead from
+	// a bug.
+	Serialise(ctx context.Context, name string, fn func(context.Context, Store) error) error
 }
