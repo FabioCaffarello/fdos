@@ -35,11 +35,11 @@ define FOR_EACH_MODULE
 	done
 endef
 
-.PHONY: help bootstrap hooks doctor verify affected \
-	toolchain-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
-	context-check agent-contract-check proto-check proto-gen proto-lint proto-breaking consumer-check \
+.PHONY: help bootstrap hooks doctor verify verify-timings affected ci-summary ci-stats \
+	toolchain-check toolchain-checksum-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
+	context-check agent-contract-check workspace-check pin-check registry-check release-plan release-prepare release-tag affected-preflight proto-check proto-gen proto-lint proto-breaking consumer-check \
 	fmt fmt-check vet lint test analyze repro-check tidy tidy-check build clean \
-	secrets-check secrets-check-staged vuln-check
+	secrets-check secrets-check-staged vuln-check commit-msg-check commit-msg-check-file
 
 help: ## Show available targets
 	@printf 'FDOS — Financial Data Operating System\n\n'
@@ -65,13 +65,53 @@ hooks: ## Install the git hooks (lefthook)
 		printf 'lefthook not installed — hooks skipped. See mise.toml.\n'; \
 	fi
 
-verify: toolchain-check contracts-check adr-check adr-immutability-check rfc-check constitution-check \
-        action-pinning-check context-check agent-contract-check proto-check \
-        secrets-check tidy-check fmt-check vet lint test analyze vuln-check repro-check ## Run every enforcement mechanism available at this milestone
+# What the gate is, defined once.
+#
+# `verify` expands it as prerequisites; `verify-timings` passes it to a script
+# that runs the same checks with a stopwatch. Two consumers, one definition —
+# the `setup-toolchain` precedent (B-008): a second copy of what the gate
+# contains is the copy that drifts, and the drifted one is never the one being
+# watched.
+VERIFY_TARGETS := toolchain-check toolchain-checksum-check contracts-check adr-check adr-immutability-check \
+                  rfc-check constitution-check action-pinning-check context-check \
+                  agent-contract-check proto-check pin-check registry-check secrets-check tidy-check \
+                  fmt-check vet workspace-check lint test analyze vuln-check repro-check
+
+verify: $(VERIFY_TARGETS) ## Run every enforcement mechanism available at this milestone
 	@printf '\nAll checks passed.\n'
+
+verify-timings: ## Run the gate with a stopwatch, reporting what each check costs
+	@$(SCRIPTS_DIR)/verify-timings.sh $(VERIFY_TARGETS)
 
 affected: ## Print the modules affected by the current change
 	@$(SCRIPTS_DIR)/affected-modules.sh $(BASE)
+
+# ADR-0014 rejected pruning the gate by affectedness and said where the speed
+# belongs instead: "Speed belongs in a separate job." This is that job. It runs
+# a strict subset of what `verify` runs, so it cannot fail while the gate is
+# green — an advisory check that can go red alone is one people learn to ignore.
+affected-preflight: ## Run vet, lint and test over affected modules only (not the gate)
+	@$(SCRIPTS_DIR)/affected-preflight.sh $(BASE)
+
+# The affected graph and the release graph are the same graph. This is the one
+# command that answers "which modules now need a tag, and in what order" — a
+# question three milestones answered by hand (ADR-0045).
+release-plan: ## Print the release chain this change implies, in order
+	@$(SCRIPTS_DIR)/release-plan.sh $(BASE)
+
+release-prepare: ## Set a module's registry row to the version about to be released
+	@MODULE="$(MODULE)" VERSION="$(VERSION)" $(SCRIPTS_DIR)/release-prepare.sh
+
+# Dry run unless PUBLISH is set. A tag here is immutable by ruleset, so a tag on
+# a commit that cannot release is permanent garbage — B-008 is fourteen of them.
+release-tag: ## Create a release tag, after checking it is safe to (PUBLISH=1 to push)
+	@MODULE="$(MODULE)" VERSION="$(VERSION)" PUBLISH="$(PUBLISH)" $(SCRIPTS_DIR)/release-tag.sh
+
+# What a release carries is decided by what the module is, not by its tag shape.
+# The workflow used to hardcode fdoslint, so every library tag published a
+# linter and signed a manifest describing it (ADR-0047).
+release-artifacts: ## Assemble the release artifacts for one module into dist/
+	@MODULE="$(MODULE)" VERSION="$(VERSION)" $(SCRIPTS_DIR)/release-artifacts.sh
 
 # ---------------------------------------------------------------------------
 # Governance
@@ -79,6 +119,9 @@ affected: ## Print the modules affected by the current change
 
 toolchain-check: ## Assert the installed toolchain matches the pins in mise.toml
 	@$(SCRIPTS_DIR)/toolchain-check.sh
+
+toolchain-checksum-check: ## Assert every URL-downloaded build input is pinned by digest
+	@$(SCRIPTS_DIR)/verify-tool-checksums.sh
 
 contracts-check: ## Assert every directory declares a valid architectural contract
 	@$(SCRIPTS_DIR)/verify-directory-contracts.sh
@@ -103,6 +146,22 @@ context-check: ## Assert documentation describes the repository that exists
 
 agent-contract-check: ## Assert agent playbooks declare a valid prompt contract
 	@$(SCRIPTS_DIR)/verify-agent-contracts.sh
+
+# The other half of FOR_EACH_MODULE, and deliberately not a replacement for it.
+#
+# Those runs use GOWORK=off so each module resolves standalone from the proxy —
+# ADR-0004's discipline, and the property a consumer with no workspace depends
+# on. This one compiles every module against its siblings' *source*, which is
+# the only way the gate can see a cross-module break before a tag makes it
+# somebody's problem (ADR-0044).
+workspace-check: ## Assert the tree compiles against its own source, not only against published versions
+	@$(SCRIPTS_DIR)/verify-workspace.sh
+
+pin-check: ## Assert first-party pins name published versions, and a changed module pins current
+	@$(SCRIPTS_DIR)/verify-module-pins.sh
+
+registry-check: ## Assert the contract registry describes the tags that exist
+	@$(SCRIPTS_DIR)/verify-registry.sh
 
 # ---------------------------------------------------------------------------
 # Contracts
@@ -136,6 +195,22 @@ secrets-check: ## Scan the full history for committed secrets
 
 secrets-check-staged: ## Scan staged changes for secrets (used by the pre-commit hook)
 	@$(SCRIPTS_DIR)/verify-secrets.sh staged
+
+# Deliberately NOT in `verify`, and the reason is measured rather than cautious.
+# Nine of the last sixty commits on main violate the 72-character limit because
+# GitHub's squash-merge appends ` (#NN)` to a subject that was compliant when it
+# was written, and four more predate the convention. Wiring this into the gate
+# would fail on main today, for commits nobody can now amend (Constitution §4).
+#
+# This target ranges over `origin/main..HEAD` — the author's own commits, before
+# the forge rewrites them — which is the only range where a failure is both fair
+# and actionable. Raising it to a gate is an enforcement-ladder change and owes
+# an ADR (issue #109).
+commit-msg-check: ## Assert this branch's commit messages follow the convention
+	@$(SCRIPTS_DIR)/verify-commit-message.sh branch $(BASE)
+
+commit-msg-check-file: ## Assert one message file follows the convention (used by the commit-msg hook)
+	@$(SCRIPTS_DIR)/verify-commit-message.sh message $(MSG)
 
 vuln-check: ## Assert no known vulnerability is reachable from FDOS code
 	@$(SCRIPTS_DIR)/verify-vulns.sh
@@ -176,6 +251,32 @@ analyze: ## Enforce domain purity and layer boundaries (FDOS analysers)
 
 repro-check: ## Assert every command builds byte-reproducibly
 	@$(SCRIPTS_DIR)/verify-reproducible-build.sh
+
+# ---------------------------------------------------------------------------
+# Pipeline telemetry
+#
+# These enforce nothing. They exist because nothing here could say what the gate
+# costs or why one run took 2.9x another, and a plan to grow or shrink the gate
+# without those numbers is a guess (RFC-0018 Phase 0).
+# ---------------------------------------------------------------------------
+
+ci-summary: ## Report the run environment and build-cache state
+	@$(SCRIPTS_DIR)/ci-run-summary.sh
+
+ci-stats: ## Report duration percentiles and failure rate for recent gate runs
+	@$(SCRIPTS_DIR)/ci-run-stats.sh $(LIMIT)
+
+# Reports and never applies. ADR-0014 refused automatic pin updates; taking the
+# reporting half and leaving the applying half to a person is the only version
+# compatible with that decision (ADR-0048).
+action-freshness: ## Report which pinned actions have moved on upstream
+	@$(SCRIPTS_DIR)/action-freshness.sh
+
+# Deliberately NOT in `verify`: reading rulesets needs an admin-scoped token,
+# which ADR-0014 declined to put in CI. Run from a maintainer's own CLI it needs
+# no new credential. `make doctor` invokes it.
+ruleset-check: ## Assert live branch, tag and environment protection matches .github/rulesets
+	@$(SCRIPTS_DIR)/verify-rulesets.sh
 
 tidy: ## Tidy every module's dependencies
 	$(call FOR_EACH_MODULE,$(GO) mod tidy)

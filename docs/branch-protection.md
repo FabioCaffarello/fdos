@@ -1,8 +1,8 @@
 # Branch and tag protection
 
-**Applied**, as two repository rulesets (ADR-0020). This document records what
-is configured and why, so a change made in the GitHub UI can be recognised as a
-change.
+**Applied**, as two repository rulesets (ADR-0020) and one deployment
+environment (ADR-0046). This document records what is configured and why, so a
+change made in the GitHub UI can be recognised as a change.
 
 It was previously a checklist with no mechanism. ADR-0014 declined to apply it
 from CI because that needs an admin-scoped token — a worse risk than the one it
@@ -47,7 +47,15 @@ blocks merges for the wrong reason.
 
 ## `release-tags` — tag ruleset
 
-Applies to `refs/tags/libs/*/v*`.
+Applies to `refs/tags/libs/*/v*`, `refs/tags/apps/*/v*` and
+`refs/tags/ecosystem/*` (ADR-0043).
+
+It covered `libs/*` alone until the other two were checked against the live API
+and found unprotected. `apps/*/v*` matters because ADR-0039 proposes attesting
+build provenance against those tags. `ecosystem/*` mattered already: four such
+tags existed, all movable, and `fdos-connectors` vendors the governance corpus
+pinned to `ecosystem/v0.1.0` and **byte-compares it** — so another repository's
+comparison anchor could have been changed from here with nothing reporting it.
 
 | Rule | Why |
 |------|-----|
@@ -58,6 +66,21 @@ Applies to `refs/tags/libs/*/v*`.
 This matters more than it looks. `release.yml` signs artifacts and attests build
 provenance against a tag; if the tag can move, the attestation describes
 something that is no longer there.
+
+## `release` — deployment environment
+
+Applied, and used by `release-tag.yml` alone (ADR-0046).
+
+| Rule | Why |
+|------|-----|
+| Deployment branch policy: protected branches only | A release is cut from `main` or not at all |
+
+**Required reviewers are deliberately not set**, for the same reason required
+approvals is 0 above: a single maintainer cannot approve their own dispatch, and
+a rule that must always be bypassed is worse than no rule. It rises the day
+there is a second maintainer.
+
+This is the only place `contents: write` is granted in this repository.
 
 ## Signed commits — required, then removed
 
@@ -91,13 +114,22 @@ says authorship is part of provenance; until this is done, it is not.
 ```sh
 gh api repos/FabioCaffarello/fdos/rulesets -q '.[] | "\(.name)  \(.target)  \(.enforcement)"'
 gh api repos/FabioCaffarello/fdos/rulesets/<id>
+gh api repos/FabioCaffarello/fdos/environments/release
 ```
 
-**Nothing checks that the live rulesets match this document.** They are
-repository state, not files: someone can change them in the UI with no commit
-here and nothing would notice. A check calling the API and diffing against
-committed JSON is feasible but needs a token in CI, which is the risk ADR-0014
-declined. Recorded as an open gap in ADR-0020 rather than solved badly.
+**`make ruleset-check` now does this** (ADR-0048). `.github/rulesets/` holds the
+normalised definition of each ruleset and of the `release` environment; the check
+fetches the live settings, normalises both sides identically and diffs.
+
+It runs **locally and deliberately not in CI**. Reading rulesets needs an
+admin-scoped token, which ADR-0014 declined to grant a workflow and ADR-0020
+recorded as an open gap — but that objection is about CI, not about checking.
+From a maintainer's own authenticated CLI it needs no new credential. `make
+doctor` invokes it, because a check nobody runs is not a check.
+
+So it is rung 3 when a maintainer runs it and rung 6 from CI's perspective, and
+the committed JSON can be updated to match a drift instead of the drift being
+reverted — only the review of that commit can tell those apart.
 
 If the API output disagrees with this document, the repository settings are what
 actually gate merges — assume the document is stale and fix it.

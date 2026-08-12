@@ -23,6 +23,12 @@ scaffoldVersion: "2.0.0"
 | govulncheck | v1.6.0 | M3 (via `go run`) |
 | buf | 1.68.4 | M4 |
 
+**`gitleaks` and `buf` are additionally pinned by SHA-256 digest** in
+`tool-checksums.txt` (ADR-0043). They are the two tools CI downloads by URL, and
+a GitHub release asset can be re-uploaded under the same tag — so a version
+alone left the artifact mutable, which is the thing SHA-pinning removes for
+actions.
+
 **The Go pin tracks the patch line** (ADR-0038): a patch release carries
 security fixes and no language change, so the pin moves to the current patch
 rather than staying where it started. Expect this row to be the one that changes
@@ -56,7 +62,16 @@ without pushing, and drifts from what developers actually execute.
 | `make bootstrap` | Prepare a working copy; validate the toolchain |
 | `make verify` | Every enforcement mechanism available at this milestone |
 | `make toolchain-check` | Installed tools match the pins |
+| `make toolchain-checksum-check` | Every URL-downloaded build input is pinned by digest |
 | `make contracts-check` | Every directory declares a valid contract |
+| `make workspace-check` | The tree compiles against its own source, not only published versions |
+| `make pin-check` | First-party pins name published versions; a changed module pins current |
+| `make registry-check` | The contract registry describes the tags that exist |
+| `make release-plan` | The tag chain this change implies, in order (plans; does not publish) |
+| `make release-prepare` | Set a module's registry row to the version about to be released |
+| `make release-tag` | Create a release tag after six preconditions hold (dry run unless `PUBLISH=1`) |
+| `make release-artifacts` | Assemble into `dist/` what the tagged module publishes |
+| `make affected-preflight` | vet, lint and test over affected modules only — **not** the gate |
 | `make adr-check` | Decision log well-formed; supersession bidirectional |
 | `make rfc-check` | RFC set well-formed; an Accepted RFC produced ADRs |
 | `make constitution-check` | Every principle appears in the §15 enforcement table |
@@ -70,13 +85,27 @@ without pushing, and drifts from what developers actually execute.
 | `make secrets-check` | Full git history scanned for secrets (`gitleaks`) |
 | `make vuln-check` | No known vulnerability reachable from FDOS code (`govulncheck`) |
 | `make hooks` | Install the git hooks (`lefthook`) |
-| `make affected` | Print the modules a change affects |
+| `make commit-msg-check` | This branch's commit subjects follow the convention — not in `verify` |
+| `make verify-timings` | The gate with a stopwatch — what each check costs |
+| `make ci-summary` | The run environment and build-cache state |
+| `make ci-stats` | Duration percentiles and failure rate of recent gate runs |
+| `make action-freshness` | Which pinned actions have moved on upstream — reports, never applies |
+| `make ruleset-check` | Live branch, tag and environment protection matches `.github/rulesets` |
+| `make affected` | Print the modules a change affects — the same graph `release-plan` orders |
 | `make doctor` | Diagnose this working copy and name the fix for each problem |
 | `make proto-check` | Contract surface: lint, format, breaking, pinning, drift, FDOS schema rules |
 | `make proto-gen` | Regenerate Go from the proto schemas |
 | `make clean` | Remove build output |
 
-**`GOWORK=off` on every Go target.** This is the load-bearing half of ADR-0004:
+**`GOWORK=off` on every Go target, and one target that deliberately does not.**
+`make workspace-check` compiles each module against its siblings' *source*
+(ADR-0044) — the other half, added because the `GOWORK=off` runs resolve siblings
+from the proxy and so cannot see a cross-module break until a tag makes it
+somebody's problem. It sets `GOWORK` to an explicit path rather than inheriting
+it, because CI exports `GOWORK=off` for the whole workflow, and it proves the
+workspace is live before trusting its own results.
+
+The `GOWORK=off` runs are the load-bearing half of ADR-0004:
 it forces module resolution through published versions instead of local
 workspace paths. Without it the open-core boundary silently stops being
 verified, with nothing to indicate that it has stopped. `go.work` exists only
@@ -91,6 +120,15 @@ unreviewed change to the dependency graph.
 | Script | Enforces | Rung |
 |--------|----------|------|
 | `toolchain-check.sh` | §9 — pinned, reproducible toolchain | 3 |
+| `verify-tool-checksums.sh` | §9, ADR-0043 — downloaded artifacts are identified by digest | 3 |
+| `verify-workspace.sh` | §11, ADR-0044 — the tree is consistent with itself, not only resolvable | 3 |
+| `verify-module-pins.sh` | §11, ADR-0044 — a changed module pins what its siblings released | 3 |
+| `verify-registry.sh` | §11, ADR-0024, ADR-0046 — the registry matches the published tags | 3 |
+| `release-plan.sh` | nothing — orders the release chain a change implies (ADR-0046) | — |
+| `release-prepare.sh` | nothing — sets the registry row for a release in flight | — |
+| `release-tag.sh` | nothing — refuses to tag unless six preconditions hold (ADR-0046) | — |
+| `release-artifacts.sh` | nothing — assembles a module's binaries and published zip (ADR-0047) | — |
+| `affected-preflight.sh` | nothing — advisory fast failure over affected modules | — |
 | `verify-directory-contracts.sh` | §10 — declared architectural boundaries | 2–3 |
 | `verify-adr.sh` | §14 — append-only decision log | 3 |
 | `verify-rfc.sh` | §14 — design is decided before it is built | 3 |
@@ -105,7 +143,13 @@ unreviewed change to the dependency graph.
 | `verify-vulns.sh` | §14 — no reachable vulnerability | 3 |
 | `verify-commit-message.sh` | §14 — commit subject convention | 4 |
 | `verify-proto.sh` | §2, §6, §7, §11 — the contract surface cannot change silently | 3 |
+| `verify-timings.sh` | nothing — reports what each gate check costs | — |
+| `ci-run-summary.sh` | nothing — records the run environment and cache state | — |
+| `ci-run-stats.sh` | nothing — duration percentiles and failure rate | — |
+| `action-freshness.sh` | nothing — reports lagging action pins (ADR-0048) | — |
+| `verify-rulesets.sh` | §9, ADR-0048 — live protection matches what is committed | 3 locally, 6 in CI |
 | `tool-version.sh` | shared helper — the single parser for `mise.toml` pins | — |
+| `tool-checksum.sh` | shared helper — the single parser for `tool-checksums.txt` | — |
 | `affected-modules.sh` | shared helper — the Nx compensation (ADR-0004) | — |
 | `list-modules.sh` | shared helper (ADR-0004 makes commands per-module) | — |
 | `lib/frontmatter.sh` | shared helper | — |

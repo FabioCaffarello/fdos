@@ -1,0 +1,93 @@
+# Create a release tag, from a person pressing a button.
+#
+# This is the only workflow in the repository that can write a tag, and it is
+# manually dispatched on purpose. Publishing is a human act: keyless signing
+# binds the artifact's identity to the workflow, so a tag pushed without somebody
+# choosing to publish produces a signed statement nobody decided to make.
+#
+# What the machine takes is the mechanics — the chain order, the version
+# arithmetic, the six preconditions — which is where the errors actually are. The
+# human keeps *whether* and *which version* (ADR-0046).
+#
+# Dry run is the default. `publish` must be set to "yes" in the dispatch form,
+# and the string is spelled out rather than a checkbox so that it cannot be left
+# ticked from last time.
+#
+# It holds no logic: `make release-tag` is the same command a maintainer runs
+# locally, and refusing there and refusing here are the same refusal (ADR-0014).
+#
+# Every action is pinned to a full commit SHA.
+
+name: release-tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      module:
+        description: "Module path, e.g. libs/kernel"
+        required: true
+        type: string
+      version:
+        description: "Version to publish, e.g. v0.10.0"
+        required: true
+        type: string
+      publish:
+        description: 'Type "yes" to actually push the tag. Anything else is a dry run.'
+        required: true
+        default: "no"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-tag
+  cancel-in-progress: false
+
+env:
+  GOWORK: "off"
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # The environment is where the deployment branch policy lives: this can only
+    # run from `main`. Required reviewers are deliberately not set, for the same
+    # reason `docs/branch-protection.md` records for required approvals — a
+    # single maintainer cannot approve their own dispatch, and a rule that must
+    # always be bypassed is worse than no rule. It rises the day there are two.
+    environment: release
+
+    permissions:
+      contents: write # create the tag — the only write in this repository
+      checks: read # confirm `verify` is green for the commit being tagged
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Tags and full history: the script compares the module against its
+          # previous tag and refuses a release with no change in it.
+          fetch-depth: 0
+
+      - name: make release-tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODULE: ${{ inputs.module }}
+          VERSION: ${{ inputs.version }}
+          # Empty unless the dispatcher typed "yes". The script treats any
+          # non-empty PUBLISH as consent, so the comparison happens here.
+          PUBLISH: ${{ inputs.publish == 'yes' && '1' || '' }}
+        run: make release-tag
+
+      # A tag push starts release.yml, which has failed silently before — B-008
+      # is fourteen tags whose release published nothing while looking fine. The
+      # tag is immutable by ruleset, so that state cannot be cleaned up.
+      - name: Say what happens next
+        if: inputs.publish == 'yes'
+        run: |
+          set -euo pipefail
+          printf 'Tag pushed. release.yml is running against it.\n'
+          printf 'Confirm it finished before announcing anything: B-008 is what\n'
+          printf 'a release that looks fine and publishes nothing looks like.\n'

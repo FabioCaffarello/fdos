@@ -1,0 +1,10 @@
+{
+  "deployment_branch_policy": {
+    "custom_branch_policies": false,
+    "protected_branches": true
+  },
+  "name": "release",
+  "protection_rules": [
+    "branch_policy"
+  ]
+}

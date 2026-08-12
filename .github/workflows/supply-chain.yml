@@ -1,16 +1,18 @@
 # Supply chain checks that need GitHub context rather than a local toolchain.
 #
-# `make verify` already runs the secret and vulnerability scans, so those are
-# not repeated here. This workflow covers what only the forge can do: reviewing
-# the dependency delta of a pull request, and reporting findings into the
-# security tab.
+# `make verify` already runs the secret and vulnerability scans per commit. What
+# this adds is *time*: a vulnerability database changes without the repository
+# changing, so a scan that only runs on push reports the state of the world on
+# the day of the last commit.
+#
+# Schedule-only. It carried a `pull_request` trigger for a job that was disabled,
+# which put a `skipped` check on every pull request (ADR-0048).
 #
 # Every action is pinned to a full commit SHA.
 
 name: supply-chain
 
 on:
-  pull_request:
   schedule:
     # Vulnerability databases change without the repository changing. A scan
     # that only runs on push reports the state of the world on the day of the
@@ -27,39 +29,33 @@ concurrency:
 env:
   GOWORK: "off"
 
+# `dependency-review` used to live here, disabled with `if: false`, because the
+# action needs GitHub's Dependency Graph and this repository does not have it —
+# every run failed with "Dependency review is not supported on this repository".
+#
+# Disabling it at the *job* level left the workflow triggering on pull requests
+# for a job that never ran, so every pull request grew a `supply-chain` check
+# with conclusion `skipped`. The comment that disabled it made the argument
+# against itself: "a permanently red check trains people to ignore CI, which
+# costs more than the check was worth." A permanently skipped one is the quieter
+# version of the same thing.
+#
+# So the trigger is gone and the job with it. To restore, once Dependency graph
+# is enabled in repository settings (issue #55): add `pull_request:` back to
+# `on:`, and a job using
+# `actions/dependency-review-action` with `fail-on-severity: low` and
+# `deny-licenses: AGPL-3.0, GPL-2.0, GPL-3.0, SSPL-1.0` — the Apache-2.0 core
+# (ADR-0002) means a copyleft dependency would make the licence claim in NOTICE
+# false.
+#
+# `make vuln-check` (govulncheck, reachable vulnerabilities) runs in the gate
+# regardless, so dependency scanning is not absent — only the PR-delta and
+# licence view is.
+
 jobs:
-  dependency-review:
-    # Disabled: the action requires GitHub's Dependency Graph, which is not
-    # available on this repository — every run fails with "Dependency review is
-    # not supported on this repository". A permanently red check trains people
-    # to ignore CI, which costs more than the check was worth.
-    #
-    # Re-enable by turning on Dependency graph in repository settings and
-    # removing the `false &&` below. Registered as B-005 in docs/blocked.md.
-    #
-    # `make vuln-check` (govulncheck, reachable vulnerabilities) runs in the
-    # gate regardless, so dependency scanning is not absent — only the
-    # PR-delta and licence view is.
-    if: false && github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Review dependency changes
-        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
-        with:
-          fail-on-severity: low
-          # Apache-2.0 core (ADR-0002). A copyleft dependency would make the
-          # licence claim in NOTICE false, which matters more here than usual:
-          # the open-core split is a commitment to downstream users.
-          deny-licenses: AGPL-3.0, GPL-2.0, GPL-3.0, SSPL-1.0
-          comment-summary-in-pr: on-failure
-
   vulnerabilities:
-    # The scheduled arm. On pull requests `make verify` has already run this.
-    if: github.event_name == 'schedule'
+    # `make verify` already runs this per commit. What this adds is time:
+    # vulnerability databases change without the repository changing.
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -83,7 +79,6 @@ jobs:
     # The full-history scan, on the schedule as well as in `make verify`. A
     # secret committed and then removed is still leaked: the object stays
     # reachable and anyone who cloned before the removal already has it.
-    if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

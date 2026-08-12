@@ -56,8 +56,17 @@ pre-commit:
 
 commit-msg:
   jobs:
+    # Through `make`, like every other job here. It was calling the script
+    # directly, which is the one place this file broke its own rule — and
+    # `scripts/README.md` requires every script to be reachable from make.
+    #
+    # `{1}` is the message file git supplies. Inside a linked git worktree
+    # lefthook drops it, the target fails loudly with `no message file given`,
+    # and the commit aborts (#109). That is the correct response to a broken
+    # harness: `make commit-msg-check` re-checks the whole branch afterwards, so
+    # a --no-verify taken to get past it is caught rather than trusted.
     - name: message-convention
-      run: scripts/verify-commit-message.sh {1}
+      run: make commit-msg-check-file MSG={1}
 
 pre-push:
   parallel: false

@@ -67,7 +67,7 @@ else
 fi
 
 if [ -f go.work ]; then
-  ok "go.work" "present (editor navigation; every make target overrides it)"
+  ok "go.work" "present (read by make workspace-check; the other targets override it)"
 else
   bad "go.work" "missing"
   hint "go work init ./libs/analysis    # ADR-0004"
@@ -115,6 +115,44 @@ if [ -n "${GOPRIVATE:-}${GOPROXY:+}" ] && [ "${GOPROXY:-}" = "off" ]; then
   hint "unset GOPROXY"
 else
   ok "GOPROXY" "${GOPROXY:-default}"
+fi
+
+# --- protection settings ------------------------------------------------------
+#
+# Repository state, not files: someone can change a ruleset in the UI with no
+# commit here and nothing would notice. This is the only place that looks, and
+# it is here rather than in CI because reading rulesets needs an admin-scoped
+# token that ADR-0014 declined to grant a workflow (ADR-0048).
+
+printf '\n%s\n' "Protection settings"
+if ruleset_out="$("${ROOT}/scripts/verify-rulesets.sh" 2>&1)"; then
+  ok "rulesets" "live protection matches .github/rulesets"
+else
+  case "$ruleset_out" in
+    *"gh is not installed"*|*"admin scope"*|*"returned nothing"*)
+      printf '  %s %-30s %s\n' "-" "rulesets" "not readable — nothing was verified"
+      hint "gh auth login, then make ruleset-check"
+      ;;
+    *)
+      bad "rulesets" "live protection has drifted from .github/rulesets"
+      hint "make ruleset-check   # shows the diff"
+      ;;
+  esac
+fi
+
+# --- what this change touches ------------------------------------------------
+#
+# The affected graph was built as the compensation for choosing make over Nx
+# (ADR-0004) and then called by nothing. Surfacing it here is the cheapest place
+# a person actually looks, and it is the same computation `make release-plan`
+# orders into a release chain (ADR-0045).
+
+affected="$("${ROOT}/scripts/affected-modules.sh" 2>/dev/null || true)"
+if [ -n "$affected" ]; then
+  printf '\n%s\n' "Affected by your current change"
+  printf '%s\n' "$affected" | sed 's/^/  /'
+  printf '  %s\n' "-> make affected-preflight   fast checks over these only"
+  printf '  %s\n' "-> make release-plan         the tag chain this implies"
 fi
 
 # --- summary -----------------------------------------------------------------

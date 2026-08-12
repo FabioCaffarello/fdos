@@ -107,6 +107,18 @@ paragraph that is merely wrong — three such statements survived every check
 until M3.5 audited them by hand.
 -->
 
+## Release chain
+
+<!--
+`make release-plan` prints the modules this change requires a tag for, in the
+order they have to be tagged, and the pin bumps between them. Paste it, or say
+"no tags required".
+
+A cross-module change is two or three coordinated releases. That was discovered
+at the moment the gate failed rather than the moment the change was designed in
+M9 Track A, M10 and the M11 gate — three times, all by hand (#65).
+-->
+
 ## Blocked or deferred
 
 <!--

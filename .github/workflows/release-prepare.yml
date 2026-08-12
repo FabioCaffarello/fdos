@@ -1,0 +1,90 @@
+# Open the pull request a release tag will be cut from.
+#
+# One mechanical edit — the module's row in the contract registry set to the
+# version about to be released — on a branch, as a pull request. It merges
+# nothing and tags nothing; `main` is still reached the way every other change
+# reaches it (ADR-0020).
+#
+# The row belongs in the tagged commit so that whoever checks out the tag reads a
+# table describing it, and `make release-tag` refuses to proceed without it. This
+# workflow exists so that step is not a hand-edit that gets forgotten — which is
+# how the registry went stale for four milestones.
+#
+# What it deliberately does not do: choose the version, bump pins, or write the
+# paragraph explaining what the release carries. Pins are already held current by
+# `make pin-check` R3 for any module with unreleased changes, and the paragraph
+# is the part a reader actually needs.
+#
+# Every action is pinned to a full commit SHA.
+
+name: release-prepare
+
+on:
+  workflow_dispatch:
+    inputs:
+      module:
+        description: "Module path, e.g. libs/kernel"
+        required: true
+        type: string
+      version:
+        description: "Version about to be released, e.g. v0.10.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-prepare
+  cancel-in-progress: false
+
+env:
+  GOWORK: "off"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: write # push the branch — not main, which is protected
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up the toolchain
+        uses: ./.github/actions/setup-toolchain
+
+      - name: make release-prepare
+        env:
+          MODULE: ${{ inputs.module }}
+          VERSION: ${{ inputs.version }}
+        run: make release-prepare
+
+      # The gate runs on the branch anyway; running it here means a prepare that
+      # produces an unmergeable pull request fails now rather than after the
+      # pull request exists.
+      - name: make verify
+        run: make verify
+
+      - name: Open the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODULE: ${{ inputs.module }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          branch="release/$(printf '%s' "$MODULE" | tr '/' '-')-${VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add docs/ecosystem/contracts.md
+          git commit -m "docs(registry): ${MODULE} ${VERSION}"
+          git push origin "$branch"
+          gh pr create \
+            --title "docs(registry): ${MODULE} ${VERSION}" \
+            --body "$(printf 'Prepared by \\`release-prepare\\`. The registry row is set so the tagged commit describes itself.\n\n**Before merging, add the paragraph** under the table saying what %s carries. The row states which version; it does not state what it means, and that is the part a reader needs.\n\nAfter merge:\n\n    make release-tag MODULE=%s VERSION=%s\n' "$VERSION" "$MODULE" "$VERSION")"
