@@ -37,7 +37,7 @@ endef
 
 .PHONY: help bootstrap hooks doctor verify verify-timings affected ci-summary ci-stats \
 	toolchain-check toolchain-checksum-check contracts-check adr-check adr-immutability-check rfc-check constitution-check action-pinning-check \
-	context-check agent-contract-check workspace-check pin-check registry-check release-plan release-prepare release-tag affected-preflight proto-check proto-gen proto-lint proto-breaking consumer-check \
+	context-check agent-contract-check workspace-check pin-check registry-check no-binaries-check release-plan release-prepare release-tag affected-preflight proto-check proto-gen proto-lint proto-breaking consumer-check \
 	fmt fmt-check vet lint test analyze repro-check tidy tidy-check build clean \
 	secrets-check secrets-check-staged vuln-check commit-msg-check commit-msg-check-file
 
@@ -74,7 +74,7 @@ hooks: ## Install the git hooks (lefthook)
 # watched.
 VERIFY_TARGETS := toolchain-check toolchain-checksum-check contracts-check adr-check adr-immutability-check \
                   rfc-check constitution-check action-pinning-check context-check \
-                  agent-contract-check proto-check pin-check registry-check secrets-check tidy-check \
+                  agent-contract-check proto-check pin-check registry-check no-binaries-check secrets-check tidy-check \
                   fmt-check vet workspace-check lint test analyze vuln-check repro-check
 
 verify: $(VERIFY_TARGETS) ## Run every enforcement mechanism available at this milestone
@@ -162,6 +162,11 @@ pin-check: ## Assert first-party pins name published versions, and a changed mod
 
 registry-check: ## Assert the contract registry describes the tags that exist
 	@$(SCRIPTS_DIR)/verify-registry.sh
+
+# A committed binary escapes §9 entirely: nothing says which source produced it,
+# which toolchain built it, or which platform it runs on (ADR-0050).
+no-binaries-check: ## Assert no compiled executable is tracked
+	@$(SCRIPTS_DIR)/verify-no-tracked-binaries.sh
 
 # ---------------------------------------------------------------------------
 # Contracts

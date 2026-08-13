@@ -100,3 +100,8 @@ Thumbs.db
 # dotcontext runtime state
 .context/cache/semantic/
 
+
+# Build output from `go build` inside a module directory. `examples/ingest`
+# carried a 7.3 MB Mach-O binary for months (ADR-0050); `make build` writes to
+# bin/ and this catches the command a developer actually runs.
+/examples/ingest/ingest
