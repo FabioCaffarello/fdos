@@ -539,14 +539,40 @@ said it was making.
 
 ### What the gate cost, before and after
 
-| | Median CI run | Range | Checks |
-|---|---|---|---|
-| before Phase 0 | 129s | 96–279, bimodal | 19 |
-| after Phase 6 | **106s** | 92–269, still bimodal | **23** |
+| | Median CI run | Range | Checks | Sample |
+|---|---|---|---|---|
+| before Phase 0 | 129s | 96–279 | 19 | 12 runs |
+| after Phase 6 | 106s | 92–269 | 23 | 15 runs |
+| **over 100 runs** | **116s** | **63–280** | 23 | 100 runs |
 
-Four checks were added and the median went *down* by 23s, which is not a
-claim about the checks: it is cache behaviour, and the range shows the
-distribution did not change shape.
+**The first two rows are too small a sample to mean what they were used for.**
+Read across a hundred runs, the distribution is two clusters of roughly equal
+size — about fifty runs between 63s and 134s, about forty-eight between 215s and
+280s — and **the slow cluster is the recent one**. Every one of the last twelve
+successful runs falls between 216s and 274s.
+
+So the gate roughly doubled during this work, and the "median went down 23s"
+reading above was an artifact of measuring fifteen runs.
+
+**Four explanations were tried and all four are wrong**, including one this
+document asserted and one that reached an accepted ADR:
+
+| Hypothesis | Measured |
+|---|---|
+| build-cache misses | hits and misses both cost 250–270s |
+| `workspace-check` compiling the tree twice | 1.4s in CI |
+| queue time from the added `preflight` job | 2–4s |
+| `examples/` joining the module set | 1.4s of ~26s of tests |
+
+Per-check in CI, the cost is where it always was: `test` 81s, `proto-check` 33s,
+`vet` 32s, `lint` 29s. Everything the six phases added totals under four
+seconds.
+
+The open question is [#139](https://github.com/FabioCaffarello/fdos/issues/139),
+and it is left open rather than answered with a fifth guess. What this section
+can say honestly is that **Phase 0 did its job**: the instrumentation turned a
+comfortable assumption into a measured regression nobody would otherwise have
+seen, and then falsified three of this document's own claims about it.
 
 The distribution is still bimodal and the cause is now recorded per run rather
 than inferred: `make ci-summary` writes the build-cache state, and the first
