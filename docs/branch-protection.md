@@ -45,6 +45,22 @@ second place the gate is defined, and the two would drift.
 requests that change dependencies, and a required check that does not always run
 blocks merges for the wrong reason.
 
+## Merge settings — squash only, and now actually so
+
+Applies to the repository, not to a ruleset, and committed as
+`.github/rulesets/repository-merge.json` (ADR-0049).
+
+| Setting | Value | Why |
+|---|---|---|
+| `allow_squash_merge` | true | one logical change per commit |
+| `allow_merge_commit` | **false** | inert anyway under required linear history, and misleading while enabled |
+| `allow_rebase_merge` | **false** | it lands the author's commits unchanged, with no ` (#NNN)` suffix — so the landed-subject rule was unpredictable |
+
+**"Squash merge only" was documented above and was not true** until ADR-0049:
+merge commits and rebase merges were both enabled, and five recent commits had
+landed without a suffix as a result. `make ruleset-check` now covers these
+settings.
+
 ## `release-tags` — tag ruleset
 
 Applies to `refs/tags/libs/*/v*`, `refs/tags/apps/*/v*` and

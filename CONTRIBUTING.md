@@ -236,8 +236,13 @@ negative-tested.
 
 Conventional prefixes: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`,
 `build`, `perf`, `ci`, `revert`. Imperative mood, no trailing period. Keep the
-subject under 50 characters; the `commit-msg` hook hard-fails above 72 and warns
-between the two.
+subject under 50 characters; the hook warns above that.
+
+**It hard-fails above 64, not 72** (ADR-0049). Squash merge appends ` (#NNN)`
+after every check has passed, so 72 is the budget for what *lands* and 64 is
+what is left for what you write. Measured before the reserve existed: nine of
+forty landed subjects exceeded 72, and seven of those were compliant when
+written.
 
 `make commit-msg-check` runs the same check over every commit on your branch,
 without going through the hook. Use it after any `--no-verify`.
