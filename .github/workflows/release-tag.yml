@@ -71,6 +71,21 @@ jobs:
           # previous tag and refuses a release with no change in it.
           fetch-depth: 0
 
+      # `git tag -a` writes a tagger, and a runner has no identity configured —
+      # so the first real dispatch of this workflow died with "empty ident name"
+      # after all six preconditions had passed. It failed *before* the push, so
+      # nothing was published and nothing became permanent, which is the order
+      # these failures should happen in.
+      #
+      # The tagger is the workflow, which is accurate: a human dispatched it and
+      # the machine performed it. `release-prepare.yml` already configures the
+      # same identity for the same reason.
+      - name: Identify the tagger
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - name: make release-tag
         env:
           GH_TOKEN: ${{ github.token }}
