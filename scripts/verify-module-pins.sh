@@ -48,6 +48,14 @@ fail() {
   failures=$((failures + 1))
 }
 
+# Explanation lines. R3 used `fail` for all three of its lines, so one stale pin
+# reported as three violations — and the first real release, which produced
+# exactly one, reported three. A check that cannot count is a check nobody
+# trusts about anything else either.
+note() {
+  printf '  %s\n' "$1" >&2
+}
+
 # Newest vX.Y.Z tag for a module path, or empty. Pre-release and metadata
 # suffixes are deliberately not ranked: this repository releases X.Y.Z, and a
 # comparison that silently mis-orders `v0.1.0-rc.1` is worse than one that
@@ -150,8 +158,8 @@ while IFS= read -r module; do
     if [ "$unreleased" = true ]; then
       # R3
       fail "${module} (${state}): pins ${dep} v${pinned}, but v${dep_newest} is published"
-      fail "  a module being changed must pin what its siblings actually released,"
-      fail "  or the release chain is discovered when the gate fails instead of when it is designed"
+      note "  a module being changed must pin what its siblings actually released,"
+      note "  or the release chain is discovered when the gate fails instead of when it is designed"
     else
       # R4
       behind_report="${behind_report}  ${module} (${state}): ${dep} v${pinned} -> v${dep_newest}"$'\n'
