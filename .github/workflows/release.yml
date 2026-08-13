@@ -29,6 +29,23 @@ on:
       - "libs/*/v*"
       - "apps/*/v*"
 
+  # A tag pushed by `release-tag.yml` does **not** trigger the push event above.
+  # GitHub suppresses workflow runs for events created with `GITHUB_TOKEN`, to
+  # stop workflows triggering themselves — so the dispatched publication path
+  # ADR-0046 built could create a tag and nothing would build it. Measured:
+  # `libs/kernel-wire/v0.3.0`, pushed from a maintainer's own credentials,
+  # triggered this workflow; `libs/ledger-wire/v0.5.0`, pushed by the workflow,
+  # triggered nothing at all (ADR-0051).
+  #
+  # So the release is dispatchable against an existing tag. It is the same job
+  # either way — one entry point, two ways in.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "An existing release tag to build, e.g. libs/ledger-wire/v0.5.0"
+        required: true
+        type: string
+
 permissions:
   contents: read
 
@@ -49,6 +66,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # `github.ref_name` is the tag on a push and the branch on a dispatch,
+          # so the tag is named explicitly rather than inferred.
+          ref: ${{ inputs.tag || github.ref_name }}
           fetch-depth: 0
 
       # The same toolchain the gate uses. This step once installed Go alone,
@@ -65,7 +85,7 @@ jobs:
       - name: make release-artifacts
         id: artifacts
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: make release-artifacts
 
       - name: Sign and attest
@@ -81,13 +101,13 @@ jobs:
       # Not in `make verify`: it depends on proxy propagation, which the
       # per-commit gate must not inherit.
       - name: Prove the published module is consumable
-        if: startsWith(github.ref_name, 'libs/')
+        if: startsWith(inputs.tag || github.ref_name, 'libs/')
         run: make consumer-check
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
           gh release create "$TAG" --title "$TAG" --generate-notes dist/*

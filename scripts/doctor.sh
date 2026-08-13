@@ -117,6 +117,27 @@ else
   ok "GOPROXY" "${GOPROXY:-default}"
 fi
 
+# --- tags -------------------------------------------------------------------
+#
+# `pin-check` and `registry-check` read the tag namespace, so a working copy
+# missing a tag gives a different answer from CI, which clones with all of them.
+# That happened: a local gate passed and the same commit failed in CI, because
+# `git fetch` had not brought a tag pushed minutes earlier. It is the divergence
+# ADR-0014 exists to prevent, arriving through state that is not the tree.
+
+# `^{}` entries are the dereferenced targets of annotated tags, so counting the
+# raw output double-counts every annotated tag — it reported 61 remote against
+# 36 local with nothing missing.
+if remote_tags="$(git ls-remote --tags origin 2>/dev/null | grep 'refs/tags/libs/' | grep -vc '\^{}' || true)"; then
+  local_tags="$(git tag --list 'libs/*' | grep -c . || true)"
+  if [ "${remote_tags:-0}" -gt "${local_tags:-0}" ]; then
+    bad "tags" "${local_tags} local, ${remote_tags} on origin — the gate reads tags"
+    hint "git fetch --tags   # or make verify will disagree with CI"
+  else
+    ok "tags" "${local_tags} release tags, in step with origin"
+  fi
+fi
+
 # --- protection settings ------------------------------------------------------
 #
 # Repository state, not files: someone can change a ruleset in the UI with no
