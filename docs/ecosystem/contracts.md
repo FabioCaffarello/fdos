@@ -82,7 +82,7 @@ that decision, **not an offer**.
 | `libs/ledger` | `v0.8.0` | no | no |
 | `libs/kernel-wire` | `v0.3.0` | no | no |
 | `libs/ledger-wire` | `v0.5.0` | no | no |
-| `libs/ledger-sqlite` | `v0.3.0` | no | no |
+| `libs/ledger-sqlite` | `v0.4.0` | no | no |
 
 This table went stale for four milestones, and ADR-0024 calls the registry part
 of the interface rather than documentation about it — so the drift was a defect,
@@ -162,6 +162,16 @@ module cannot be re-released until its source changes.
 Recorded here rather than left to be discovered, for the same reason ADR-0047
 records the twenty releases that carried a linter: an adopter reading this table
 should not have to infer what a release contains.
+
+**`libs/ledger-sqlite/v0.4.0`** changes no code of its own either: it adopts the
+chain — `libs/contracts v0.6.0`, `libs/kernel v0.9.0`, `libs/ledger-wire v0.5.0`
+— which is what `make pin-check`'s R4 report had been listing as the outstanding
+work. Minor rather than patch for the same reason as the release below: the
+dependency set a consumer receives moves.
+
+The engine's own behaviour is unchanged. `libs/ledger v0.8.0` was already
+pinned, so the serialisation port it implements (ADR-0041) is the same one it
+implemented at `v0.3.0`.
 
 **`libs/ledger-wire/v0.5.0`** changes no code of its own — the diff is `go.mod`
 and `go.sum` — and is a minor rather than a patch because of what it pulls in.
