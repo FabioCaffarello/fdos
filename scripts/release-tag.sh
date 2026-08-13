@@ -142,7 +142,8 @@ if command -v gh >/dev/null 2>&1; then
   )"
   case "$conclusion" in
     success) printf '  ok  verify is green for %s\n' "${SHA:0:8}" ;;
-    "" | null) die "no 'verify' check run found for ${SHA} — wait for CI before tagging" ;;
+    "") die "no 'verify' check run found for ${SHA} — has CI started?" ;;
+    null) die "verify is still running for ${SHA} — wait for it, then dispatch again" ;;
     *) die "verify concluded '${conclusion}' for ${SHA}; tagging it would sign a red commit" ;;
   esac
 else
