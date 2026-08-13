@@ -72,7 +72,9 @@ printf 'Registry updated: %s %s -> %s\n\n' "$MODULE" "$old_version" "$VERSION"
 printf 'Next, and each step is a person:\n\n'
 printf '  1. describe what the version carries, under the table — the row says\n'
 printf '     which version, not what it means\n'
-printf '  2. make verify\n'
+printf '  2. make release-simulate MODULE=%s VERSION=%s\n' "$MODULE" "$VERSION"
+printf '     the gate as it will run once the tag exists — #125 is what happens\n'
+printf '     when that answer differs from the one before the tag\n'
 printf '  3. commit, open a pull request, merge it\n'
 printf '  4. make release-tag MODULE=%s VERSION=%s\n' "$MODULE" "$VERSION"
 printf '\n`make registry-check` accepts a row above the newest tag only while the\n'

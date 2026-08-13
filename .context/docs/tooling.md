@@ -72,6 +72,7 @@ without pushing, and drifts from what developers actually execute.
 | `make release-prepare` | Set a module's registry row to the version about to be released |
 | `make release-tag` | Create a release tag after six preconditions hold (dry run unless `PUBLISH=1`) |
 | `make release-artifacts` | Assemble into `dist/` what the tagged module publishes |
+| `make release-simulate` | Run the gate as it will run once the tag exists, without creating one |
 | `make affected-preflight` | vet, lint and test over affected modules only — **not** the gate |
 | `make adr-check` | Decision log well-formed; supersession bidirectional |
 | `make rfc-check` | RFC set well-formed; an Accepted RFC produced ADRs |
@@ -130,6 +131,7 @@ unreviewed change to the dependency graph.
 | `release-prepare.sh` | nothing — sets the registry row for a release in flight | — |
 | `release-tag.sh` | nothing — refuses to tag unless six preconditions hold (ADR-0046) | — |
 | `release-artifacts.sh` | nothing — assembles a module's binaries and published zip (ADR-0047) | — |
+| `release-simulate.sh` | nothing — the dry run for the gate under a hypothetical tag (#125) | — |
 | `affected-preflight.sh` | nothing — advisory fast failure over affected modules | — |
 | `verify-directory-contracts.sh` | §10 — declared architectural boundaries | 2–3 |
 | `verify-adr.sh` | §14 — append-only decision log | 3 |

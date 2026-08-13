@@ -81,7 +81,7 @@ that decision, **not an offer**.
 | `libs/kernel` | `v0.9.0` | no | no |
 | `libs/ledger` | `v0.8.0` | no | no |
 | `libs/kernel-wire` | `v0.3.0` | no | no |
-| `libs/ledger-wire` | `v0.4.0` | no | no |
+| `libs/ledger-wire` | `v0.5.0` | no | no |
 | `libs/ledger-sqlite` | `v0.3.0` | no | no |
 
 This table went stale for four milestones, and ADR-0024 calls the registry part
@@ -162,6 +162,19 @@ module cannot be re-released until its source changes.
 Recorded here rather than left to be discovered, for the same reason ADR-0047
 records the twenty releases that carried a linter: an adopter reading this table
 should not have to infer what a release contains.
+
+**`libs/ledger-wire/v0.5.0`** changes no code of its own — the diff is `go.mod`
+and `go.sum` — and is a minor rather than a patch because of what it pulls in.
+Adopting it moves a consumer to `libs/ledger v0.8.0` by minimal version
+selection, and that version **breaks every implementation of `app.Store`**
+(ADR-0041). `ledger-wire`'s own exported surface takes
+`app.AcceptHoldingClaimCommand` and never `app.Store`, so nothing here breaks;
+the break arrives through the dependency, which is exactly the case a patch
+number would hide.
+
+It is also the first release cut through the corrected path
+([#125](https://github.com/FabioCaffarello/fdos/issues/125)), and the first tag
+whose release carries the module's own zip.
 
 **`libs/ledger-sqlite/v0.3.0`** is step two: it adopts `libs/ledger/v0.8.0` and
 implements `Serialise` as a `BEGIN IMMEDIATE` transaction held open across the

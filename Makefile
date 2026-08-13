@@ -113,6 +113,12 @@ release-tag: ## Create a release tag, after checking it is safe to (PUBLISH=1 to
 release-artifacts: ## Assemble the release artifacts for one module into dist/
 	@MODULE="$(MODULE)" VERSION="$(VERSION)" $(SCRIPTS_DIR)/release-artifacts.sh
 
+# release.yml re-verifies the tagged commit, so the gate's answer must be the
+# same before and after the tag. It was not, once (#125). This proves it per
+# release, before anything is published.
+release-simulate: ## Run the gate as it will run once the tag exists, without creating one
+	@MODULE="$(MODULE)" VERSION="$(VERSION)" $(SCRIPTS_DIR)/release-simulate.sh
+
 # ---------------------------------------------------------------------------
 # Governance
 # ---------------------------------------------------------------------------
