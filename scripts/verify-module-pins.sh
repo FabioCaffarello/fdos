@@ -66,6 +66,39 @@ note() {
 # command substitution is the exit status of the assignment — so an untagged
 # module killed the script with no output at all. Found by running it against
 # `libs/analysis`, which has no tags.
+# The newest tag of a module **that already existed at the commit being
+# verified**, which is the only set a commit could have pinned against.
+#
+# `newest_tag` alone is not a function of the commit: it reads the whole tag
+# namespace, so the same tree passes before a tag is created and fails after.
+# The first release cut through the dispatched path proved that the hard way —
+# `release.yml` re-runs the gate on the tagged commit, R3 saw the tag the commit
+# had just created, and the release of libs/kernel-wire/v0.3.0 failed on the tag
+# it was publishing. A permanent tag whose release can never complete, which is
+# B-008's shape (#125).
+#
+# A tag pointing *at* HEAD is excluded: a commit cannot pin a version created
+# from itself. A tag on a descendant is excluded too, so verifying an old commit
+# asks what was true then.
+newest_ancestor_tag() {
+  local module="$1" head best="" tag_commit
+  head="$(git rev-parse HEAD)"
+  while IFS= read -r version; do
+    [ -n "$version" ] || continue
+    tag_commit="$(git rev-parse "${module}/v${version}^{commit}" 2>/dev/null || true)"
+    [ -n "$tag_commit" ] || continue
+    [ "$tag_commit" = "$head" ] && continue
+    git merge-base --is-ancestor "$tag_commit" "$head" 2>/dev/null || continue
+    best="$version"
+  done <<INNER
+$(git tag --list "${module}/v*" 2>/dev/null \
+  | sed "s|^${module}/v||" \
+  | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
+  | sort -t. -k1,1n -k2,2n -k3,3n || true)
+INNER
+  printf '%s' "$best"
+}
+
 newest_tag() {
   git tag --list "${1}/v*" 2>/dev/null \
     | sed "s|^${1}/v||" \
@@ -140,20 +173,31 @@ while IFS= read -r module; do
       continue
     fi
 
-    dep_newest="$(newest_tag "$dep")"
-    [ -n "$dep_newest" ] || continue
+    # R2 measures against every tag that exists — a pin above the newest is
+    # wrong whenever the tag was made. R3 and R4 measure against what existed
+    # at this commit.
+    dep_latest="$(newest_tag "$dep")"
+    dep_newest="$(newest_ancestor_tag "$dep")"
+    [ -n "$dep_latest" ] || continue
 
+    cmp=0
+    compare_versions "$pinned" "$dep_latest" || cmp=$?
+    if [ "$cmp" -eq 1 ]; then
+      # R2 — pinned above the newest tag. Reachable when a tag is deleted, which
+      # the release-tags ruleset now forbids, and when a pin is hand-edited.
+      fail "${module}: pins ${dep} v${pinned}, above its newest tag v${dep_latest}"
+      continue
+    fi
+
+    [ -n "$dep_newest" ] || continue
     cmp=0
     compare_versions "$pinned" "$dep_newest" || cmp=$?
 
-    if [ "$cmp" -eq 0 ]; then
-      continue # current
-    elif [ "$cmp" -eq 1 ]; then
-      # R2 — pinned above the newest tag. Reachable when a tag is deleted, which
-      # the release-tags ruleset now forbids, and when a pin is hand-edited.
-      fail "${module}: pins ${dep} v${pinned}, above its newest tag v${dep_newest}"
-      continue
-    fi
+    # Only "behind" is interesting here. Equal is current, and *ahead* means the
+    # pin names a tag created at this very commit — which the filter above
+    # excluded on purpose, and which R2 has already checked against every tag
+    # that exists.
+    [ "$cmp" -eq 2 ] || continue
 
     if [ "$unreleased" = true ]; then
       # R3
