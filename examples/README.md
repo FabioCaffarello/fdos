@@ -30,6 +30,12 @@ compare bytes against.
 | `conform_test.go` | Every way a submission is refused, with the reason |
 | `testdata/` | The conforming submission, serialized and as text, so a producer in another language can compare bytes |
 
+The table is the whole of what this kit contains. A compiled `ingest` binary was
+tracked here for months and appears in no row of it — 7.3 MB of one developer's
+`darwin/arm64` build, in the directory whose job is to show a third party what
+conformance looks like. `make no-binaries-check` is now what keeps this table
+complete (ADR-0050); `go build` output in this directory is ignored.
+
 ### The kit restates no rules
 
 `Check` does not describe admission — it **runs** it, against a throwaway

@@ -67,6 +67,7 @@ without pushing, and drifts from what developers actually execute.
 | `make workspace-check` | The tree compiles against its own source, not only published versions |
 | `make pin-check` | First-party pins name published versions; a changed module pins current |
 | `make registry-check` | The contract registry describes the tags that exist |
+| `make no-binaries-check` | No compiled executable is tracked |
 | `make release-plan` | The tag chain this change implies, in order (plans; does not publish) |
 | `make release-prepare` | Set a module's registry row to the version about to be released |
 | `make release-tag` | Create a release tag after six preconditions hold (dry run unless `PUBLISH=1`) |
@@ -124,6 +125,7 @@ unreviewed change to the dependency graph.
 | `verify-workspace.sh` | §11, ADR-0044 — the tree is consistent with itself, not only resolvable | 3 |
 | `verify-module-pins.sh` | §11, ADR-0044 — a changed module pins what its siblings released | 3 |
 | `verify-registry.sh` | §11, ADR-0024, ADR-0046 — the registry matches the published tags | 3 |
+| `verify-no-tracked-binaries.sh` | §9, ADR-0050 — build output is never committed | 3 |
 | `release-plan.sh` | nothing — orders the release chain a change implies (ADR-0046) | — |
 | `release-prepare.sh` | nothing — sets the registry row for a release in flight | — |
 | `release-tag.sh` | nothing — refuses to tag unless six preconditions hold (ADR-0046) | — |

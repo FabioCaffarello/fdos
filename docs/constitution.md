@@ -199,7 +199,7 @@ an earlier target was not achievable.
 | 6 | Provenance | `NewEnvelope` requires it and `Provenance` has no incomplete constructor | 1 | 1 ✅ |
 | 7 | Temporal Modeling | both axes required; knowledge time never a caller's parameter; no query without an `AsOf` | 1 | 1 ✅ |
 | 8 | Explainability | `ProjectPosition` returns `Explained[Position]`; combinators build the trace | 1 | 1 ✅ |
-| 9 | Reproducibility | double-build diff, tidy and toolchain pins, SHA-pinned actions and digest-pinned downloaded artifacts (`make repro-check`, `tidy-check`, `toolchain-check`, `action-pinning-check`, `toolchain-checksum-check`) | 3 | 3 ✅ |
+| 9 | Reproducibility | double-build diff, tidy and toolchain pins, SHA-pinned actions, digest-pinned downloaded artifacts, and no tracked build output (`make repro-check`, `tidy-check`, `toolchain-check`, `action-pinning-check`, `toolchain-checksum-check`, `no-binaries-check`) | 3 | 3 ✅ |
 | 10 | Domain Before Infrastructure | `impurity`, `layering` analysers + directory contracts | 2 | 2 ✅ |
 | 11 | Contracts Over Implementations | `layering`, `buf breaking` against main, wire/domain round-trip conformance, cross-module source compatibility, and the registry checked against published tags (`make proto-check`, `make test`, `make workspace-check`, `make pin-check`, `make registry-check`) | 3 | 3 ✅ |
 | 12 | Knowledge Graph Strategy | — | 6 | 5 |
