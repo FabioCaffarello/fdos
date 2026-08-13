@@ -93,8 +93,15 @@ while IFS= read -r row; do
   listed="${listed}${module} "
   newest="$(newest_tag "$module")"
 
+  # A row for a module with no tag at all is a first release in flight: the row
+  # has to be in the commit that gets tagged, and there is no earlier tag to
+  # compare it against. Blocking it made a module's *first* release impossible —
+  # `registry-check` refused the row and `release-tag` refused to tag without it.
+  #
+  # Reported rather than silent, because a row for a module nobody ever tags is
+  # a claim about a version that does not exist.
   if [ -z "$newest" ]; then
-    fail "${module}: listed at ${version}, but no tag exists for it"
+    printf '  %-20s %-9s declares a first release; no tag exists yet\n' "$module" "$version"
     continue
   fi
 
