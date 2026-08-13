@@ -12,15 +12,25 @@
 # failed rehearsal is permanent — `libs/release-smoke/v0.0.0-rc.1` and `rc.2` are
 # still in the namespace, from the drill that proved B-008 fixed.
 #
-# So this rehearses against an **already published** version. It assembles the
-# artifacts, generates the SBOM, attests provenance and signs the manifest —
-# every step `release.yml` takes — and then stops. No tag, no GitHub release. The
-# output goes to the run's artifacts, where it can be downloaded and checked.
+# It used to check out the *tag's* tree, which made it useless: no published tag
+# carried the release machinery, because the machinery merged after all of them.
+# Every rehearsal failed at `Set up the toolchain` or at `make release-artifacts`
+# until `libs/ledger-wire/v0.5.0` became the first tag cut after it (#124).
+#
+# That is backwards. **The path under test is the one on the default branch** —
+# the one that will run when the next tag is cut. So this checks out the current
+# tree and rehearses it against an already published *version*, whose zip is real
+# bytes the proxy serves. The tree is what will be tagged; the version is what
+# can be fetched.
+#
+# It assembles the artifacts, generates the SBOM, attests provenance and signs
+# the manifest — every step `release.yml` takes — and then stops. No tag, no
+# GitHub release; the output goes to the run's artifacts.
 #
 # What it does not cover, stated rather than implied: `gh release create`, and
-# the tag trigger itself. Those are exercised by the first real release, and this
-# reduces what that release is discovering for the first time from everything to
-# two lines.
+# the dispatch of `release.yml` itself. And the attestation it produces is real:
+# it describes bytes the proxy already serves, so it is true, and it adds a
+# second attestation for a subject that may already have one.
 #
 # Every action is pinned to a full commit SHA.
 
@@ -30,7 +40,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "An existing release tag to rehearse against, e.g. libs/kernel/v0.9.0"
+        description: "A published tag whose module and version to rehearse, e.g. libs/kernel/v0.9.0"
         required: true
         type: string
 
@@ -55,10 +65,11 @@ jobs:
       attestations: write
 
     steps:
-      - name: Checkout the tag
+      # The default branch, deliberately: the machinery under test is the one
+      # that will run, not the one a historical tag happens to carry.
+      - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.tag }}
           fetch-depth: 0
 
       - name: Set up the toolchain
@@ -97,7 +108,8 @@ jobs:
       - name: Say what was and was not exercised
         run: |
           set -euo pipefail
-          printf 'Rehearsed: verify, artifact assembly, SBOM, attestation, signing'
-          printf ', consumer-check.\n'
-          printf 'Not rehearsed: gh release create, and the tag push that triggers it.\n'
+          printf 'Rehearsed the machinery on the default branch, against the\n'
+          printf 'published version %s: verify, artifact assembly, SBOM,\n' "${{ inputs.tag }}"
+          printf 'attestation, signing, consumer-check.\n\n'
+          printf 'Not rehearsed: gh release create, and dispatching release.yml.\n'
           printf 'No tag was created and no release was published.\n'
