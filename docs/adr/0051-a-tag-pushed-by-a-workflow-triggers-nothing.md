@@ -1,15 +1,22 @@
 ---
 id: ADR-0051
 title: A tag pushed by a workflow triggers nothing, so the release is dispatchable
-status: Accepted
+status: Superseded
 date: 2026-08-13
 deciders:
   - "@FabioCaffarello"
 supersedes: []
-superseded_by: []
+superseded_by:
+  - ADR-0052
 ---
 
 # ADR-0051 — A tag pushed by a workflow triggers nothing, so the release is dispatchable
+
+> **Superseded by [ADR-0052](0052-the-release-is-called-not-triggered.md).**
+> The constraint recorded here is permanent and unchanged: a tag pushed with
+> `GITHUB_TOKEN` triggers nothing. What changed is the remedy — §2's "two
+> dispatches" became one call, on the condition this ADR itself named, once the
+> path had published a release without incident.
 
 ## Context
 

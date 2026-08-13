@@ -30,7 +30,7 @@ Forge configuration for FDOS. Governed by ADR-0014.
 | `release-rehearse.yml` | manual dispatch | the default branch's release path, against a published version, stopping before publication |
 | `ci-telemetry.yml` | weekly schedule, manual dispatch | `make ci-stats`, `make action-freshness`, `make verify-timings` |
 | `release-prepare.yml` | manual dispatch | `make release-prepare`, then opens the pull request |
-| `release-tag.yml` | manual dispatch | `make release-tag` — the only job that may write a tag |
+| `release-tag.yml` | manual dispatch | `make release-tag`, then calls `release.yml` |
 
 `release-tag.yml` is the one place `contents: write` appears, behind a `release`
 environment restricted to `main`. Publishing is a dispatched act because keyless
