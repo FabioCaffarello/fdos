@@ -218,6 +218,30 @@ what to depend on, that decision is here rather than in a compiler error.
 `libs/analysis` is not published at all: it is tooling, and nothing outside this
 repository has reason to link it.
 
+## Applications
+
+Not contracts and not importable: an application is something an adopter
+operates ([ADR-0037](../adr/0037-delivery-includes-a-service-the-adopter-operates.md)).
+It is listed here because the same registry is where a reader looks to learn
+what this repository publishes.
+
+| Application | Version | What it is |
+|---|---|---|
+| `apps/submitd` | `v0.1.0` | The ingress. A producer submits a holding claim over a socket; it admits or refuses |
+
+**`v0.1.0` rather than `v1.0.0`, and the choice is a judgement rather than a
+rule.** [ADR-0039](../adr/0039-applications-are-released-as-signed-binaries.md)
+deliberately decided no versioning policy for applications, so this is the first
+exercise of that space: `0.x` says the shape may still move. What is stable is
+what refuses — the guards are tested, and ADR-0039's own transcript shows them
+firing in the shipped binary rather than only in tests.
+
+**`go install` is not deprecated by this.** It remains the supported path and
+gives integrity of *source* through the module proxy and its checksum database.
+What a release adds is a signed artifact, an SBOM and a provenance attestation
+binding binaries to the workflow that built them — the question due diligence
+asks about the component that admits financial facts.
+
 ## Not published, and frequently assumed to be
 
 **There is no `fdos.acquisition.v1`.** No `AcquisitionEnvelope`, no
@@ -256,15 +280,29 @@ proxy, which is what makes a build work, and that is all they offer. They are
 not back-filled: attaching provenance to a version after the fact is a decision
 about what an attestation means, not a repair.
 
-**The pipeline now works, proven end to end** by a disposable tag rather than
-asserted. From the next tag onwards a release carries:
+**The pipeline works, proven by releasing** rather than asserted —
+`libs/ledger-wire/v0.5.0` and `libs/ledger-sqlite/v0.4.0` were both verified
+after publication, and five defects were found by doing it that reading the
+workflows had not.
 
-| Artifact | What it answers |
-|---|---|
-| `SHA256SUMS` | what the released bytes are |
-| `SHA256SUMS.bundle` | who signed them — cosign keyless bundle: signature, certificate and transparency-log entry together |
-| build-provenance attestation | which workflow run, from which commit, built them |
-| `*.spdx.json` | what went into the binary |
+What a release carries is decided by what the module *is*
+([ADR-0047](../adr/0047-a-release-carries-what-the-module-publishes.md)):
+
+| Artifact | What it answers | When |
+|---|---|---|
+| the module zip | the bytes the proxy serves, which is what a build consumes | a `libs/*` release |
+| `<name>_<os>_<arch>` | the binaries, for four platforms | a module with a `main` package |
+| `sbom.spdx.json` | what went into it | always |
+| `SHA256SUMS` | what the released bytes are | always |
+| `SHA256SUMS.bundle` | who signed them — cosign keyless bundle: signature, certificate and transparency-log entry together | always |
+| build-provenance attestation | which workflow run, from which commit, built them | always |
+
+**Before ADR-0047 the workflow hardcoded `fdoslint`**, so twenty library
+releases carry a linter's binaries and a signed manifest describing them. Those
+are not corrected: they are history attached to immutable tags. And
+`libs/kernel-wire/v0.3.0` carries no release at all — the tag made its own
+verification fail ([#125](https://github.com/FabioCaffarello/fdos/issues/125)),
+and re-running cannot help because the workflow checks out the tag's tree.
 
 Verifying the manifest, which is what
 [fdos#26](https://github.com/FabioCaffarello/fdos/issues/26) asked for:
