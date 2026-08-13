@@ -112,4 +112,5 @@ jobs:
         if: always()
         env:
           TOOLCHAIN_CACHE_HIT: ${{ steps.toolchain.outputs.cache-hit }}
+          TOOLCHAIN_CACHE_BYTES: ${{ steps.toolchain.outputs.cache-bytes }}
         run: make ci-summary
