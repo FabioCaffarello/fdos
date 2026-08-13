@@ -79,7 +79,7 @@ that decision, **not an offer**.
 | Module | Version | Offered | Consumed externally |
 |---|---|---|---|
 | `libs/kernel` | `v0.9.0` | no | no |
-| `libs/ledger` | `v0.8.0` | no | no |
+| `libs/ledger` | `v0.9.0` | no | no |
 | `libs/kernel-wire` | `v0.3.0` | no | no |
 | `libs/ledger-wire` | `v0.5.0` | no | no |
 | `libs/ledger-sqlite` | `v0.4.0` | no | no |
@@ -162,6 +162,15 @@ module cannot be re-released until its source changes.
 Recorded here rather than left to be discovered, for the same reason ADR-0047
 records the twenty releases that carried a linter: an adopter reading this table
 should not have to infer what a release contains.
+
+**`libs/ledger/v0.9.0`** adopts `libs/kernel v0.9.0` and changes no code of its
+own. It was the last entry in `pin-check`'s R4 report — the one module still
+pinning what it was released against while a newer sibling existed.
+
+Kernel `v0.9.0` carries the rounding scale (`RoundingContext`), which the ledger
+does not use directly: it stores and replays what it is given. So this is
+adoption rather than uptake, and the version is minor because the dependency set
+a consumer receives moves.
 
 **`libs/ledger-sqlite/v0.4.0`** changes no code of its own either: it adopts the
 chain — `libs/contracts v0.6.0`, `libs/kernel v0.9.0`, `libs/ledger-wire v0.5.0`
