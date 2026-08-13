@@ -99,10 +99,20 @@ jobs:
       # A tag push starts release.yml, which has failed silently before — B-008
       # is fourteen tags whose release published nothing while looking fine. The
       # tag is immutable by ruleset, so that state cannot be cleaned up.
+      # A tag pushed with GITHUB_TOKEN does not trigger `release.yml` — GitHub
+      # suppresses workflow runs for events this token creates. So publication
+      # is two dispatches, and this says the second one out loud rather than
+      # leaving a tag with nothing building it (ADR-0051).
       - name: Say what happens next
         if: inputs.publish == 'yes'
+        env:
+          MODULE: ${{ inputs.module }}
+          VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          printf 'Tag pushed. release.yml is running against it.\n'
-          printf 'Confirm it finished before announcing anything: B-008 is what\n'
-          printf 'a release that looks fine and publishes nothing looks like.\n'
+          printf 'Tag pushed. Nothing is building it: a tag created with\n'
+          printf 'GITHUB_TOKEN does not trigger release.yml.\n\n'
+          printf 'Publish the evidence:\n\n'
+          printf '  gh workflow run release.yml -f tag=%s/%s\n\n' "$MODULE" "$VERSION"
+          printf 'Then confirm it finished. B-008 is what a release that looks\n'
+          printf 'fine and publishes nothing looks like.\n'
