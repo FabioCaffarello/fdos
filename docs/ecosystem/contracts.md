@@ -225,7 +225,14 @@ reports an import that ignores this. If you are reading this registry to decide
 what to depend on, that decision is here rather than in a compiler error.
 
 `libs/analysis` is not published at all: it is tooling, and nothing outside this
-repository has reason to link it.
+repository has reason to link it. **Neither is `fdoslint`, the binary it
+produces** ([ADR-0053](../adr/0053-fdoslint-is-not-distributed.md)) — the gate
+builds it from source on every run, and the purity rules it applies are scoped
+to code here (ADR-0021).
+
+Twenty releases carried that binary before ADR-0047, under other modules' tags.
+They were shipping an artifact with no consumer, which makes them less wrong
+than they look and no more correctable.
 
 ## Applications
 
