@@ -4,8 +4,8 @@ github.com/FabioCaffarello/fdos/libs/kernel v0.9.0 h1:itueGIr/JglyLyYz9cvdfj6cU+
 github.com/FabioCaffarello/fdos/libs/kernel v0.9.0/go.mod h1:hM9SmGyiNMlaofqVcXPjIma1pSPOu7IWI5I06vEbr5Y=
 github.com/FabioCaffarello/fdos/libs/kernel-wire v0.3.0 h1:ZxS3qjrJn8LdlXcViRbjBBvm+sVdNe2HQm8cfsBT9MM=
 github.com/FabioCaffarello/fdos/libs/kernel-wire v0.3.0/go.mod h1:EinTDue6Eu+9dyisPvlMLbFo2OkcbdD1AQaJk5ejPyg=
-github.com/FabioCaffarello/fdos/libs/ledger v0.8.0 h1:cFg7LX7fs9rK85g+TdfAvzhlg06r3cmpEvFt/TEaVjI=
-github.com/FabioCaffarello/fdos/libs/ledger v0.8.0/go.mod h1:z1uKd4+/1oEyi/kVGkcMGWPRSnnJRG0WEGP9uX2MSzY=
+github.com/FabioCaffarello/fdos/libs/ledger v0.9.0 h1:QoqDDr3+EWt71B133aLBqJgHc+Y15nIPE11yoZvTIzc=
+github.com/FabioCaffarello/fdos/libs/ledger v0.9.0/go.mod h1:rS6i/kewNZjO+D3GqnRXosOf4aqqedSz9Few8f05Ljk=
 github.com/FabioCaffarello/fdos/libs/ledger-sqlite v0.4.0 h1:WhyCOkTQ+all1GKa+WyQUIe9M8re4CWhjto0F03GIJI=
 github.com/FabioCaffarello/fdos/libs/ledger-sqlite v0.4.0/go.mod h1:hZJU/Xv3ellBkYPXUpkh0qTKAxmRDCjT/0KcnKDWDzw=
 github.com/FabioCaffarello/fdos/libs/ledger-wire v0.5.0 h1:SzgyjXv58e9TJ7/pZiXqcRd+EnpD9iEIqTkkzkcrMRA=
