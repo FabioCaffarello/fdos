@@ -20,10 +20,12 @@ forbidden:
 Each subdirectory is a deployable application: an independent Go module with a
 `main` package, published under `github.com/FabioCaffarello/fdos/apps/<name>`.
 
-## Status: empty by design
+## Status: one application
 
-`apps/` contains no applications at M2. Applications compose bounded contexts,
-and no context module exists until M6 (see `libs/README.md`).
+`submitd` is the first composition root (ADR-0037), released as
+`apps/submitd/v0.1.0`. This directory was empty by design until M11 — the
+argument recorded here was that applications compose bounded contexts and no
+context module existed — and `libs/ledger` ended that.
 
 **`apps/` means deployable, not "has a `func main`".** Developer tooling carries
 its own `cmd/` inside its module — `libs/analysis/cmd/fdoslint` is the current

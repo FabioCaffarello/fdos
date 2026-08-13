@@ -37,6 +37,13 @@ Each is an independent Go module published under its own tag (ADR-0004). A
 private repository already builds against `libs/contracts` at a pinned version,
 so a change to that module is a change to somebody else's build.
 
+**There is an application, and it decides nothing.** `apps/submitd` is the first
+composition root (ADR-0037): it receives `fdos.ingest.v1.HoldingClaimSubmission`
+over HTTP and admits it. Every check that matters is `app.Ledger`'s and is
+performed there whatever the caller ran. A rule that appears in `apps/` is in
+the wrong directory — unreachable by the analysers, by the conformance kit, and
+by every test that does not start a process.
+
 **What is undecided is still not yours to decide.** The rule that mattered when
 the repository was empty has narrowed rather than lapsed: do not add a bounded
 context, a canonical type or a published message ahead of the ADR that sequences
@@ -66,16 +73,18 @@ it, say so rather than implying you did.
 | Path | Contents |
 |------|----------|
 | `libs/` | Reusable libraries, one Go module per subdirectory. |
-| `apps/` | Deployable applications, composition roots only. Empty. |
+| `apps/` | Deployable applications, composition roots only. `submitd` is the first. |
 | `docs/` | Constitution, ADRs, RFCs, and the register of blocked work. Authoritative. |
 | `deploy/` | Deployment topology. Empty. |
-| `examples/` | Executable demonstrations of the public contracts. Empty. |
+| `examples/` | Executable demonstrations of the public contracts. `ingest/` is the conformance kit. |
 | `scripts/` | Enforcement mechanisms, invoked through `make`. |
 | `.github/` | CI workflows — `verify`, `release`, `supply-chain`. They invoke `make` and hold no logic of their own (ADR-0014). |
 | `.context/` | Knowledge for agents, derived from `docs/`. |
 
-`apps/`, `deploy/` and `examples/` are empty **by design**, not by omission, and
-each says in its `README.md` what may live there.
+`deploy/` is empty **by design**, not by omission, and its `README.md` says what
+may live there. `apps/` and `examples/` were empty on the same terms until M11
+and M8 filled them — the front matter of each directory's `README.md` is still
+the binding contract for what may be added.
 
 `make contracts-check` enforces that declaration for every top-level directory
 **and every module under `libs/`**. It stops there: layers below

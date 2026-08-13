@@ -66,12 +66,32 @@ which the operator asserts that authentication sits in front of this process.
 There is deliberately no value meaning *"I did not think about it"* — the same
 reasoning that produced the `unmediated` sentinel in ADR-0028.
 
+## More than one process
+
+Another process may hold the same database. **That was not true when this binary
+shipped, and this file said so** — the claim is corrected here rather than
+quietly dropped.
+
+[ADR-0036](../../docs/adr/0036-knowledge-time-is-assigned-under-the-streams-write-lock.md)
+serialised writers inside one process, so a second `submitd` — or an operator
+CLI beside it — reopened the clock-read/append window that decision had closed.
+[ADR-0041](../../docs/adr/0041-the-write-path-serialises-in-the-store.md)
+superseded it: mutual exclusion moved into the `app.Store` port as
+`Serialise(ctx, name, fn)`, `libs/ledger` reads the clock *inside* that region,
+and `libs/ledger-sqlite` implements it as a transaction that spans processes.
+This binary carries both versions.
+
+**What that buys is ordering, not throughput.** On SQLite the region is guarded
+by a database-wide lock, so concurrent writers serialise on it — ADR-0041
+records that as a cost, and ADR-0042's second engine is what exists to pay it
+down. Two processes are now *correct*, not fast.
+
 ## What it does not promise
 
 - **Crash-safety under real power loss.** ADR-0035 records this as an open gap in
   the storage layer and it is not closed here. Do not read "durable" as
   "survives having the plug pulled".
-- **More than one instance.** ADR-0036 serialises writers inside one process.
-  Two `submitd` processes against one database reintroduce exactly the ordering
-  problem that decision closed, and the store's check is then the only guard.
+- **Throughput under concurrent writers.** See above: the region is serialised
+  and on SQLite it is database-wide. No figure is promised, and a reader can be
+  blocked behind a writer for the length of the region.
 - **Rate limiting, quotas or abuse handling.** D2's.

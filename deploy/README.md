@@ -19,10 +19,16 @@ forbidden:
 Deployment topology for FDOS: how the applications in `apps/` are packaged, run
 and connected.
 
-## Status: empty by design
+## Status: empty, and no longer for the reason recorded here
 
-`deploy/` contains nothing at M0. There are no applications to deploy until
-`apps/` is populated, which follows M2.
+`deploy/` contains nothing. The reason this file gave was that no application
+existed to deploy — `apps/submitd` exists now and is released, so what is
+missing is the packaging and the topology, not the subject.
+
+That is M13's work: an application also ships as a signed image referenced by
+digest ([#145](https://github.com/FabioCaffarello/fdos/issues/145)), and this
+directory gets a platform-only stack ([#146](https://github.com/FabioCaffarello/fdos/issues/146)).
+Until then the sections below are the standing constraints on whatever lands.
 
 ## Infrastructure is replaceable
 
