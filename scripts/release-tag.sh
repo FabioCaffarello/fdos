@@ -71,9 +71,15 @@ printf '%s' "$VERSION" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$' \
 scripts/list-modules.sh | grep -qx "$MODULE" \
   || die "'${MODULE}' is not a module in this repository"
 
+# `examples/*` is a demonstration kit, not a deliverable. `apps/*` is: ADR-0039
+# is accepted and says a tag matching `apps/<name>/vX.Y.Z` produces the same
+# evidence a library does. This refused both, because it was written while
+# ADR-0039 was still Proposed and Phase 5 accepted it without coming back here —
+# so the one job allowed to write a tag refused to write the tag the decision
+# authorises.
 case "$MODULE" in
-  apps/*|examples/*)
-    die "'${MODULE}' publishes nothing anyone pins; ADR-0039 decides how applications are released"
+  examples/*)
+    die "'${MODULE}' is a demonstration kit, not a deliverable"
     ;;
 esac
 
@@ -111,10 +117,20 @@ printf '  ok  %s has unreleased changes\n' "$MODULE"
 # out the tag reads a table describing it. If it is missing, the release is being
 # made from a tree that does not describe itself.
 
-if ! grep -qE "^\| \`${MODULE}\` \| \`${VERSION}\` \|" docs/ecosystem/contracts.md; then
-  die "docs/ecosystem/contracts.md does not list ${MODULE} at ${VERSION} — update it, merge it, then tag the merged commit"
-fi
-printf '  ok  the registry declares %s\n' "$VERSION"
+# Only libraries. The registry describes what a consumer may import, and an
+# application is not importable — `release-artifacts` says the same thing when it
+# skips the module zip for anything outside `libs/`.
+case "$MODULE" in
+  libs/*)
+    if ! grep -qE "^\| \`${MODULE}\` \| \`${VERSION}\` \|" docs/ecosystem/contracts.md; then
+      die "docs/ecosystem/contracts.md does not list ${MODULE} at ${VERSION} — update it, merge it, then tag the merged commit"
+    fi
+    printf '  ok  the registry declares %s\n' "$VERSION"
+    ;;
+  *)
+    printf '  --  not a library; the registry describes what may be imported\n'
+    ;;
+esac
 
 # --- 5. the tree is clean and matches the remote -----------------------------
 #
