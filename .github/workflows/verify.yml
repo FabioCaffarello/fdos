@@ -45,6 +45,17 @@ jobs:
   # `verify` does not depend on it. Making the gate wait on an advisory job
   # would make the advisory job a gate.
   preflight:
+    # Pull requests only. On a push to `main` there is nothing to compare
+    # against, so this job printed "Nothing affected", compiled nothing — and
+    # then saved an **empty** Go build cache under the key `verify` shares,
+    # because `setup-go` caches unconditionally and whichever job finishes first
+    # wins. `verify` then found the key taken and skipped its own save.
+    #
+    # Every later run restored that 0 MB cache, was told `cache-hit: true`, and
+    # compiled cold. Measured in the cache list: `refs/heads/main` entries at
+    # 0 MB beside `refs/pull/*/merge` entries at 162–170 MB, and a gate 4.2x
+    # slower than on a tree whose dependencies had been stable (#139).
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
