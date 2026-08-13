@@ -28,6 +28,16 @@ outputs:
   cache-hit:
     description: Whether the Go module and build caches were restored
     value: ${{ steps.go.outputs.cache-hit }}
+  # How much build cache actually arrived, measured after the restore.
+  #
+  # `cache-hit` turned out not to explain anything: runs reporting a hit were as
+  # slow as runs reporting a miss, while every check that compiles Go was 6-14x
+  # slower than on a tree whose dependencies had been stable (#139). A boolean
+  # cannot distinguish "restored a cache" from "restored a cache useful for the
+  # dependency set now being compiled". Kilobytes can.
+  cache-bytes:
+    description: Size of GOCACHE immediately after the restore, in kilobytes
+    value: ${{ steps.cache-size.outputs.kilobytes }}
 
 runs:
   using: composite
@@ -52,6 +62,21 @@ runs:
         go-version: ${{ steps.pins.outputs.go }}
         check-latest: false
         cache-dependency-path: "**/go.sum"
+
+    # Immediately after the restore and before anything compiles, so this is
+    # what the gate started with rather than what it ended with.
+    - name: Measure the restored build cache
+      id: cache-size
+      shell: bash
+      run: |
+        set -euo pipefail
+        dir="$(go env GOCACHE)"
+        if [ -d "$dir" ]; then
+          kb="$(du -sk "$dir" 2>/dev/null | awk '{print $1}')"
+        else
+          kb=0
+        fi
+        echo "kilobytes=${kb:-0}" >> "$GITHUB_OUTPUT"
 
     - name: Install golangci-lint
       uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
