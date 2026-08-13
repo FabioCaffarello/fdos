@@ -145,11 +145,23 @@ sides — an older reader ignores a field it does not know, and the round-trip
 conformance suite gained the cases that prove nothing is dropped in either
 direction.
 
-It is also **the first release cut through the dispatched path**
+It was **the first release cut through the dispatched path**
 ([ADR-0046](../adr/0046-publishing-a-tag-is-a-dispatched-act.md),
-[ADR-0047](../adr/0047-a-release-carries-what-the-module-publishes.md)), so it
-is the first tag whose release carries the module's own zip rather than a
-linter's binaries.
+[ADR-0047](../adr/0047-a-release-carries-what-the-module-publishes.md)), and it
+**carries no GitHub release**: no module zip, no SBOM, no attestation, no signed
+manifest. The tag is published and the proxy serves it, so the module version is
+real and usable; what is missing is the evidence around it.
+
+`release.yml` re-runs the gate on the tagged commit, and `pin-check` read the tag
+namespace rather than the tree — so the tag made its own verification fail
+([#125](https://github.com/FabioCaffarello/fdos/issues/125)). Re-running cannot
+help: the workflow checks out the tag's tree, which contains the check that
+fails. The tag cannot be deleted (ADR-0043, and that rule is right), and the
+module cannot be re-released until its source changes.
+
+Recorded here rather than left to be discovered, for the same reason ADR-0047
+records the twenty releases that carried a linter: an adopter reading this table
+should not have to infer what a release contains.
 
 **`libs/ledger-sqlite/v0.3.0`** is step two: it adopts `libs/ledger/v0.8.0` and
 implements `Serialise` as a `BEGIN IMMEDIATE` transaction held open across the
