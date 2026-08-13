@@ -80,7 +80,7 @@ that decision, **not an offer**.
 |---|---|---|---|
 | `libs/kernel` | `v0.9.0` | no | no |
 | `libs/ledger` | `v0.8.0` | no | no |
-| `libs/kernel-wire` | `v0.2.0` | no | no |
+| `libs/kernel-wire` | `v0.3.0` | no | no |
 | `libs/ledger-wire` | `v0.4.0` | no | no |
 | `libs/ledger-sqlite` | `v0.3.0` | no | no |
 
@@ -136,6 +136,20 @@ means ships inside this module.
 > adopting both pins, which is a separate step. A release enables an adoption
 > and is not one — and a registry that conflates the two would have this repo
 > believing a gap was shut while a workspace build still failed.
+
+**`libs/kernel-wire/v0.3.0`** carries the scale across the wire: the codec now
+maps `RoundingContext`'s scale, added to the schema at
+[`libs/contracts` v0.6.0](#version-history), so a rounded amount states the minor
+units it was rounded to instead of leaving them inferred. Additive on both
+sides — an older reader ignores a field it does not know, and the round-trip
+conformance suite gained the cases that prove nothing is dropped in either
+direction.
+
+It is also **the first release cut through the dispatched path**
+([ADR-0046](../adr/0046-publishing-a-tag-is-a-dispatched-act.md),
+[ADR-0047](../adr/0047-a-release-carries-what-the-module-publishes.md)), so it
+is the first tag whose release carries the module's own zip rather than a
+linter's binaries.
 
 **`libs/ledger-sqlite/v0.3.0`** is step two: it adopts `libs/ledger/v0.8.0` and
 implements `Serialise` as a `BEGIN IMMEDIATE` transaction held open across the
