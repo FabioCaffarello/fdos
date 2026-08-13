@@ -96,23 +96,20 @@ jobs:
           PUBLISH: ${{ inputs.publish == 'yes' && '1' || '' }}
         run: make release-tag
 
-      # A tag push starts release.yml, which has failed silently before — B-008
-      # is fourteen tags whose release published nothing while looking fine. The
-      # tag is immutable by ruleset, so that state cannot be cleaned up.
-      # A tag pushed with GITHUB_TOKEN does not trigger `release.yml` — GitHub
-      # suppresses workflow runs for events this token creates. So publication
-      # is two dispatches, and this says the second one out loud rather than
-      # leaving a tag with nothing building it (ADR-0051).
-      - name: Say what happens next
-        if: inputs.publish == 'yes'
-        env:
-          MODULE: ${{ inputs.module }}
-          VERSION: ${{ inputs.version }}
-        run: |
-          set -euo pipefail
-          printf 'Tag pushed. Nothing is building it: a tag created with\n'
-          printf 'GITHUB_TOKEN does not trigger release.yml.\n\n'
-          printf 'Publish the evidence:\n\n'
-          printf '  gh workflow run release.yml -f tag=%s/%s\n\n' "$MODULE" "$VERSION"
-          printf 'Then confirm it finished. B-008 is what a release that looks\n'
-          printf 'fine and publishes nothing looks like.\n'
+  # A tag pushed with GITHUB_TOKEN does not trigger `release.yml` — GitHub
+  # suppresses workflow runs for events this token creates, which is why the
+  # first attempt at this left a tag with nothing building it (ADR-0051).
+  #
+  # A **call** is not an event, so the guard does not apply. The release runs in
+  # this run, immediately after the tag exists, and a green dispatch means the
+  # release happened rather than that it was started (ADR-0052).
+  release:
+    needs: tag
+    if: inputs.publish == 'yes'
+    uses: ./.github/workflows/release.yml
+    permissions:
+      contents: write # create the GitHub release
+      id-token: write # keyless signing and provenance
+      attestations: write
+    with:
+      tag: ${{ inputs.module }}/${{ inputs.version }}

@@ -46,6 +46,16 @@ on:
         required: true
         type: string
 
+  # Called by `release-tag.yml` immediately after it pushes the tag, so
+  # publication is one dispatch again (ADR-0052). A call is not an event, so the
+  # GITHUB_TOKEN guard that suppressed the push trigger does not apply to it.
+  workflow_call:
+    inputs:
+      tag:
+        description: "The tag just created, e.g. libs/ledger-wire/v0.5.0"
+        required: true
+        type: string
+
 permissions:
   contents: read
 
